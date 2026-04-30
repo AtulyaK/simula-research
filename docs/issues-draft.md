@@ -34,9 +34,33 @@ Create a minimal executable pipeline skeleton that wires stage boundaries and pe
 
 ## Acceptance criteria
 
-- [ ] Pipeline shell runs end-to-end with placeholder stage outputs.
-- [ ] Run manifest contains run ID, seed, model IDs, protocol version, and artifact schema version.
-- [ ] Stage handoff contracts align with `docs/pipeline-spec.md`.
+- [x] Pipeline shell runs end-to-end with placeholder stage outputs.
+- [x] Run manifest contains run ID, seed, model IDs, protocol version, and artifact schema version.
+- [x] Stage handoff contracts align with `docs/pipeline-spec.md`.
+
+## Implementation notes (completed tracer bullet)
+
+- **Branch**: `feature/issue-1-tracer-bullet-manifest`
+- **Goal delivered**: one thin end-to-end tracer bullet proving Stage 0 through Stage 5 wiring and run-level contract stability.
+- **Public entrypoint**: `run_pipeline(seed, model_ids)` in `src/simula_research/pipeline.py`.
+- **Manifest contract fields**: `run_id`, `seed`, `model_ids`, `protocol_version`, `artifact_schema_version`.
+- **Manifest schema validation**: added `MANIFEST_SCHEMA` and `validate_manifest()` in `src/simula_research/manifest.py` with required-field and type checks.
+- **Stage handoff skeleton**: placeholder outputs for:
+  - `stage_0_domain_run_spec`
+  - `stage_1_global_diversification`
+  - `stage_2_local_diversification`
+  - `stage_3_complexification`
+  - `stage_4_dual_critic_quality_verification`
+  - `stage_5_evaluation_handoff`
+- **Traceability guarantee in tracer bullet**: each stage output stores the same `run_id` as the manifest.
+- **Test strategy (TDD)**: integration-style test via public API in `tests/test_issue1_tracer_bullet.py`, asserting manifest contents and stage boundary contracts.
+- **Verification command**: `PYTHONPATH=src python3 -m unittest discover -s tests -v`
+- **Result**: passing (1 test, 0 failures).
+
+## Follow-on notes for Issue 2
+
+- This tracer bullet intentionally keeps stage behavior as placeholders to preserve a thin vertical slice.
+- Issue 2 can implement real taxonomy graph generation inside `stage_1_global_diversification` without changing the Issue 1 contract surface.
 
 ---
 
@@ -206,3 +230,5 @@ Use these prompts in order as you execute:
    `Split the current blocked issue into thinner AFK vertical slices with updated dependencies and revised acceptance criteria.`
 5. **Promotion to next phase**  
    `Propose ADR updates and a follow-on issue set for reusable engine interfaces without breaking milestone-1 comparability.`
+
+For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).

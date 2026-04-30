@@ -191,3 +191,5 @@ flowchart TD
 - [`docs/evaluation-metrics.md`](./evaluation-metrics.md)
 - [`docs/research-validation-playbook.md`](./research-validation-playbook.md)
 - [`docs/reproducibility-ops.md`](./reproducibility-ops.md)
+- [`docs/issues-draft.md`](./issues-draft.md)
+- [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md)

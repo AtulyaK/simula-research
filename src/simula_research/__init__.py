@@ -1,0 +1,3 @@
+from simula_research.pipeline import run_pipeline
+
+__all__ = ["run_pipeline"]
