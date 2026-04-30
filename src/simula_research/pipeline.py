@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from simula_research.local_diversification import build_local_diversification
 from simula_research.manifest import validate_manifest
 from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
 
@@ -50,6 +51,30 @@ def _persist_taxonomy_artifacts(run_root: Path, taxonomy: dict[str, Any]) -> dic
     }
 
 
+def _persist_local_diversification_artifacts(
+    run_root: Path, local_diversification: dict[str, Any]
+) -> dict[str, str]:
+    local_dir = run_root / "20_local_diversification"
+    local_dir.mkdir(parents=True, exist_ok=True)
+
+    instantiations_path = local_dir / "instantiations.json"
+    rejections_path = local_dir / "rejections.json"
+
+    instantiations_path.write_text(
+        json.dumps(local_diversification["instantiations"], indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    rejections_path.write_text(
+        json.dumps(local_diversification["rejections"], indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    return {
+        "instantiations": str(instantiations_path),
+        "rejections": str(rejections_path),
+    }
+
+
 def run_pipeline(
     seed: int,
     model_ids: dict[str, str],
@@ -83,6 +108,10 @@ def run_pipeline(
 
     run_root = Path(artifact_root) / run_id
     artifacts = _persist_taxonomy_artifacts(run_root=run_root, taxonomy=taxonomy)
+    local_diversification = build_local_diversification(taxonomy=taxonomy)
+    local_artifacts = _persist_local_diversification_artifacts(
+        run_root=run_root, local_diversification=local_diversification
+    )
 
     stage_outputs["stage_1_global_diversification"] = {
         "status": "completed",
@@ -104,6 +133,14 @@ def run_pipeline(
                 "instantiation_id",
             ],
         },
+    }
+    stage_outputs["stage_2_local_diversification"] = {
+        "status": "completed",
+        "run_id": run_id,
+        "instantiation_count": len(local_diversification["instantiations"]),
+        "rejection_count": len(local_diversification["rejections"]),
+        "anti_collapse_checks": local_diversification["anti_collapse_checks"],
+        "local_diversification_artifacts": local_artifacts,
     }
 
     return {"manifest": manifest, "stage_outputs": stage_outputs, "taxonomy": taxonomy}
