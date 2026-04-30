@@ -36,8 +36,12 @@ class Issue1TracerBulletTest(unittest.TestCase):
         )
 
         for stage_name, stage_output in stage_outputs.items():
-            self.assertEqual(stage_output["status"], "placeholder")
             self.assertEqual(stage_output["run_id"], manifest["run_id"], msg=stage_name)
+            if stage_name == "stage_1_global_diversification":
+                self.assertEqual(stage_output["status"], "completed")
+                self.assertIn("taxonomy_root_node_id", stage_output)
+            else:
+                self.assertEqual(stage_output["status"], "placeholder")
 
 
 if __name__ == "__main__":
