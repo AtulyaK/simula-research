@@ -34,13 +34,9 @@ flowchart TD
 
 ## Documentation map
 
-Start here in this order:
+Use the structured docs index first:
 
-1. [`docs/pipeline-spec.md`](docs/pipeline-spec.md)
-2. [`docs/evaluation-metrics.md`](docs/evaluation-metrics.md)
-3. [`docs/research-validation-playbook.md`](docs/research-validation-playbook.md)
-4. [`docs/reproducibility-ops.md`](docs/reproducibility-ops.md)
-5. ADRs in [`docs/adr/`](docs/adr/)
+- [`docs/README.md`](docs/README.md)
 
 Domain language anchors:
 
