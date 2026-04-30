@@ -9,6 +9,9 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #1: complete on `main` (PR #12)
 - Issue #2: complete on `main` (PR #15)
 - Wave 1 support slices (prompt B/C): integrated in `main` via commits `86f9ce8` (validators) and `27e7e0c` (harness)
+- Issue #3: complete on `main` (PR #16)
+- Issue #4: complete on `main` (PR #18)
+- Issue #6 skeleton: complete on `main` (PR #19)
 
 ## Slice index
 
@@ -108,9 +111,9 @@ Generate meta-prompts and multiple within-node instantiations, then enforce loca
 
 ## Acceptance criteria
 
-- [ ] Every sample is traceable to `taxonomy_node_id` and `meta_prompt_id`.
-- [ ] Local diversity checks run before complexification.
-- [ ] Rejected low-diversity candidates are logged.
+- [x] Every sample is traceable to `taxonomy_node_id` and `meta_prompt_id`.
+- [x] Local diversity checks run before complexification.
+- [x] Rejected low-diversity candidates are logged.
 
 ---
 
@@ -125,9 +128,9 @@ Apply complexification to a controlled sample fraction while preserving source i
 
 ## Acceptance criteria
 
-- [ ] Complexification policy supports configurable fraction and strategy.
-- [ ] Complexified samples retain taxonomy linkage.
-- [ ] Semantic-preservation checks run and failures are recorded.
+- [x] Complexification policy supports configurable fraction and strategy.
+- [x] Complexified samples retain taxonomy linkage.
+- [x] Semantic-preservation checks run and failures are recorded.
 
 ---
 
@@ -159,10 +162,10 @@ Compute coverage, complexity, and quality metrics per `docs/evaluation-metrics.m
 
 ## Acceptance criteria
 
-- [ ] Coverage metrics include node ratio and depth profile.
-- [ ] Complexity metrics include calibrated score and complexity shift.
-- [ ] Quality metrics include acceptance, agreement, and regeneration burden.
-- [ ] Gate report maps thresholds to pass/fail outcomes.
+- [x] Coverage metrics include node ratio and depth profile.
+- [x] Complexity metrics include calibrated score and complexity shift.
+- [x] Quality metrics include acceptance, agreement, and regeneration burden.
+- [x] Gate report maps thresholds to pass/fail outcomes.
 
 ---
 
