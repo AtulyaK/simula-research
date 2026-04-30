@@ -40,6 +40,9 @@ class Issue1TracerBulletTest(unittest.TestCase):
             if stage_name == "stage_1_global_diversification":
                 self.assertEqual(stage_output["status"], "completed")
                 self.assertIn("taxonomy_root_node_id", stage_output)
+            elif stage_name == "stage_2_local_diversification":
+                self.assertEqual(stage_output["status"], "completed")
+                self.assertTrue(stage_output["anti_collapse_checks"]["executed"])
             else:
                 self.assertEqual(stage_output["status"], "placeholder")
 
