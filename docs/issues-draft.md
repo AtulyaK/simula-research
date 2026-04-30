@@ -11,6 +11,7 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Wave 1 support slices (prompt B/C): integrated in `main` via commits `86f9ce8` (validators) and `27e7e0c` (harness)
 - Issue #3: complete on `main` (PR #16)
 - Issue #4: complete on `main` (PR #18)
+- Issue #5: complete on `main` (PR #21)
 - Issue #6 skeleton: complete on `main` (PR #19)
 
 ## Slice index
@@ -27,6 +28,7 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 | 8 | Milestone-1 gate review and threshold adjustment decision | HITL | #7 |
 | 9 | Reproducibility hardening and deterministic rerun checks | AFK | #8 |
 | 10 | Decide reusable-engine extraction scope and boundaries | HITL | #9 |
+| 11 | Productionize dual-critic evaluators (replace simulation) | AFK | #10 |
 
 ## Draft issue bodies
 
@@ -145,9 +147,16 @@ Add dual-critic evaluation, disagreement handling, and regeneration pathways to 
 
 ## Acceptance criteria
 
-- [ ] Critic A and Critic B decisions are stored per sample.
-- [ ] Disagreement path is deterministic under configured policy.
-- [ ] Rejection/regeneration logs are persisted as artifacts.
+- [x] Critic A and Critic B decisions are stored per sample.
+- [x] Disagreement path is deterministic under configured policy.
+- [x] Rejection/regeneration logs are persisted as artifacts.
+
+## Follow-up tasks carried into later slices
+
+- **Issue #6 metric wiring**: consume Stage 4 artifacts (`critic_decisions`, `rejections`, `regenerations`) for quality metric computation and gate reporting.
+- **Issue #7 reporting depth**: add taxonomy-segment disagreement and regeneration burden breakout tables in ablation reports.
+- **Issue #9 reproducibility hardening**: freeze adjudication-policy fields in manifest comparability checks so critic-policy changes are explicit protocol changes.
+- **Future productionization (post-milestone)**: replace deterministic hash-based critic simulation with provider-backed critic evaluators while preserving the current artifact schema and deterministic replay controls.
 
 ---
 
@@ -234,6 +243,23 @@ Define which stage seams become reusable interfaces in next phase while preservi
 - [ ] Candidate interfaces are listed with rationale.
 - [ ] Migration scope excludes any change that invalidates baseline comparability.
 - [ ] Follow-up issue set or ADR updates are approved.
+
+---
+
+### Issue 11: Productionize dual-critic evaluators (replace simulation)
+
+**Type**: AFK  
+**Blocked by**: Issue 10
+
+## What to build
+
+Replace the deterministic hash-based critic simulation with provider-backed critic evaluators while preserving current Stage 4 artifact schema and deterministic replay controls.
+
+## Acceptance criteria
+
+- [ ] Critic adapter interface supports provider-backed A/B evaluators without changing Stage 4 artifact field names.
+- [ ] Replay mode supports deterministic reruns under fixed seed/config.
+- [ ] Regression tests prove compatibility with Issue #6 quality metric inputs and gate report wiring.
 
 ## Recommendations: where to prompt next
 
