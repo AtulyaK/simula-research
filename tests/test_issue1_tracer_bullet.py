@@ -46,6 +46,9 @@ class Issue1TracerBulletTest(unittest.TestCase):
             elif stage_name == "stage_3_complexification":
                 self.assertEqual(stage_output["status"], "completed")
                 self.assertIn("complexification_policy", stage_output)
+            elif stage_name == "stage_4_dual_critic_quality_verification":
+                self.assertEqual(stage_output["status"], "completed")
+                self.assertIn("adjudication_policy", stage_output)
             else:
                 self.assertEqual(stage_output["status"], "placeholder")
 
