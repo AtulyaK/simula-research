@@ -12,8 +12,10 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 1 | Prompt A: taxonomy stage | Issue #2, PR #15 | Complete | Taxonomy stage + tests are in `main`. |
 | Wave 1 | Prompt B: harness support | PR #13 (+ commit `27e7e0c` integration) | Complete | Harness fixtures/assertions and integration notes are now in `main`. |
 | Wave 1 | Prompt C: validator utilities | PR #14 (+ commit `86f9ce8` integration) | Complete | Validator APIs and tests are now in `main`. |
-| Wave 2 | Prompt A: local diversification | Issue #3, PR #16 | In review | Merge first in Wave 2 sequence. |
-| Wave 2 | Prompt B: config scaffolding | Issue #7, PR #17 | In review | Rebase on latest `main` after PR #16 merges. |
+| Wave 2 | Prompt A: local diversification | Issue #3, PR #16 | Complete | Local diversification stage + anti-collapse tests are in `main`. |
+| Wave 2 | Prompt B: config scaffolding | Issue #7, PR #17 | Complete | Baseline/ablation config presets are in `main`. |
+| Wave 3 | Prompt A: complexification | Issue #4, PR #18 | Complete | Stage 3 complexification and semantic-preservation artifacts are in `main`. |
+| Wave 3 | Prompt B: metrics skeleton | Issue #6, PR #19 | Complete | Evaluation metric scaffolding and gate report skeleton are in `main`. |
 
 ## How to use this file
 
