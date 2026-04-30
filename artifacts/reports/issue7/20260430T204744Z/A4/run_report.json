@@ -1,0 +1,106 @@
+{
+  "complexity_evidence": {
+    "calibrated_score_distribution": {
+      "p25": 0.45,
+      "p50": 0.45,
+      "p75": 0.45
+    },
+    "complexification_pairs_evaluated": 7,
+    "complexification_precision": 0.0,
+    "complexity_shift": 0.0
+  },
+  "coverage_evidence": {
+    "coverage_balance": 0.1428571428571428,
+    "covered_nodes": 1,
+    "depth_coverage_profile": {
+      "0": 0.0,
+      "1": 0.0,
+      "2": 0.25
+    },
+    "eligible_nodes": 7,
+    "node_coverage_ratio": 0.14285714285714285
+  },
+  "failure_analysis": [
+    "Failed threshold: coverage.node_coverage_ratio (0.14285714285714285 >= 0.8).",
+    "Failed threshold: coverage.min_depth_coverage (0.0 >= 0.6).",
+    "Failed threshold: complexity.complexification_precision (0.0 >= 0.7).",
+    "Failed threshold: quality.critic_agreement (0.17857142857142855 >= 0.75).",
+    "Failed threshold: quality.acceptance_rate (0.14285714285714285 >= 0.5)."
+  ],
+  "gate_summary": {
+    "complexity.complexification_precision": {
+      "actual": 0.0,
+      "comparator": ">=",
+      "status": "fail",
+      "threshold": 0.7
+    },
+    "coverage.min_depth_coverage": {
+      "actual": 0.0,
+      "comparator": ">=",
+      "status": "fail",
+      "threshold": 0.6
+    },
+    "coverage.node_coverage_ratio": {
+      "actual": 0.14285714285714285,
+      "comparator": ">=",
+      "status": "fail",
+      "threshold": 0.8
+    },
+    "overall_status": "fail",
+    "quality.acceptance_rate": {
+      "actual": 0.14285714285714285,
+      "comparator": ">=",
+      "status": "fail",
+      "threshold": 0.5
+    },
+    "quality.critic_agreement": {
+      "actual": 0.17857142857142855,
+      "comparator": ">=",
+      "status": "fail",
+      "threshold": 0.75
+    },
+    "quality.regen_burden": {
+      "actual": 0.0,
+      "comparator": "<=",
+      "status": "pass",
+      "threshold": 1.0
+    }
+  },
+  "protocol": {
+    "artifact_schema_version": "v1",
+    "baseline_or_ablation_tag": "A4",
+    "complexity_judgment_protocol": {
+      "initial_rating": 1000,
+      "k_factor": 32,
+      "minimum_comparisons_per_sample": 5,
+      "version": "milestone-1"
+    },
+    "critic_adjudication_config": {
+      "mode": "single_critic",
+      "policy": "reject_on_disagreement"
+    },
+    "domain_objective": "pilot-domain",
+    "evaluation_protocol_version": "milestone-1",
+    "hypothesis_focus": [
+      "H4"
+    ],
+    "protocol_version": "0.1.0",
+    "run_label": "ablation-single-critic",
+    "taxonomy_eligibility_policy": "default-eligible-all-taxonomy-nodes"
+  },
+  "quality_evidence": {
+    "acceptance_rate": 0.14285714285714285,
+    "critic_agreement": 0.17857142857142855,
+    "disagreement_rate": 0.5714285714285714,
+    "regen_burden": 0.0,
+    "requires_issue_5_outputs": false,
+    "todo_after_issue_5": []
+  },
+  "run_identity": {
+    "branch": "feature/issue-7-execute-b0-a1-a4",
+    "commit_hash": "5d631a8",
+    "run_id": "run-20260430T204744Z-d386f9b4",
+    "seed": 7,
+    "timestamp_utc": "2026-04-30T20:47:44.072523+00:00"
+  }
+}

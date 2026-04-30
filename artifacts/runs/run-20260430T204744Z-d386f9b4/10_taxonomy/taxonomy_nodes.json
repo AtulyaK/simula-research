@@ -1,0 +1,65 @@
+[
+  {
+    "branch_source": "seed",
+    "confidence": 1.0,
+    "depth": 0,
+    "label": "pilot-domain root",
+    "notes": "root taxonomy node",
+    "parent_taxonomy_node_id": null,
+    "taxonomy_node_id": "tax-9f7348228a8e"
+  },
+  {
+    "branch_source": "recursive-expansion",
+    "confidence": 0.8,
+    "depth": 1,
+    "label": "pilot-domain root pilot fundamentals",
+    "notes": "generated from parent tax-9f7348228a8e",
+    "parent_taxonomy_node_id": "tax-9f7348228a8e",
+    "taxonomy_node_id": "tax-079d4f2d6823"
+  },
+  {
+    "branch_source": "recursive-expansion",
+    "confidence": 0.8,
+    "depth": 1,
+    "label": "pilot-domain root pilot advanced",
+    "notes": "generated from parent tax-9f7348228a8e",
+    "parent_taxonomy_node_id": "tax-9f7348228a8e",
+    "taxonomy_node_id": "tax-1827300b6107"
+  },
+  {
+    "branch_source": "recursive-expansion",
+    "confidence": 0.8,
+    "depth": 2,
+    "label": "pilot-domain root pilot fundamentals domain fundamentals",
+    "notes": "generated from parent tax-079d4f2d6823",
+    "parent_taxonomy_node_id": "tax-079d4f2d6823",
+    "taxonomy_node_id": "tax-6ca519f1753d"
+  },
+  {
+    "branch_source": "recursive-expansion",
+    "confidence": 0.8,
+    "depth": 2,
+    "label": "pilot-domain root pilot fundamentals domain advanced",
+    "notes": "generated from parent tax-079d4f2d6823",
+    "parent_taxonomy_node_id": "tax-079d4f2d6823",
+    "taxonomy_node_id": "tax-6123d0c8daae"
+  },
+  {
+    "branch_source": "recursive-expansion",
+    "confidence": 0.8,
+    "depth": 2,
+    "label": "pilot-domain root pilot advanced domain fundamentals",
+    "notes": "generated from parent tax-1827300b6107",
+    "parent_taxonomy_node_id": "tax-1827300b6107",
+    "taxonomy_node_id": "tax-9d4dee183241"
+  },
+  {
+    "branch_source": "recursive-expansion",
+    "confidence": 0.8,
+    "depth": 2,
+    "label": "pilot-domain root pilot advanced domain advanced",
+    "notes": "generated from parent tax-1827300b6107",
+    "parent_taxonomy_node_id": "tax-1827300b6107",
+    "taxonomy_node_id": "tax-959ac88dd20b"
+  }
+]

@@ -1,0 +1,93 @@
+[
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "reject",
+    "critic_b_decision": "accept",
+    "disagreement": true,
+    "final_reason": "policy_reject_on_disagreement",
+    "instantiation_id": "inst-ab14ade2f9e4",
+    "meta_prompt_id": "mp-5e9181892c2b",
+    "quality_status": "rejected",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-9f7348228a8e"
+  },
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "reject",
+    "critic_b_decision": "reject",
+    "disagreement": false,
+    "final_reason": "both_reject",
+    "instantiation_id": "inst-927674b0d4b7",
+    "meta_prompt_id": "mp-e19631a768fb",
+    "quality_status": "rejected",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-079d4f2d6823"
+  },
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "reject",
+    "critic_b_decision": "accept",
+    "disagreement": true,
+    "final_reason": "policy_reject_on_disagreement",
+    "instantiation_id": "inst-1f4968f031a4",
+    "meta_prompt_id": "mp-e7c54dcd56a0",
+    "quality_status": "rejected",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-1827300b6107"
+  },
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "reject",
+    "critic_b_decision": "reject",
+    "disagreement": false,
+    "final_reason": "both_reject",
+    "instantiation_id": "inst-443d84567e65",
+    "meta_prompt_id": "mp-559a27c32dca",
+    "quality_status": "rejected",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-6ca519f1753d"
+  },
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "accept",
+    "critic_b_decision": "accept",
+    "disagreement": false,
+    "final_reason": "both_accept",
+    "instantiation_id": "inst-b6350a55bb7a",
+    "meta_prompt_id": "mp-eac0f6036b1e",
+    "quality_status": "accepted",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-6123d0c8daae"
+  },
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "accept",
+    "critic_b_decision": "reject",
+    "disagreement": true,
+    "final_reason": "policy_reject_on_disagreement",
+    "instantiation_id": "inst-f59075d1f03d",
+    "meta_prompt_id": "mp-1ec2b48a7cfb",
+    "quality_status": "rejected",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-9d4dee183241"
+  },
+  {
+    "adjudication_policy": "reject",
+    "critic_a_decision": "accept",
+    "critic_b_decision": "reject",
+    "disagreement": true,
+    "final_reason": "policy_reject_on_disagreement",
+    "instantiation_id": "inst-b6092663b84f",
+    "meta_prompt_id": "mp-5b931f1097d0",
+    "quality_status": "rejected",
+    "regeneration_count": 0,
+    "review_status": "reviewed",
+    "taxonomy_node_id": "tax-959ac88dd20b"
+  }
+]
