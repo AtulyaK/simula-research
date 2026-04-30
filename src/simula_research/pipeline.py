@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from simula_research.complexification import apply_complexification
 from simula_research.local_diversification import build_local_diversification
 from simula_research.manifest import validate_manifest
 from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
@@ -75,12 +76,32 @@ def _persist_local_diversification_artifacts(
     }
 
 
+def _persist_complexification_artifacts(run_root: Path, complexification: dict[str, Any]) -> dict[str, str]:
+    complex_dir = run_root / "30_complexification"
+    complex_dir.mkdir(parents=True, exist_ok=True)
+
+    samples_path = complex_dir / "samples.json"
+    failures_path = complex_dir / "semantic_preservation_failures.json"
+
+    samples_path.write_text(json.dumps(complexification["samples"], indent=2, sort_keys=True), encoding="utf-8")
+    failures_path.write_text(
+        json.dumps(complexification["semantic_preservation_failures"], indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    return {
+        "samples": str(samples_path),
+        "semantic_preservation_failures": str(failures_path),
+    }
+
+
 def run_pipeline(
     seed: int,
     model_ids: dict[str, str],
     domain_objective: str = "pilot-domain",
     artifact_root: str | Path = "artifacts/runs",
     taxonomy_config: dict[str, int] | None = None,
+    complexification_config: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     run_id = f"run-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
 
@@ -112,6 +133,16 @@ def run_pipeline(
     local_artifacts = _persist_local_diversification_artifacts(
         run_root=run_root, local_diversification=local_diversification
     )
+    complex_cfg = complexification_config or {}
+    complexification = apply_complexification(
+        samples=local_diversification["instantiations"],
+        complexify_fraction=float(complex_cfg.get("complexify_fraction", 0.5)),
+        semantic_overlap_threshold=float(complex_cfg.get("semantic_overlap_threshold", 0.55)),
+        strategy=str(complex_cfg.get("strategy", "append_reasoning")),
+    )
+    complex_artifacts = _persist_complexification_artifacts(
+        run_root=run_root, complexification=complexification
+    )
 
     stage_outputs["stage_1_global_diversification"] = {
         "status": "completed",
@@ -141,6 +172,16 @@ def run_pipeline(
         "rejection_count": len(local_diversification["rejections"]),
         "anti_collapse_checks": local_diversification["anti_collapse_checks"],
         "local_diversification_artifacts": local_artifacts,
+    }
+    stage_outputs["stage_3_complexification"] = {
+        "status": "completed",
+        "run_id": run_id,
+        "complexified_count": len(
+            [sample for sample in complexification["samples"] if sample["is_complexified"]]
+        ),
+        "semantic_preservation_failure_count": len(complexification["semantic_preservation_failures"]),
+        "complexification_policy": complexification["complexification_policy"],
+        "complexification_artifacts": complex_artifacts,
     }
 
     return {"manifest": manifest, "stage_outputs": stage_outputs, "taxonomy": taxonomy}

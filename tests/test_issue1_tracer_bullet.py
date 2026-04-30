@@ -43,6 +43,9 @@ class Issue1TracerBulletTest(unittest.TestCase):
             elif stage_name == "stage_2_local_diversification":
                 self.assertEqual(stage_output["status"], "completed")
                 self.assertTrue(stage_output["anti_collapse_checks"]["executed"])
+            elif stage_name == "stage_3_complexification":
+                self.assertEqual(stage_output["status"], "completed")
+                self.assertIn("complexification_policy", stage_output)
             else:
                 self.assertEqual(stage_output["status"], "placeholder")
 
