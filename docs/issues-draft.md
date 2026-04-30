@@ -2,7 +2,13 @@
 
 ## Purpose
 
-This is a draft issue pack for implementation sequencing. These are not published yet. Slices are intentionally thin and end-to-end so each one yields a verifiable outcome.
+This is the working issue pack for implementation sequencing. Slices are intentionally thin and end-to-end so each one yields a verifiable outcome.
+
+## Verification snapshot
+
+- Issue #1: complete on `main` (PR #12)
+- Issue #2: complete on `main` (PR #15)
+- Wave 1 support slices (prompt B/C): integrated in `main` via commits `86f9ce8` (validators) and `27e7e0c` (harness)
 
 ## Slice index
 
@@ -75,9 +81,19 @@ Implement recursive taxonomy generation with merge/filter checks and output a va
 
 ## Acceptance criteria
 
-- [ ] Taxonomy output is acyclic and has no orphan nodes.
-- [ ] Every node has a stable `taxonomy_node_id`.
-- [ ] Taxonomy artifacts are persisted in the run artifact layout.
+- [x] Taxonomy output is acyclic and has no orphan nodes.
+- [x] Every node has a stable `taxonomy_node_id`.
+- [x] Taxonomy artifacts are persisted in the run artifact layout.
+
+## Implementation notes (completed in mainline)
+
+- **Branch**: `feature/issue-2-global-taxonomy-stage`
+- **Merged PR**: #15
+- **Delivered**:
+  - recursive taxonomy generation with merge/filter checks
+  - deterministic `taxonomy_node_id` generation
+  - persisted taxonomy artifacts under `10_taxonomy/`
+  - handoff contract for issue #3 in stage output
 
 ---
 

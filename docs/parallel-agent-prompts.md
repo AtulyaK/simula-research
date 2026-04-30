@@ -2,6 +2,23 @@
 
 This document provides copy/paste-ready prompts for running multiple agents against the first Simula implementation wave plan.
 
+## Wave execution status (verified against `origin/main`)
+
+Use this table as the source of truth for what is actually integrated in `main`.
+
+| Wave | Slice | Linked issue/PR | Status on `main` | Notes |
+| --- | --- | --- | --- | --- |
+| Wave 0 | Issue #1 tracer bullet | Issue #1, PR #12 | Complete | Manifest + pipeline skeleton are in `main`. |
+| Wave 1 | Prompt A: taxonomy stage | Issue #2, PR #15 | Complete | Taxonomy stage + tests are in `main`. |
+| Wave 1 | Prompt B: harness support | PR #13 (+ commit `27e7e0c` integration) | Complete | Harness fixtures/assertions and integration notes are now in `main`. |
+| Wave 1 | Prompt C: validator utilities | PR #14 (+ commit `86f9ce8` integration) | Complete | Validator APIs and tests are now in `main`. |
+
+## How to use this file
+
+- Treat prompt blocks below as the prompt library.
+- Check the status table before starting a new wave.
+- When a slice lands in `main`, update both this table and `docs/issues-draft.md`.
+
 ## Operating model
 
 - Use one PR branch per issue or wave.
