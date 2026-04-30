@@ -11,7 +11,9 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Wave 1 support slices (prompt B/C): integrated in `main` via commits `86f9ce8` (validators) and `27e7e0c` (harness)
 - Issue #3: complete on `main` (PR #16)
 - Issue #4: complete on `main` (PR #18)
+- Issue #5: complete on `main` (PR #21)
 - Issue #6 skeleton: complete on `main` (PR #19)
+- Issue #7: complete on `main` (PR #23)
 
 ## Slice index
 
@@ -145,9 +147,9 @@ Add dual-critic evaluation, disagreement handling, and regeneration pathways to 
 
 ## Acceptance criteria
 
-- [ ] Critic A and Critic B decisions are stored per sample.
-- [ ] Disagreement path is deterministic under configured policy.
-- [ ] Rejection/regeneration logs are persisted as artifacts.
+- [x] Critic A and Critic B decisions are stored per sample.
+- [x] Disagreement path is deterministic under configured policy.
+- [x] Rejection/regeneration logs are persisted as artifacts.
 
 ---
 
@@ -180,9 +182,9 @@ Run `B0` and at least `A1` and `A4` as defined in the playbook, then publish run
 
 ## Acceptance criteria
 
-- [ ] Baseline and required ablation runs complete under fixed protocol.
-- [ ] Comparison tables are generated and persisted.
-- [ ] Failure analysis notes are included for any failed gate.
+- [x] Baseline and required ablation runs complete under fixed protocol.
+- [x] Comparison tables are generated and persisted.
+- [x] Failure analysis notes are included for any failed gate.
 
 ---
 
@@ -239,15 +241,13 @@ Define which stage seams become reusable interfaces in next phase while preservi
 
 Use these prompts in order as you execute:
 
-1. **Build start**  
-   `Implement Issue 1 with TDD. Deliver one thin end-to-end tracer bullet for the pilot domain.`
-2. **Core validation run**  
-   `Implement Issues 2-6 in order, then run B0 + A1 + A4 and produce a milestone gate report.`
-3. **If signals are weak**  
-   `Use /diagnose to identify whether coverage, complexity, or quality is the bottleneck and propose smallest parameter-level change.`
-4. **If issue size is too large**  
-   `Split the current blocked issue into thinner AFK vertical slices with updated dependencies and revised acceptance criteria.`
-5. **Promotion to next phase**  
-   `Propose ADR updates and a follow-on issue set for reusable engine interfaces without breaking milestone-1 comparability.`
+1. **Next active issue (current)**  
+   `Run Issue #8 HITL milestone-1 gate review using Issue #7 artifacts. Include coverage, complexity, quality, and reproducibility evidence; record pass/conditional pass/fail; and capture threshold-change rationale if any.`
+2. **If signals are weak**  
+   `Use /diagnose on Issue #7 outputs to identify whether coverage, complexity, or quality is the bottleneck and propose the smallest parameter-level change.`
+3. **Then execute reproducibility hardening**  
+   `Implement Issue #9 reproducibility hardening and deterministic rerun checks, then attach status to milestone evidence.`
+4. **Promotion to next phase**  
+   `Run Issue #10 scope decision and propose ADR updates plus a follow-on issue set for reusable engine interfaces without breaking milestone-1 comparability.`
 
 For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).

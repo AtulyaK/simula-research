@@ -16,6 +16,9 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 2 | Prompt B: config scaffolding | Issue #7, PR #17 | Complete | Baseline/ablation config presets are in `main`. |
 | Wave 3 | Prompt A: complexification | Issue #4, PR #18 | Complete | Stage 3 complexification and semantic-preservation artifacts are in `main`. |
 | Wave 3 | Prompt B: metrics skeleton | Issue #6, PR #19 | Complete | Evaluation metric scaffolding and gate report skeleton are in `main`. |
+| Wave 4 | Issue #5 dual-critic adjudication | Issue #5, PR #21 | Complete | Stage 4 adjudication plus rejection/regeneration artifacts are in `main`. |
+| Wave 5 | Issue #7 execution + reporting | Issue #7, PR #23 | Complete | B0/A1/A4 artifacts, gate reports, and comparison tables are in `main`. |
+| Wave 6 | Issue #8 HITL gate review | Issue #8 | Next | Run milestone-1 review packet and record pass/conditional pass/fail decision. |
 
 ## How to use this file
 
