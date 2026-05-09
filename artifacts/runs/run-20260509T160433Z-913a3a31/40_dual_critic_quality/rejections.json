@@ -1,0 +1,56 @@
+[
+  {
+    "critic_a_decision": "reject",
+    "critic_b_decision": "accept",
+    "instantiation_id": "inst-ab14ade2f9e4",
+    "meta_prompt_id": "mp-5e9181892c2b",
+    "reason": "policy_reject_on_disagreement",
+    "regeneration_count": 0,
+    "taxonomy_node_id": "tax-9f7348228a8e"
+  },
+  {
+    "critic_a_decision": "reject",
+    "critic_b_decision": "reject",
+    "instantiation_id": "inst-927674b0d4b7",
+    "meta_prompt_id": "mp-e19631a768fb",
+    "reason": "both_reject",
+    "regeneration_count": 0,
+    "taxonomy_node_id": "tax-079d4f2d6823"
+  },
+  {
+    "critic_a_decision": "reject",
+    "critic_b_decision": "accept",
+    "instantiation_id": "inst-1f4968f031a4",
+    "meta_prompt_id": "mp-e7c54dcd56a0",
+    "reason": "policy_reject_on_disagreement",
+    "regeneration_count": 0,
+    "taxonomy_node_id": "tax-1827300b6107"
+  },
+  {
+    "critic_a_decision": "reject",
+    "critic_b_decision": "reject",
+    "instantiation_id": "inst-443d84567e65",
+    "meta_prompt_id": "mp-559a27c32dca",
+    "reason": "both_reject",
+    "regeneration_count": 0,
+    "taxonomy_node_id": "tax-6ca519f1753d"
+  },
+  {
+    "critic_a_decision": "accept",
+    "critic_b_decision": "reject",
+    "instantiation_id": "inst-f59075d1f03d",
+    "meta_prompt_id": "mp-1ec2b48a7cfb",
+    "reason": "policy_reject_on_disagreement",
+    "regeneration_count": 0,
+    "taxonomy_node_id": "tax-9d4dee183241"
+  },
+  {
+    "critic_a_decision": "accept",
+    "critic_b_decision": "reject",
+    "instantiation_id": "inst-b6092663b84f",
+    "meta_prompt_id": "mp-5b931f1097d0",
+    "reason": "policy_reject_on_disagreement",
+    "regeneration_count": 0,
+    "taxonomy_node_id": "tax-959ac88dd20b"
+  }
+]
