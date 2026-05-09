@@ -19,7 +19,7 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 4 | Issue #5 dual-critic adjudication | Issue #5, PR #21 | Complete | Stage 4 adjudication plus rejection/regeneration artifacts are in `main`. |
 | Wave 5 | Issue #7 execution + reporting | Issue #7, PR #23 | Complete | B0/A1/A4 artifacts, gate reports, and comparison tables are in `main`. |
 | Wave 6 | Issue #8 HITL gate review | Issue #8 | Complete | Milestone-1 review packet captured in `artifacts/reports/issue8/`. |
-| Wave 7 | Issue #9 reproducibility hardening | Issue #9 | Complete (local) | Manifest validation (B0/A1/A4) and baseline rerun classification attached to milestone evidence; pending merge to `main`. |
+| Wave 7 | Issue #9 reproducibility hardening | Issue #9, PR #25 | Complete | Manifest validation (B0/A1/A4), baseline rerun classification, and paper-aligned hard gates are in `main`. |
 
 ## How to use this file
 

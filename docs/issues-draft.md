@@ -15,7 +15,7 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #6 skeleton: complete on `main` (PR #19)
 - Issue #7: complete on `main` (PR #23)
 - Issue #8: complete with milestone review evidence in `artifacts/reports/issue8/`
-- Issue #9: complete with reproducibility evidence in `artifacts/reports/issue9/`
+- Issue #9: complete on `main` (PR #25); reproducibility evidence in `artifacts/reports/issue9/`
 
 ## Slice index
 
