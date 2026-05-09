@@ -6,10 +6,62 @@ import unittest
 from pathlib import Path
 
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
-from simula_research.issue9_reproducibility import run_issue9_reproducibility_check
+from simula_research.issue9_reproducibility import (
+    _classify_baseline_rerun,
+    _evaluate_comparability_gate,
+    run_issue9_reproducibility_check,
+)
 
 
 class Issue9ReproducibilityTests(unittest.TestCase):
+    def test_baseline_rerun_classification_detects_large_metric_drift(self) -> None:
+        baseline_gate_report = {
+            "coverage": {
+                "node_coverage_ratio": 0.90,
+                "depth_coverage_profile": {"0": 1.0, "1": 0.80},
+            },
+            "complexity": {
+                "complexification_precision": 0.75,
+                "calibrated_score_distribution": {"p50": 0.65},
+            },
+            "quality": {"acceptance_rate": 0.80, "critic_agreement": 0.90},
+        }
+        rerun_gate_report = {
+            "coverage": {
+                "node_coverage_ratio": 0.40,
+                "depth_coverage_profile": {"0": 1.0, "1": 0.20},
+            },
+            "complexity": {
+                "complexification_precision": 0.75,
+                "calibrated_score_distribution": {"p50": 0.65},
+            },
+            "quality": {"acceptance_rate": 0.80, "critic_agreement": 0.90},
+        }
+
+        result = _classify_baseline_rerun(baseline_gate_report, rerun_gate_report)
+
+        self.assertEqual(result["classification"], "mismatch")
+        self.assertAlmostEqual(result["max_metric_delta"], 0.60)
+
+    def test_comparability_gate_rejects_mixed_non_ablation_axis(self) -> None:
+        milestone_review = {
+            "comparability_constraints_check": {
+                "taxonomy_eligibility_policy": {
+                    "status": "mixed",
+                    "details": "A1 changes taxonomy eligibility by ablation design.",
+                },
+                "critic_adjudication_configuration": {
+                    "status": "mixed",
+                    "details": "A4 single_critic by documented ablation design.",
+                },
+            }
+        }
+
+        result = _evaluate_comparability_gate(milestone_review)
+
+        self.assertFalse(result["ok"])
+        self.assertIn("taxonomy_eligibility_policy", result["details"])
+
     def test_issue9_reproducibility_check_validates_manifests_and_updates_milestone_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_root = Path(tmp_dir)
