@@ -164,6 +164,10 @@ Prepare artifacts for metric computation and validation gate decisions.
 - `model_ids`
 - `timestamp_utc`
 
+## Machine-readable stage contracts (Stages 1–4)
+
+Runtime validation of handoff dicts is implemented in `src/simula_research/stage_contracts.py` (`validate_taxonomy_output`, `validate_local_diversification_output`, `validate_complexification_output`, `validate_adjudication_output`, and `validate_stage_handoffs`). The default `run_pipeline` path invokes `validate_stage_handoffs` after adjudication so lineage and required-field regressions fail before artifacts are written. This layer does not alter evaluation metric definitions or threshold gates.
+
 ## Configuration knobs by control axis
 
 ### Coverage

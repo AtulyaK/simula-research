@@ -118,6 +118,11 @@ def _classify_baseline_rerun(
     }
 
 
+def evaluate_comparability_gate(milestone_review: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate Issue #9 fixed-protocol comparability hard gate (public API for tests and tooling)."""
+    return _evaluate_comparability_gate(milestone_review)
+
+
 def _evaluate_comparability_gate(milestone_review: dict[str, Any]) -> dict[str, Any]:
     checks = milestone_review.get("comparability_constraints_check", {})
     if not checks:

@@ -10,6 +10,7 @@ from simula_research.complexification import apply_complexification
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.local_diversification import build_local_diversification
 from simula_research.manifest import validate_manifest
+from simula_research.stage_contracts import validate_stage_handoffs
 from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
 
 PROTOCOL_VERSION = "0.1.0"
@@ -173,6 +174,12 @@ def run_pipeline(
     adjudication = adjudicate_samples(
         samples=complexification["samples"],
         policy=dual_critic_config,
+    )
+    validate_stage_handoffs(
+        taxonomy=taxonomy,
+        local_diversification=local_diversification,
+        complexification=complexification,
+        adjudication=adjudication,
     )
     dual_critic_artifacts = _persist_dual_critic_artifacts(run_root=run_root, adjudication=adjudication)
 
