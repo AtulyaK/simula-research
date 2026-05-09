@@ -10,6 +10,7 @@
     },
     "critic_adjudication_configuration": {
       "details": "B0 and A1 use dual_critic; A4 uses single_critic by design as ablation. Adjudication policy remains reject_on_disagreement.",
+      "mixed_reason": "documented_ablation",
       "status": "mixed"
     },
     "domain_objective": {

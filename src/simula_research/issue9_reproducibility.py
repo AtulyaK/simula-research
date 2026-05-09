@@ -11,6 +11,9 @@ from simula_research.validators import validate_manifest_schema
 METRIC_SECTIONS: tuple[str, ...] = ("coverage_metrics", "complexity_metrics", "quality_metrics")
 ACCEPTABLE_DRIFT_MAX_DELTA = 0.02
 
+# Canonical reason when `status: mixed` remains protocol-comparable (e.g. A4 single-critic ablation).
+MIXED_REASON_DOCUMENTED_ABLATION = "documented_ablation"
+
 
 def _read_json(path: str | Path) -> dict[str, Any]:
     return json.loads(Path(path).read_text(encoding="utf-8"))
@@ -56,6 +59,35 @@ def _collect_manifest_validation(gate_report_paths: list[str]) -> dict[str, dict
     return validation_by_tag
 
 
+def _resolve_gate_report_path_for_preset(gate_report_paths: list[str], preset_tag: str = "B0") -> Path:
+    """Pick baseline gate_report.json by directory name, not POSIX string fragments."""
+    want = preset_tag.strip()
+    if not want:
+        raise ValueError("preset_tag must be non-empty")
+
+    for raw in gate_report_paths:
+        path = Path(raw)
+        resolved = path
+        try:
+            if path.exists():
+                resolved = path.resolve()
+        except OSError:
+            resolved = path
+        parent = resolved.parent.name
+        if parent == want and resolved.name.lower() == "gate_report.json":
+            return resolved
+
+        # Fallback: find preset segment adjacent to gate_report anywhere in the path parts.
+        parts = resolved.parts
+        for i in range(len(parts) - 1):
+            if parts[i] == want and parts[i + 1].lower() == "gate_report.json":
+                return resolved
+
+    raise ValueError(
+        f"No gate_report.json found under a {preset_tag!r} directory in gate_report_paths: {gate_report_paths!r}"
+    )
+
+
 def _max_metric_delta(baseline_gate_report: dict[str, Any], rerun_gate_report: dict[str, Any]) -> float:
     max_delta = 0.0
     for section in METRIC_SECTIONS:
@@ -97,21 +129,28 @@ def _evaluate_comparability_gate(milestone_review: dict[str, Any]) -> dict[str, 
     failing_axes: list[str] = []
     for axis, axis_payload in checks.items():
         status = str(axis_payload.get("status", "")).lower()
-        details = str(axis_payload.get("details", "")).lower()
         if status == "pass":
             continue
-        if status == "mixed" and "ablation" in details:
+        if status == "mixed":
+            mixed_reason = str(axis_payload.get("mixed_reason", "")).strip()
+            # Structured field avoids brittle substring matching on free-text `details`.
+            if mixed_reason == MIXED_REASON_DOCUMENTED_ABLATION:
+                continue
+            failing_axes.append(axis)
             continue
         failing_axes.append(axis)
 
     if failing_axes:
         return {
             "ok": False,
-            "details": f"Comparability gate failed for: {', '.join(sorted(failing_axes))}",
+            "details": (
+                f"Comparability gate failed for: {', '.join(sorted(failing_axes))}. "
+                f"When status is mixed, set mixed_reason={MIXED_REASON_DOCUMENTED_ABLATION!r} for deliberate ablations."
+            ),
         }
     return {
         "ok": True,
-        "details": "Comparability constraints pass, with mixed axes limited to documented ablation design.",
+        "details": "Comparability constraints pass; any mixed axes declare mixed_reason=documented_ablation.",
     }
 
 
@@ -145,8 +184,8 @@ def run_issue9_reproducibility_check(
     gate_report_paths = list(milestone_review["evidence_intake"]["sources"]["gate_reports"])
 
     manifest_validation = _collect_manifest_validation(gate_report_paths)
-    baseline_gate_report_path = next(path for path in gate_report_paths if "/B0/" in path)
-    baseline_gate_report = _read_json(baseline_gate_report_path)
+    baseline_gate_path = _resolve_gate_report_path_for_preset(gate_report_paths, "B0")
+    baseline_gate_report = _read_json(baseline_gate_path)
 
     rerun_output = execute_issue7_matrix(
         artifact_root=artifact_root,

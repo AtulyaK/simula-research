@@ -1,0 +1,2 @@
+# Evidence trees are large generated outputs; mark for linguist so default diffs stay readable.
+artifacts/** linguist-generated=true

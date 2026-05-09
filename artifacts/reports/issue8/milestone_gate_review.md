@@ -27,7 +27,7 @@ Comparability constraints are preserved for:
 - complexity judgment protocol (`milestone-1`, fixed Elo defaults)
 - artifact schema version (`v1`)
 
-Critic configuration differs for `A4` (`single_critic`) by design as an ablation; adjudication policy stays `reject_on_disagreement`.
+Critic configuration differs for `A4` (`single_critic`) by design as an ablation; adjudication policy stays `reject_on_disagreement`. In machine-readable evidence, this is recorded as `status: mixed` with `mixed_reason: documented_ablation` (not substring matching on prose alone).
 
 ## Reproducibility status
 
