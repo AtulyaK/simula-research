@@ -1,0 +1,35 @@
+{
+  "domain_namespace": "pilot-domain",
+  "edges": [
+    {
+      "parent_taxonomy_node_id": "tax-9f7348228a8e",
+      "taxonomy_node_id": "tax-079d4f2d6823"
+    },
+    {
+      "parent_taxonomy_node_id": "tax-9f7348228a8e",
+      "taxonomy_node_id": "tax-1827300b6107"
+    },
+    {
+      "parent_taxonomy_node_id": "tax-079d4f2d6823",
+      "taxonomy_node_id": "tax-6ca519f1753d"
+    },
+    {
+      "parent_taxonomy_node_id": "tax-079d4f2d6823",
+      "taxonomy_node_id": "tax-6123d0c8daae"
+    },
+    {
+      "parent_taxonomy_node_id": "tax-1827300b6107",
+      "taxonomy_node_id": "tax-9d4dee183241"
+    },
+    {
+      "parent_taxonomy_node_id": "tax-1827300b6107",
+      "taxonomy_node_id": "tax-959ac88dd20b"
+    }
+  ],
+  "generation_policy": {
+    "branching_factor": 2,
+    "max_depth": 2,
+    "merge_filter_strategy": "normalize+deduplicate+parent-filter"
+  },
+  "root_taxonomy_node_id": "tax-9f7348228a8e"
+}

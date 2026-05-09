@@ -18,7 +18,8 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 3 | Prompt B: metrics skeleton | Issue #6, PR #19 | Complete | Evaluation metric scaffolding and gate report skeleton are in `main`. |
 | Wave 4 | Issue #5 dual-critic adjudication | Issue #5, PR #21 | Complete | Stage 4 adjudication plus rejection/regeneration artifacts are in `main`. |
 | Wave 5 | Issue #7 execution + reporting | Issue #7, PR #23 | Complete | B0/A1/A4 artifacts, gate reports, and comparison tables are in `main`. |
-| Wave 6 | Issue #8 HITL gate review | Issue #8 | Next | Run milestone-1 review packet and record pass/conditional pass/fail decision. |
+| Wave 6 | Issue #8 HITL gate review | Issue #8 | Complete | Milestone-1 review packet captured in `artifacts/reports/issue8/`. |
+| Wave 7 | Issue #9 reproducibility hardening | Issue #9 | Complete (local) | Manifest validation (B0/A1/A4) and baseline rerun classification attached to milestone evidence; pending merge to `main`. |
 
 ## How to use this file
 
@@ -260,6 +261,7 @@ Goals:
 1) Validate manifest schema across compared runs.
 2) Execute and classify baseline rerun (exact/acceptable drift/mismatch).
 3) Attach reproducibility status to milestone evidence.
+4) Enforce reproducibility + audit trace + fixed-protocol comparability hard gates before any threshold tuning.
 ```
 
 ### HITL prompt: Issue #10

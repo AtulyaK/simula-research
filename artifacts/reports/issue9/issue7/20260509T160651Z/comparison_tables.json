@@ -1,0 +1,70 @@
+{
+  "complexity_comparison": [
+    {
+      "complexification_precision": 0.0,
+      "complexity_shift": 0.0,
+      "preset_id": "B0"
+    },
+    {
+      "complexification_precision": 0.0,
+      "complexity_shift": 0.0,
+      "preset_id": "A1"
+    },
+    {
+      "complexification_precision": 0.0,
+      "complexity_shift": 0.0,
+      "preset_id": "A4"
+    }
+  ],
+  "coverage_comparison": [
+    {
+      "coverage_balance": 0.1428571428571428,
+      "node_coverage_ratio": 0.14285714285714285,
+      "preset_id": "B0"
+    },
+    {
+      "coverage_balance": 0.1428571428571428,
+      "node_coverage_ratio": 0.14285714285714285,
+      "preset_id": "A1"
+    },
+    {
+      "coverage_balance": 0.1428571428571428,
+      "node_coverage_ratio": 0.14285714285714285,
+      "preset_id": "A4"
+    }
+  ],
+  "gate_comparison": [
+    {
+      "overall_status": "fail",
+      "preset_id": "B0"
+    },
+    {
+      "overall_status": "fail",
+      "preset_id": "A1"
+    },
+    {
+      "overall_status": "fail",
+      "preset_id": "A4"
+    }
+  ],
+  "quality_comparison": [
+    {
+      "acceptance_rate": 0.14285714285714285,
+      "critic_agreement": 0.42857142857142855,
+      "preset_id": "B0",
+      "regen_burden": 0.0
+    },
+    {
+      "acceptance_rate": 0.14285714285714285,
+      "critic_agreement": 0.42857142857142855,
+      "preset_id": "A1",
+      "regen_burden": 0.0
+    },
+    {
+      "acceptance_rate": 0.14285714285714285,
+      "critic_agreement": 0.17857142857142855,
+      "preset_id": "A4",
+      "regen_burden": 0.0
+    }
+  ]
+}

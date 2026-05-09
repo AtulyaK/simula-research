@@ -88,6 +88,12 @@ Some model providers can introduce nondeterminism. When exact matching fails:
 - document quantified impact on gate metrics
 - mark run comparability status explicitly
 
+## Milestone comparability (structured `mixed`)
+
+When a comparability axis is intentionally not uniform across runs (for example, a designed ablation such as A4 single-critic), record `status: mixed` **and** `mixed_reason: documented_ablation` on that axis in `comparability_constraints_check`.
+
+Issue #9 comparability hard gates treat prose in `details` as human-readable only; they require the structured `mixed_reason` so reviews do not rely on substring matching in free text.
+
 ## Operational checks before any report publication
 
 - Manifest complete and schema-valid.

@@ -1,0 +1,100 @@
+[
+  {
+    "complexity_source": "complexification_transform_v1",
+    "instantiation_id": "inst-ab14ade2f9e4",
+    "is_complexified": true,
+    "lineage": {
+      "instantiation_id": "inst-ab14ade2f9e4",
+      "meta_prompt_id": "mp-5e9181892c2b",
+      "taxonomy_node_id": "tax-9f7348228a8e"
+    },
+    "meta_prompt_id": "mp-5e9181892c2b",
+    "source_intent": "pilot-domain::pilot-domain root example 0. Reasoning path for pilot-domain root under tax-9f7348228a8e.",
+    "taxonomy_node_id": "tax-9f7348228a8e",
+    "text": "pilot-domain::pilot-domain root example 0. Reasoning path for pilot-domain root under tax-9f7348228a8e. Include a multi-step justification, evaluate one plausible distractor, and articulate why the final decision resolves ambiguity."
+  },
+  {
+    "complexity_source": "complexification_transform_v1",
+    "instantiation_id": "inst-927674b0d4b7",
+    "is_complexified": true,
+    "lineage": {
+      "instantiation_id": "inst-927674b0d4b7",
+      "meta_prompt_id": "mp-e19631a768fb",
+      "taxonomy_node_id": "tax-079d4f2d6823"
+    },
+    "meta_prompt_id": "mp-e19631a768fb",
+    "source_intent": "pilot-domain::pilot-domain root pilot fundamentals example 0. Reasoning path for pilot-domain root pilot fundamentals under tax-079d4f2d6823.",
+    "taxonomy_node_id": "tax-079d4f2d6823",
+    "text": "pilot-domain::pilot-domain root pilot fundamentals example 0. Reasoning path for pilot-domain root pilot fundamentals under tax-079d4f2d6823. Include a multi-step justification, evaluate one plausible distractor, and articulate why the final decision resolves ambiguity."
+  },
+  {
+    "complexity_source": "complexification_transform_v1",
+    "instantiation_id": "inst-1f4968f031a4",
+    "is_complexified": true,
+    "lineage": {
+      "instantiation_id": "inst-1f4968f031a4",
+      "meta_prompt_id": "mp-e7c54dcd56a0",
+      "taxonomy_node_id": "tax-1827300b6107"
+    },
+    "meta_prompt_id": "mp-e7c54dcd56a0",
+    "source_intent": "pilot-domain::pilot-domain root pilot advanced example 0. Reasoning path for pilot-domain root pilot advanced under tax-1827300b6107.",
+    "taxonomy_node_id": "tax-1827300b6107",
+    "text": "pilot-domain::pilot-domain root pilot advanced example 0. Reasoning path for pilot-domain root pilot advanced under tax-1827300b6107. Include a multi-step justification, evaluate one plausible distractor, and articulate why the final decision resolves ambiguity."
+  },
+  {
+    "complexity_source": "complexification_transform_v1",
+    "instantiation_id": "inst-443d84567e65",
+    "is_complexified": true,
+    "lineage": {
+      "instantiation_id": "inst-443d84567e65",
+      "meta_prompt_id": "mp-559a27c32dca",
+      "taxonomy_node_id": "tax-6ca519f1753d"
+    },
+    "meta_prompt_id": "mp-559a27c32dca",
+    "source_intent": "pilot-domain::pilot-domain root pilot fundamentals domain fundamentals example 0. Reasoning path for pilot-domain root pilot fundamentals domain fundamentals under tax-6ca519f1753d.",
+    "taxonomy_node_id": "tax-6ca519f1753d",
+    "text": "pilot-domain::pilot-domain root pilot fundamentals domain fundamentals example 0. Reasoning path for pilot-domain root pilot fundamentals domain fundamentals under tax-6ca519f1753d. Include a multi-step justification, evaluate one plausible distractor, and articulate why the final decision resolves ambiguity."
+  },
+  {
+    "complexity_source": "original",
+    "instantiation_id": "inst-b6350a55bb7a",
+    "is_complexified": false,
+    "lineage": {
+      "instantiation_id": "inst-b6350a55bb7a",
+      "meta_prompt_id": "mp-eac0f6036b1e",
+      "taxonomy_node_id": "tax-6123d0c8daae"
+    },
+    "meta_prompt_id": "mp-eac0f6036b1e",
+    "source_intent": "pilot-domain::pilot-domain root pilot fundamentals domain advanced example 0. Reasoning path for pilot-domain root pilot fundamentals domain advanced under tax-6123d0c8daae.",
+    "taxonomy_node_id": "tax-6123d0c8daae",
+    "text": "pilot-domain::pilot-domain root pilot fundamentals domain advanced example 0. Reasoning path for pilot-domain root pilot fundamentals domain advanced under tax-6123d0c8daae."
+  },
+  {
+    "complexity_source": "original",
+    "instantiation_id": "inst-f59075d1f03d",
+    "is_complexified": false,
+    "lineage": {
+      "instantiation_id": "inst-f59075d1f03d",
+      "meta_prompt_id": "mp-1ec2b48a7cfb",
+      "taxonomy_node_id": "tax-9d4dee183241"
+    },
+    "meta_prompt_id": "mp-1ec2b48a7cfb",
+    "source_intent": "pilot-domain::pilot-domain root pilot advanced domain fundamentals example 0. Reasoning path for pilot-domain root pilot advanced domain fundamentals under tax-9d4dee183241.",
+    "taxonomy_node_id": "tax-9d4dee183241",
+    "text": "pilot-domain::pilot-domain root pilot advanced domain fundamentals example 0. Reasoning path for pilot-domain root pilot advanced domain fundamentals under tax-9d4dee183241."
+  },
+  {
+    "complexity_source": "original",
+    "instantiation_id": "inst-b6092663b84f",
+    "is_complexified": false,
+    "lineage": {
+      "instantiation_id": "inst-b6092663b84f",
+      "meta_prompt_id": "mp-5b931f1097d0",
+      "taxonomy_node_id": "tax-959ac88dd20b"
+    },
+    "meta_prompt_id": "mp-5b931f1097d0",
+    "source_intent": "pilot-domain::pilot-domain root pilot advanced domain advanced example 0. Reasoning path for pilot-domain root pilot advanced domain advanced under tax-959ac88dd20b.",
+    "taxonomy_node_id": "tax-959ac88dd20b",
+    "text": "pilot-domain::pilot-domain root pilot advanced domain advanced example 0. Reasoning path for pilot-domain root pilot advanced domain advanced under tax-959ac88dd20b."
+  }
+]

@@ -14,6 +14,8 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #5: complete on `main` (PR #21)
 - Issue #6 skeleton: complete on `main` (PR #19)
 - Issue #7: complete on `main` (PR #23)
+- Issue #8: complete with milestone review evidence in `artifacts/reports/issue8/`
+- Issue #9: complete with reproducibility evidence in `artifacts/reports/issue9/`
 
 ## Slice index
 
@@ -199,9 +201,9 @@ Conduct a human review of milestone-1 evidence, confirm pass/fail status, and ex
 
 ## Acceptance criteria
 
-- [ ] Review includes coverage, complexity, and quality evidence.
-- [ ] Decision is recorded as pass, conditional pass, or fail.
-- [ ] Any threshold change is justified and linked to ADR workflow.
+- [x] Review includes coverage, complexity, and quality evidence.
+- [x] Decision is recorded as pass, conditional pass, or fail.
+- [x] Any threshold change is justified and linked to ADR workflow.
 
 ---
 
@@ -213,12 +215,14 @@ Conduct a human review of milestone-1 evidence, confirm pass/fail status, and ex
 ## What to build
 
 Enforce manifest completeness and execute deterministic rerun protocol on baseline to confirm replayability.
+Treat reproducibility, audit traces, and fixed-protocol comparability as hard gates before any threshold tuning.
 
 ## Acceptance criteria
 
-- [ ] Manifest schema validation passes for all compared runs.
-- [ ] Baseline rerun is executed and classified (exact/acceptable drift/mismatch).
-- [ ] Reproducibility status is attached to milestone evidence.
+- [x] Manifest schema validation passes for all compared runs.
+- [x] Baseline rerun is executed and classified (exact/acceptable drift/mismatch).
+- [x] Reproducibility status is attached to milestone evidence.
+- [x] Threshold tuning guard blocks changes unless reproducibility/audit/comparability hard gates pass.
 
 ---
 
@@ -242,12 +246,10 @@ Define which stage seams become reusable interfaces in next phase while preservi
 Use these prompts in order as you execute:
 
 1. **Next active issue (current)**  
-   `Run Issue #8 HITL milestone-1 gate review using Issue #7 artifacts. Include coverage, complexity, quality, and reproducibility evidence; record pass/conditional pass/fail; and capture threshold-change rationale if any.`
+   `Implement Issue #9 reproducibility hardening and deterministic rerun checks, then attach reproducibility status to milestone evidence.`
 2. **If signals are weak**  
    `Use /diagnose on Issue #7 outputs to identify whether coverage, complexity, or quality is the bottleneck and propose the smallest parameter-level change.`
-3. **Then execute reproducibility hardening**  
-   `Implement Issue #9 reproducibility hardening and deterministic rerun checks, then attach status to milestone evidence.`
-4. **Promotion to next phase**  
+3. **Promotion to next phase**  
    `Run Issue #10 scope decision and propose ADR updates plus a follow-on issue set for reusable engine interfaces without breaking milestone-1 comparability.`
 
 For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).

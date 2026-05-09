@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+# Rule: Simula paper alignment (repo-local)
+
+Applies to this repository only.
+
+## Required references (for medium/large tasks)
+Before implementation/planning decisions, consult:
+- `docs/research_paper.pdf`
+- `docs/adr/0001-research-first-scope.md`
+- `docs/adr/0002-control-axes-as-first-class.md`
+- `docs/adr/0003-evaluation-protocol-and-thresholds.md`
+- `contexts/core/CONTEXT.md`
+- `contexts/eval/CONTEXT.md`
+
+## Required workflow
+- Medium/large tasks: run `/grill-with-docs` first.
+- Implementation tasks: prefer `/tdd`.
+- Failures/regressions: run `/diagnose` before proposing fixes.
+
+## Hard constraints
+- Do NOT change thresholds/metric formulas/ablation protocol without explicit justification grounded in `docs/research_paper.pdf` and ADR impact notes.
+- Preserve baseline/ablation comparability unless explicitly approved.
+- Do reproducibility checks before interpreting weak/failed metrics.
+
+## Required response section (substantial work)
+Include `Paper Alignment Check` with:
+1) Traceability/Auditability
+2) Protocol/Comparability
+3) Control-axis impact (coverage/complexity/quality)
+4) Deviations (or `none`)
+
+## Escalation
+If alignment is ambiguous, ask for HITL clarification instead of assuming.
