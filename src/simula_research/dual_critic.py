@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import hashlib
+from collections.abc import Callable
 from typing import Any
 
-
-def _decision_from_text(text: str, critic_id: str) -> str:
-    digest = hashlib.sha1(f"{critic_id}::{text}".encode("utf-8")).hexdigest()
-    return "accept" if int(digest[:2], 16) % 2 == 0 else "reject"
+from simula_research.provider_protocols import CriticVerdict, CriticVerdictFn, hash_based_critic_verdict
 
 
 def _normalized_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
@@ -23,10 +20,15 @@ def _normalized_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def adjudicate_samples(samples: list[dict[str, Any]], policy: dict[str, Any] | None = None) -> dict[str, Any]:
+def adjudicate_samples(
+    samples: list[dict[str, Any]],
+    policy: dict[str, Any] | None = None,
+    critic_verdict: CriticVerdictFn | None = None,
+) -> dict[str, Any]:
     adjudication_policy = _normalized_policy(policy)
     disagreement_policy = adjudication_policy["disagreement_policy"]
     max_regenerations = adjudication_policy["max_regenerations_per_sample"]
+    decide: Callable[[str, str], CriticVerdict] = critic_verdict or hash_based_critic_verdict
 
     decisions: list[dict[str, Any]] = []
     rejections: list[dict[str, Any]] = []
@@ -39,8 +41,8 @@ def adjudicate_samples(samples: list[dict[str, Any]], policy: dict[str, Any] | N
         meta_prompt_id = str(sample.get("meta_prompt_id", "unknown-meta"))
         source_text = str(sample.get("text", ""))
         regen_count = 0
-        critic_a_decision = _decision_from_text(source_text, critic_id="critic_a")
-        critic_b_decision = _decision_from_text(source_text, critic_id="critic_b")
+        critic_a_decision = decide(source_text, "critic_a")
+        critic_b_decision = decide(source_text, "critic_b")
 
         if critic_a_decision == critic_b_decision:
             final_status = "accepted" if critic_a_decision == "accept" else "rejected"
@@ -58,8 +60,8 @@ def adjudicate_samples(samples: list[dict[str, Any]], policy: dict[str, Any] | N
             for regeneration_index in range(max_regenerations):
                 regen_count += 1
                 regen_text = f"{regen_text} [regen-{regeneration_index + 1}]"
-                regen_a_decision = _decision_from_text(regen_text, critic_id="critic_a")
-                regen_b_decision = _decision_from_text(regen_text, critic_id="critic_b")
+                regen_a_decision = decide(regen_text, "critic_a")
+                regen_b_decision = decide(regen_text, "critic_b")
                 regenerations.append(
                     {
                         "instantiation_id": sample_id,

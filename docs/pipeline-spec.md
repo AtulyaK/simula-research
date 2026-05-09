@@ -168,6 +168,10 @@ Prepare artifacts for metric computation and validation gate decisions.
 
 Runtime validation of handoff dicts is implemented in `src/simula_research/stage_contracts.py` (`validate_taxonomy_output`, `validate_local_diversification_output`, `validate_complexification_output`, `validate_adjudication_output`, and `validate_stage_handoffs`). The default `run_pipeline` path invokes `validate_stage_handoffs` after adjudication so lineage and required-field regressions fail before artifacts are written. This layer does not alter evaluation metric definitions or threshold gates.
 
+Filesystem persistence for Stages 1–4 uses `src/simula_research/run_artifact_store.py`: `RunArtifactStore` (protocol) and `FileSystemRunArtifactStore` (default layout under `artifacts/runs/<run_id>/`). `run_pipeline(..., artifact_store_factory=...)` accepts a factory `Callable[[Path], RunArtifactStore]` keyed to the resolved run root so tests or integrations can swap storage without changing stage logic.
+
+Dual-critic adjudication accepts an optional `critic_verdict` callable (`CriticVerdictFn` in `src/simula_research/provider_protocols.py`); the default remains the deterministic hash-based stub used for research-phase replay.
+
 ## Configuration knobs by control axis
 
 ### Coverage
