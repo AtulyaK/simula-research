@@ -16,7 +16,10 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #7: complete on `main` (PR #23)
 - Issue #8: complete with milestone review evidence in `artifacts/reports/issue8/`
 - Issue #9: complete on `main` (PR #25); reproducibility evidence in `artifacts/reports/issue9/`
-- Issue #10: closed (HITL scope decision); Milestone 3 follow-ons **#27–#30** complete on `main` (commits `df88524`, `73a0dc9`); handoff for next agent in `docs/agents/next-agent-handoff.md`
+- Issue #10: **open — HITL** (reusable-engine extraction scope); blocks formal “first cycle closed” declaration  
+- Milestone 3 follow-ons **#27–#30**: complete on `main` (commits `df88524`, `73a0dc9`)  
+- Post–Milestone 3 hardening: **#31** / **PR #32** (TypedDict stage contracts), **#33** / **PR #34** (artifact tree stage-4 dir `40_dual_critic_quality` alignment)—merged to `main`  
+- Agent briefing: **`docs/agents/next-agent-handoff.md`** (testing prerequisites, P0/P1 follow-ups, definition of done)
 
 ## Slice index
 
@@ -246,11 +249,11 @@ Define which stage seams become reusable interfaces in next phase while preservi
 
 Use these prompts in order as you execute:
 
-1. **Next active issue (current)**  
-   `Implement Issue #9 reproducibility hardening and deterministic rerun checks, then attach reproducibility status to milestone evidence.`
-2. **If signals are weak**  
-   `Use /diagnose on Issue #7 outputs to identify whether coverage, complexity, or quality is the bottleneck and propose the smallest parameter-level change.`
-3. **Promotion to next phase**  
-   `Run Issue #10 scope decision and propose ADR updates plus a follow-on issue set for reusable engine interfaces without breaking milestone-1 comparability.`
+1. **Close the first implementation cycle (HITL — current gate)**  
+   `Run Issue #10: list candidate reusable-engine interfaces (taxonomy, local diversification, complexification, adjudication, artifact store), rationale, and explicit exclusions that would break milestone-1 comparability. Produce approved follow-on GitHub issues or ADR drafts.`
+2. **If continuing engineering before LLM integration**  
+   `Read docs/agents/next-agent-handoff.md P1 items: add Protocol-based hooks for earlier stages with bit-identical defaults; document manifest validation modes (boot vs full reproducibility). Use /tdd; do not change thresholds without ADR 0003.`
+3. **If signals are weak on a new pilot rerun**  
+   `Use /diagnose on latest baseline+ablation outputs to identify whether coverage, complexity, or quality is the bottleneck and propose the smallest parameter-level change (not threshold formula edits unless ADR-approved).`
 
 For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).

@@ -21,6 +21,7 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 6 | Issue #8 HITL gate review | Issue #8 | Complete | Milestone-1 review packet captured in `artifacts/reports/issue8/`. |
 | Wave 7 | Issue #9 reproducibility hardening | Issue #9, PR #25 | Complete | Manifest validation (B0/A1/A4), baseline rerun classification, and paper-aligned hard gates are in `main`. |
 | Wave 8 | Milestone 3 extraction seams | Issues #27–#30 (closed) | Complete | Stage contracts (`stage_contracts.py`), `RunArtifactStore`, critic `critic_verdict` hook, comparability gate tests; see `docs/agents/next-agent-handoff.md`. |
+| Wave 9 | Post–M3 hardening | Issues **#31**, **#33**; PRs **#32**, **#34** (merged) | Complete | TypedDict exports on stage handoff contracts; `REQUIRED_ARTIFACT_STAGES` aligned to `40_dual_critic_quality/` + reproducibility-ops migration note. |
 
 ## How to use this file
 
@@ -279,14 +280,20 @@ Goals:
 ### Agent briefing: post–Milestone 3 (current)
 
 ```text
-Read docs/agents/next-agent-handoff.md first. It lists completed work (#27–#30), hard constraints (ADRs 0001–0003), and prioritized follow-ups (artifact path alignment, generator protocols, manifest modes).
+Read docs/agents/next-agent-handoff.md in full first. It now includes:
+- Definition of “done” for the first engineering cycle (Milestones 1–3 + Issue #10 HITL).
+- Testing prerequisites (Python 3.11+, unittest command, no API keys for deterministic path).
+- P0: Issue #10 (reusable-engine scope — human approval).
+- P1: earlier-stage Protocol hooks with bit-identical defaults; manifest boot vs full-schema documentation.
+- Completed post-M3 merges: PR #32 (#31 TypedDict), PR #34 (#33 artifact stage dir alignment).
 
 Your first actions:
 1) Confirm tests pass: PYTHONPATH=src python3 -m unittest discover -s tests -v
-2) Open a GitHub issue for the specific slice you will implement (one vertical slice per PR).
-3) Do not change thresholds/metrics/protocol without ADR 0003 impact.
+2) If doing AFK work: open ONE GitHub issue per vertical slice, then branch and PR.
+3) If the task is Issue #10: produce a decision memo + follow-on issues/ADRs; do not merge comparability-breaking refactors without explicit waiver text.
+4) Do not change thresholds/metric formulas/ablations/protocol semantics without paper justification + docs/adr/0003-evaluation-protocol-and-thresholds.md impact notes.
 
-Paste the Paper Alignment Check section into your PR description when the change is substantial.
+Paste the Paper Alignment Check into PR descriptions when the change is substantial.
 ```
 
 ## Fast fallback prompts

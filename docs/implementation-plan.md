@@ -150,6 +150,31 @@ Exit criteria:
 - stage contracts preserved under interface extraction
 - no loss in baseline comparability semantics
 
+## Current engineering status (live)
+
+**Last reviewed:** align with `main` and `docs/agents/next-agent-handoff.md`.
+
+| Milestone | Status | Notes |
+| --- | --- | --- |
+| **Milestone 1** | Met | Runnable stages + B0/A1/A4 execution + gate reporting (`artifacts/reports/issue7/`, `issue8/`). |
+| **Milestone 2** | Met | Manifest schema validation, baseline rerun classification, reproducibility evidence (`artifacts/reports/issue9/`, PR #25). |
+| **Milestone 3 (seams)** | Met on `main` | Stage contracts (#27), `RunArtifactStore` (#28), critic verdict hook (#29), comparability gate (#30). |
+| **Post–M3 hardening** | Met on `main` | TypedDict handoff types (#31 / PR #32); artifact tree validator vs `40_dual_critic_quality` (#33 / PR #34). |
+| **First-cycle closure** | **Pending HITL** | **Issue #10**: reusable-engine extraction scope, ADR/issue follow-ups, explicit comparability stance. |
+
+### Remaining work to declare the first implementation cycle “closed”
+
+1. **Human (Issue #10):** Approve candidate interfaces and follow-on issue set; optionally file ADRs for extraction boundaries.  
+2. **Engineering (optional but recommended before LLM swap):**  
+   - Inject **taxonomy / local diversification / complexification** behind protocols with **default = current deterministic behavior** (same as critic hook pattern).  
+   - **Document or unify** manifest validation modes so operators know when `manifest.validate_manifest` vs `validators.validate_manifest_schema` applies; keep Issue #9 tests passing.
+
+### Testing prerequisites (no extra procurement for unittest)
+
+- **Python 3.11+** (TypedDict `Required` / `NotRequired`; CI may use newer).  
+- **Command:** `PYTHONPATH=src python3 -m unittest discover -s tests -v` from repository root.  
+- **No API keys** for current deterministic tests. Reserve provider keys and budget for when real models replace stubs.
+
 ## Dependency map
 
 ```mermaid
