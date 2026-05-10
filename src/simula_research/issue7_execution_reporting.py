@@ -72,6 +72,8 @@ def execute_issue7_matrix(
         )
 
         stage4 = pipeline_result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
+        stage3 = pipeline_result["stage_outputs"]["stage_3_complexification"]
+        stage3_samples = _read_json(stage3["complexification_artifacts"]["samples"])
         stage4_decisions = _read_json(stage4["stage4_artifacts"]["critic_decisions"])
         accepted_samples = [entry for entry in stage4_decisions if entry["quality_status"] == "accepted"]
         coverage = compute_coverage_metrics(
@@ -79,10 +81,22 @@ def execute_issue7_matrix(
             accepted_samples=accepted_samples,
         )
 
-        run_scores = _compute_complexity_scores(stage4_decisions)
+        decisions_by_instantiation_id = {
+            str(decision["instantiation_id"]): decision for decision in stage4_decisions
+        }
+        complexity_samples = [
+            {
+                **sample,
+                "quality_status": decisions_by_instantiation_id.get(
+                    str(sample["instantiation_id"]), {}
+                ).get("quality_status", sample.get("quality_status")),
+            }
+            for sample in stage3_samples
+        ]
+        run_scores = _compute_complexity_scores(complexity_samples)
         complexification_pairs = [
             {"is_successful": bool(sample.get("is_complexified", False))}
-            for sample in stage4_decisions
+            for sample in complexity_samples
         ]
         if preset_id == "B0":
             baseline_scores = run_scores
