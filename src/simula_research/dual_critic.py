@@ -65,6 +65,7 @@ def adjudicate_samples(
         regen_count = 0
         critic_a_decision = decide(sample, "critic_a")
         critic_b_decision = decide(sample, "critic_b")
+        final_sample = sample
 
         if critic_a_decision == critic_b_decision:
             final_status = "accepted" if critic_a_decision == "accept" else "rejected"
@@ -99,6 +100,9 @@ def adjudicate_samples(
                 if regen_a_decision == "accept" and regen_b_decision == "accept":
                     final_status = "accepted"
                     final_reason = "regeneration_consensus_accept"
+                    critic_a_decision = regen_a_decision
+                    critic_b_decision = regen_b_decision
+                    final_sample = regen_sample
                     break
 
         decisions.append(
@@ -120,7 +124,7 @@ def adjudicate_samples(
         if final_status == "accepted":
             accepted_samples.append(
                 {
-                    **sample,
+                    **final_sample,
                     "critic_a_decision": critic_a_decision,
                     "critic_b_decision": critic_b_decision,
                     "quality_status": "accepted",
