@@ -71,6 +71,20 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
 
             self.assertTrue(has_failed_gate)
 
+    def test_complexity_metrics_use_complexification_stage_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="feature/issue-7-complexity-evidence",
+                commit_hash="deadbeef",
+            )
+
+            complexity = output["run_reports"]["B0"]["complexity"]
+
+            self.assertGreater(complexity["complexification_precision"], 0.0)
+            self.assertGreater(complexity["calibrated_score_distribution"]["p50"], 0.45)
+
 
 if __name__ == "__main__":
     unittest.main()

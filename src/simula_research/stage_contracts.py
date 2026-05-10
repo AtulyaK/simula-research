@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, NotRequired, Required, TypedDict
+from typing import Any, Literal, TypedDict
 
 # Stage handoff contracts aligned with docs/pipeline-spec.md (Stages 1–4).
 # Validators raise ValueError on violation so refactors fail fast at boundaries.
@@ -43,11 +43,14 @@ class Stage2Instantiation(TypedDict):
     lineage: Stage2InstantiationLineage
 
 
-class Stage2Rejection(TypedDict):
+class _Stage2RejectionOptional(TypedDict, total=False):
+    candidate_instantiation_id: str
+
+
+class Stage2Rejection(_Stage2RejectionOptional):
     reason: str
     taxonomy_node_id: str
     meta_prompt_id: str
-    candidate_instantiation_id: NotRequired[str]
 
 
 class Stage2AntiCollapseChecks(TypedDict):
@@ -62,24 +65,30 @@ class Stage2LocalDiversificationOutput(TypedDict):
     anti_collapse_checks: Stage2AntiCollapseChecks
 
 
-class Stage3Sample(TypedDict, total=False):
-    instantiation_id: Required[str]
-    taxonomy_node_id: Required[str]
-    meta_prompt_id: Required[str]
-    text: Required[str]
-    is_complexified: Required[bool]
-    complexity_source: Required[str]
-    source_intent: NotRequired[str]
+class _Stage3SampleOptional(TypedDict, total=False):
+    source_intent: str
 
 
-class Stage3SemanticPreservationFailure(TypedDict, total=False):
-    instantiation_id: Required[str]
-    taxonomy_node_id: Required[str]
-    meta_prompt_id: Required[str]
-    reason: Required[str]
-    source_intent: NotRequired[str]
-    candidate_text: NotRequired[str]
-    semantic_overlap_ratio: NotRequired[float]
+class Stage3Sample(_Stage3SampleOptional):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    text: str
+    is_complexified: bool
+    complexity_source: str
+
+
+class _Stage3SemanticPreservationFailureOptional(TypedDict, total=False):
+    source_intent: str
+    candidate_text: str
+    semantic_overlap_ratio: float
+
+
+class Stage3SemanticPreservationFailure(_Stage3SemanticPreservationFailureOptional):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    reason: str
 
 
 class Stage3ComplexificationOutput(TypedDict):
@@ -106,12 +115,12 @@ class Stage4DecisionRow(TypedDict):
     review_status: str
 
 
-class Stage4AcceptedSample(TypedDict, total=False):
-    instantiation_id: Required[str]
-    taxonomy_node_id: Required[str]
-    meta_prompt_id: Required[str]
-    critic_a_decision: Required[CriticVerdictLiteral]
-    critic_b_decision: Required[CriticVerdictLiteral]
+class Stage4AcceptedSample(TypedDict):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    critic_a_decision: CriticVerdictLiteral
+    critic_b_decision: CriticVerdictLiteral
 
 
 class Stage4RejectionLogEntry(TypedDict):
