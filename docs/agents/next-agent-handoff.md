@@ -33,6 +33,7 @@ Optional engineering that **does not** block declaring the cycle “complete” 
 - **#27** — `src/simula_research/stage_contracts.py`: runtime validation for Stage 1–4 handoffs; `run_pipeline` calls `validate_stage_handoffs` after adjudication; tests `tests/test_stage_contracts.py`; see `docs/pipeline-spec.md`.
 - **#28** — `src/simula_research/run_artifact_store.py`: `RunArtifactStore` protocol + `FileSystemRunArtifactStore`; `run_pipeline(..., artifact_store_factory=...)`.
 - **#29** — `src/simula_research/provider_protocols.py`: `CriticVerdictFn`, `hash_based_critic_verdict`; `adjudicate_samples(..., critic_verdict=...)` and `run_pipeline(..., critic_verdict=...)`.
+- **#22** (GitHub — productionize dual-critic evaluators) — `CriticSampleEvaluatorFn`, `sample_evaluator_from_text_fn`, `recorded_sample_evaluator`, and `critic_sample_evaluator=` on `adjudicate_samples` / `run_pipeline` (mutually exclusive with `critic_verdict`); Stage 4 artifact field names unchanged. Rollout: `docs/llm-validation-readiness.md` Phase 1; verify merge state on `main` in GitHub.
 - **#30** — `evaluate_comparability_gate()` in `issue9_reproducibility.py`; tests `tests/test_issue30_comparability_gate.py`.
 
 Landmark commits (historical): **`df88524`** (contracts + comparability tests), **`73a0dc9`** (artifact store + critic hook).

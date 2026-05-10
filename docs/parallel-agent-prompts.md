@@ -22,6 +22,26 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 7 | Issue #9 reproducibility hardening | Issue #9, PR #25 | Complete | Manifest validation (B0/A1/A4), baseline rerun classification, and paper-aligned hard gates are in `main`. |
 | Wave 8 | Milestone 3 extraction seams | Issues #27–#30 (closed) | Complete | Stage contracts (`stage_contracts.py`), `RunArtifactStore`, critic `critic_verdict` hook, comparability gate tests; see `docs/agents/next-agent-handoff.md`. |
 | Wave 9 | Post–M3 hardening | Issues **#31**, **#33**; PRs **#32**, **#34** (merged) | Complete | TypedDict exports on stage handoff contracts; `REQUIRED_ARTIFACT_STAGES` aligned to `40_dual_critic_quality/` + reproducibility-ops migration note. |
+| Wave 10 | LLM validation — Stage 4 seam | GitHub **#22**; follow-ons **#41** (Phase 1.3 metadata), **#42** (Phase 3 execution fidelity) | In progress / planned | Sample-aware `CriticSampleEvaluatorFn` + replay helpers; next: provider metadata (#41), preset→pipeline behavior (#42), optional reference adapter + smoke run. |
+
+### Agent prompt: Wave 10 / LLM Phase 1 (Stage 4 critics)
+
+```text
+Read docs/llm-validation-readiness.md (Phase 1) and docs/agents/next-agent-handoff.md.
+
+Goals:
+1) Land or extend GitHub #22: provider-facing `CriticSampleEvaluatorFn` usage, deterministic replay path, and tests that keep Issue #6 quality metrics + gate report wiring valid.
+2) Add the smallest optional reference adapter (e.g. env-driven HTTP call) OR document how operators inject their own adapter without committing vendor SDKs to CI.
+3) Open/follow follow-on issues for Phase 1.3 (structured provider metadata on manifest / stage outputs) and Phase 3 (preset toggles alter execution, not only Issue #7 reporting).
+
+Constraints:
+- Do not change DEFAULT_THRESHOLDS, metric formulas, or ADR 0003 protocol semantics without ADR impact notes.
+- Preserve Stage 4 JSON artifact schemas and `40_dual_critic_quality/` layout per reproducibility-ops.
+
+Deliverables:
+- Code + tests (unittest); Paper Alignment Check on the PR.
+- Short smoke-run notes template (cost, retries, timeouts) when a real provider is used.
+```
 
 ## How to use this file
 

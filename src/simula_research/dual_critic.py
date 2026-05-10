@@ -3,7 +3,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from simula_research.provider_protocols import CriticVerdict, CriticVerdictFn, hash_based_critic_verdict
+from simula_research.provider_protocols import (
+    CriticSampleEvaluatorFn,
+    CriticVerdict,
+    CriticVerdictFn,
+    hash_based_critic_verdict,
+    sample_evaluator_from_text_fn,
+)
 
 
 def _normalized_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
@@ -20,15 +26,31 @@ def _normalized_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
+def _resolve_sample_evaluator(
+    critic_verdict: CriticVerdictFn | None,
+    critic_sample_evaluator: CriticSampleEvaluatorFn | None,
+) -> Callable[[dict[str, Any], str], CriticVerdict]:
+    if critic_sample_evaluator is not None and critic_verdict is not None:
+        raise ValueError(
+            "Pass only one of critic_sample_evaluator (sample-aware, GitHub #22) "
+            "or critic_verdict (text-only, Issue #29)"
+        )
+    if critic_sample_evaluator is not None:
+        return critic_sample_evaluator
+    text_fn = critic_verdict or hash_based_critic_verdict
+    return sample_evaluator_from_text_fn(text_fn)
+
+
 def adjudicate_samples(
     samples: list[dict[str, Any]],
     policy: dict[str, Any] | None = None,
     critic_verdict: CriticVerdictFn | None = None,
+    critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
 ) -> dict[str, Any]:
     adjudication_policy = _normalized_policy(policy)
     disagreement_policy = adjudication_policy["disagreement_policy"]
     max_regenerations = adjudication_policy["max_regenerations_per_sample"]
-    decide: Callable[[str, str], CriticVerdict] = critic_verdict or hash_based_critic_verdict
+    decide = _resolve_sample_evaluator(critic_verdict, critic_sample_evaluator)
 
     decisions: list[dict[str, Any]] = []
     rejections: list[dict[str, Any]] = []
@@ -41,8 +63,8 @@ def adjudicate_samples(
         meta_prompt_id = str(sample.get("meta_prompt_id", "unknown-meta"))
         source_text = str(sample.get("text", ""))
         regen_count = 0
-        critic_a_decision = decide(source_text, "critic_a")
-        critic_b_decision = decide(source_text, "critic_b")
+        critic_a_decision = decide(sample, "critic_a")
+        critic_b_decision = decide(sample, "critic_b")
 
         if critic_a_decision == critic_b_decision:
             final_status = "accepted" if critic_a_decision == "accept" else "rejected"
@@ -60,8 +82,9 @@ def adjudicate_samples(
             for regeneration_index in range(max_regenerations):
                 regen_count += 1
                 regen_text = f"{regen_text} [regen-{regeneration_index + 1}]"
-                regen_a_decision = decide(regen_text, "critic_a")
-                regen_b_decision = decide(regen_text, "critic_b")
+                regen_sample = {**sample, "text": regen_text}
+                regen_a_decision = decide(regen_sample, "critic_a")
+                regen_b_decision = decide(regen_sample, "critic_b")
                 regenerations.append(
                     {
                         "instantiation_id": sample_id,

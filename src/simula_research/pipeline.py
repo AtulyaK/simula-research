@@ -10,7 +10,7 @@ from simula_research.complexification import apply_complexification
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.local_diversification import build_local_diversification
 from simula_research.manifest import validate_manifest
-from simula_research.provider_protocols import CriticVerdictFn
+from simula_research.provider_protocols import CriticSampleEvaluatorFn, CriticVerdictFn
 from simula_research.run_artifact_store import FileSystemRunArtifactStore, RunArtifactStore
 from simula_research.stage_contracts import validate_stage_handoffs
 from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
@@ -38,6 +38,7 @@ def run_pipeline(
     dual_critic_config: dict[str, Any] | None = None,
     artifact_store_factory: Callable[[Path], RunArtifactStore] | None = None,
     critic_verdict: CriticVerdictFn | None = None,
+    critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
 ) -> dict[str, object]:
     run_id = f"run-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
 
@@ -77,10 +78,16 @@ def run_pipeline(
         strategy=str(complex_cfg.get("strategy", "append_reasoning")),
     )
     complex_artifacts = store.persist_complexification(complexification)
+    if critic_verdict is not None and critic_sample_evaluator is not None:
+        raise ValueError(
+            "run_pipeline: pass only one of critic_sample_evaluator (GitHub #22) "
+            "or critic_verdict (Issue #29)"
+        )
     adjudication = adjudicate_samples(
         samples=complexification["samples"],
         policy=dual_critic_config,
         critic_verdict=critic_verdict,
+        critic_sample_evaluator=critic_sample_evaluator,
     )
     validate_stage_handoffs(
         taxonomy=taxonomy,
