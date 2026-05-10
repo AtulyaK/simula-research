@@ -19,3 +19,4 @@ Skills that create or manage issues should use GitHub Issues operations. Typical
 ## Notes
 
 - If the tracker changes in the future, update this file and the `## Agent skills` block in `AGENTS.md`.
+- After Milestone 3, use **`docs/agents/next-agent-handoff.md`** as the default briefing you paste for a new implementation agent (constraints, completed seams, prioritized follow-ups).

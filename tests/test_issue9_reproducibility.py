@@ -7,12 +7,68 @@ from pathlib import Path
 
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
 from simula_research.issue9_reproducibility import (
+    _classify_baseline_rerun,
     _resolve_gate_report_path_for_preset,
+    evaluate_comparability_gate,
     run_issue9_reproducibility_check,
 )
 
 
 class Issue9ReproducibilityTests(unittest.TestCase):
+    def test_baseline_rerun_classification_detects_large_metric_drift(self) -> None:
+        baseline_gate_report = {
+            "coverage": {
+                "node_coverage_ratio": 0.90,
+                "depth_coverage_profile": {"0": 1.0, "1": 0.80},
+            },
+            "complexity": {
+                "complexification_precision": 0.75,
+                "calibrated_score_distribution": {"p50": 0.65},
+            },
+            "quality": {"acceptance_rate": 0.80, "critic_agreement": 0.90},
+        }
+        rerun_gate_report = {
+            "coverage": {
+                "node_coverage_ratio": 0.30,
+                "depth_coverage_profile": {"0": 1.0, "1": 0.80},
+            },
+            "complexity": {
+                "complexification_precision": 0.75,
+                "calibrated_score_distribution": {"p50": 0.65},
+            },
+            "quality": {"acceptance_rate": 0.80, "critic_agreement": 0.90},
+        }
+
+        result = _classify_baseline_rerun(baseline_gate_report, rerun_gate_report)
+
+        self.assertEqual(result["classification"], "mismatch")
+        self.assertAlmostEqual(result["max_metric_delta"], 0.60)
+        self.assertGreater(result["metric_paths_compared"], 0)
+        self.assertEqual(result["missing_metric_paths"], [])
+
+    def test_comparability_gate_rejects_mixed_axis_without_structured_reason(self) -> None:
+        milestone_review = {
+            "comparability_constraints_check": {
+                "artifact_schema_version": {"status": "pass", "details": "ok"},
+                "domain_objective": {"status": "pass", "details": "ok"},
+                "taxonomy_eligibility_policy": {
+                    "status": "mixed",
+                    "details": "Undocumented mixed axis (missing mixed_reason).",
+                },
+                "complexity_judgment_protocol": {"status": "pass", "details": "ok"},
+                "critic_adjudication_configuration": {
+                    "status": "mixed",
+                    "mixed_reason": "documented_ablation",
+                    "details": "A4 single_critic by documented ablation design",
+                },
+            }
+        }
+
+        result = evaluate_comparability_gate(milestone_review)
+
+        self.assertFalse(result["ok"])
+        self.assertIn("taxonomy_eligibility_policy", result["details"])
+
     def test_issue9_reproducibility_check_validates_manifests_and_updates_milestone_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             temp_root = Path(tmp_dir)
@@ -119,7 +175,7 @@ class Issue9ReproducibilityTests(unittest.TestCase):
             root = Path(tmp_dir)
             b0_gate = root / "artifacts" / "reports" / "issue7" / "ts" / "B0" / "gate_report.json"
             b0_gate.parent.mkdir(parents=True, exist_ok=True)
-            b0_gate.write_text('{"coverage_metrics":{}}', encoding="utf-8")
+            b0_gate.write_text('{"coverage":{}}', encoding="utf-8")
             posix_style = str(b0_gate)
 
             escaped = posix_style.replace("/", "\\")

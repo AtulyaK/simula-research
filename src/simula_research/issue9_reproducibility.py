@@ -8,7 +8,8 @@ from simula_research.issue7_execution_reporting import execute_issue7_matrix
 from simula_research.run_config_presets import get_config_preset
 from simula_research.validators import validate_manifest_schema
 
-METRIC_SECTIONS: tuple[str, ...] = ("coverage_metrics", "complexity_metrics", "quality_metrics")
+# Must match keys emitted by evaluation_metrics.build_gate_report (issue7 gate_report.json).
+METRIC_SECTIONS: tuple[str, ...] = ("coverage", "complexity", "quality")
 ACCEPTABLE_DRIFT_MAX_DELTA = 0.02
 
 # Canonical reason when `status: mixed` remains protocol-comparable (e.g. A4 single-critic ablation).
@@ -88,24 +89,56 @@ def _resolve_gate_report_path_for_preset(gate_report_paths: list[str], preset_ta
     )
 
 
-def _max_metric_delta(baseline_gate_report: dict[str, Any], rerun_gate_report: dict[str, Any]) -> float:
-    max_delta = 0.0
+def _numeric_metric_paths(payload: Any, prefix: tuple[str, ...] = ()) -> dict[str, float]:
+    if isinstance(payload, dict):
+        metrics: dict[str, float] = {}
+        for key, value in payload.items():
+            metrics.update(_numeric_metric_paths(value, (*prefix, str(key))))
+        return metrics
+    if isinstance(payload, (int, float)) and not isinstance(payload, bool):
+        return {".".join(prefix): float(payload)}
+    return {}
+
+
+def _collect_numeric_metrics(gate_report: dict[str, Any]) -> dict[str, float]:
+    metrics: dict[str, float] = {}
     for section in METRIC_SECTIONS:
-        original_metrics = baseline_gate_report.get(section, {})
-        rerun_metrics = rerun_gate_report.get(section, {})
-        for key, original_value in original_metrics.items():
-            rerun_value = rerun_metrics.get(key)
-            if isinstance(original_value, (int, float)) and isinstance(rerun_value, (int, float)):
-                max_delta = max(max_delta, abs(float(original_value) - float(rerun_value)))
-    return max_delta
+        section_metrics = _numeric_metric_paths(gate_report.get(section, {}))
+        metrics.update({f"{section}.{path}": value for path, value in section_metrics.items()})
+    return metrics
+
+
+def _metric_delta_summary(
+    baseline_gate_report: dict[str, Any],
+    rerun_gate_report: dict[str, Any],
+) -> dict[str, Any]:
+    baseline_metrics = _collect_numeric_metrics(baseline_gate_report)
+    rerun_metrics = _collect_numeric_metrics(rerun_gate_report)
+    comparable_paths = sorted(set(baseline_metrics).intersection(rerun_metrics))
+    missing_metric_paths = sorted(set(baseline_metrics).symmetric_difference(rerun_metrics))
+
+    max_delta = 0.0
+    for path in comparable_paths:
+        max_delta = max(max_delta, abs(baseline_metrics[path] - rerun_metrics[path]))
+
+    return {
+        "max_metric_delta": max_delta,
+        "metric_paths_compared": len(comparable_paths),
+        "missing_metric_paths": missing_metric_paths,
+    }
 
 
 def _classify_baseline_rerun(
     baseline_gate_report: dict[str, Any],
     rerun_gate_report: dict[str, Any],
 ) -> dict[str, Any]:
-    max_delta = _max_metric_delta(baseline_gate_report, rerun_gate_report)
-    if max_delta == 0.0:
+    delta_summary = _metric_delta_summary(baseline_gate_report, rerun_gate_report)
+    max_delta = float(delta_summary["max_metric_delta"])
+    missing_metric_paths = list(delta_summary["missing_metric_paths"])
+    metric_paths_compared = int(delta_summary["metric_paths_compared"])
+    if missing_metric_paths or metric_paths_compared == 0:
+        classification = "mismatch"
+    elif max_delta == 0.0:
         classification = "exact"
     elif max_delta <= ACCEPTABLE_DRIFT_MAX_DELTA:
         classification = "acceptable_drift"
@@ -115,7 +148,14 @@ def _classify_baseline_rerun(
         "classification": classification,
         "max_metric_delta": max_delta,
         "drift_threshold": ACCEPTABLE_DRIFT_MAX_DELTA,
+        "metric_paths_compared": metric_paths_compared,
+        "missing_metric_paths": missing_metric_paths,
     }
+
+
+def evaluate_comparability_gate(milestone_review: dict[str, Any]) -> dict[str, Any]:
+    """Evaluate Issue #9 fixed-protocol comparability hard gate (public API for tests and tooling)."""
+    return _evaluate_comparability_gate(milestone_review)
 
 
 def _evaluate_comparability_gate(milestone_review: dict[str, Any]) -> dict[str, Any]:
