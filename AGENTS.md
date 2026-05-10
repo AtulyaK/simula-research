@@ -4,6 +4,10 @@
 
 Issues are tracked in GitHub Issues for this repository. See `docs/agents/issue-tracker.md`.
 
+### New implementation agent briefing
+
+Paste **`docs/agents/next-agent-handoff.md`** at the start of a session so the agent inherits Milestone 3 state, constraints, and prioritized follow-ups.
+
 ### Triage labels
 
 Triage uses canonical labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.

@@ -16,6 +16,7 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #7: complete on `main` (PR #23)
 - Issue #8: complete with milestone review evidence in `artifacts/reports/issue8/`
 - Issue #9: complete on `main` (PR #25); reproducibility evidence in `artifacts/reports/issue9/`
+- Issue #10: closed (HITL scope decision); Milestone 3 follow-ons **#27–#30** complete on `main` (commits `df88524`, `73a0dc9`); handoff for next agent in `docs/agents/next-agent-handoff.md`
 
 ## Slice index
 

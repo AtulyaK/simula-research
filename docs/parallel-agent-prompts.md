@@ -20,6 +20,7 @@ Use this table as the source of truth for what is actually integrated in `main`.
 | Wave 5 | Issue #7 execution + reporting | Issue #7, PR #23 | Complete | B0/A1/A4 artifacts, gate reports, and comparison tables are in `main`. |
 | Wave 6 | Issue #8 HITL gate review | Issue #8 | Complete | Milestone-1 review packet captured in `artifacts/reports/issue8/`. |
 | Wave 7 | Issue #9 reproducibility hardening | Issue #9, PR #25 | Complete | Manifest validation (B0/A1/A4), baseline rerun classification, and paper-aligned hard gates are in `main`. |
+| Wave 8 | Milestone 3 extraction seams | Issues #27–#30 (closed) | Complete | Stage contracts (`stage_contracts.py`), `RunArtifactStore`, critic `critic_verdict` hook, comparability gate tests; see `docs/agents/next-agent-handoff.md`. |
 
 ## How to use this file
 
@@ -273,6 +274,19 @@ Goals:
 1) Identify candidate stage interfaces for reuse.
 2) Exclude changes that would break milestone-1 comparability.
 3) Approve follow-on issue set and ADR updates for phase 2.
+```
+
+### Agent briefing: post–Milestone 3 (current)
+
+```text
+Read docs/agents/next-agent-handoff.md first. It lists completed work (#27–#30), hard constraints (ADRs 0001–0003), and prioritized follow-ups (artifact path alignment, generator protocols, manifest modes).
+
+Your first actions:
+1) Confirm tests pass: PYTHONPATH=src python3 -m unittest discover -s tests -v
+2) Open a GitHub issue for the specific slice you will implement (one vertical slice per PR).
+3) Do not change thresholds/metrics/protocol without ADR 0003 impact.
+
+Paste the Paper Alignment Check section into your PR description when the change is substantial.
 ```
 
 ## Fast fallback prompts
