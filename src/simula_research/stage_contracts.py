@@ -1,9 +1,145 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal, NotRequired, Required, TypedDict
 
 # Stage handoff contracts aligned with docs/pipeline-spec.md (Stages 1–4).
 # Validators raise ValueError on violation so refactors fail fast at boundaries.
+#
+# TypedDict shapes below are for static checking and API documentation; validators
+# intentionally accept dict[str, Any] so JSON-like payloads stay compatible.
+
+
+class Stage1TaxonomyNode(TypedDict):
+    taxonomy_node_id: str
+    parent_taxonomy_node_id: str | None
+    label: str
+    depth: int
+
+
+class Stage1TaxonomyEdge(TypedDict):
+    parent_taxonomy_node_id: str
+    taxonomy_node_id: str
+
+
+class Stage1TaxonomyOutput(TypedDict):
+    domain_namespace: str
+    root_taxonomy_node_id: str
+    nodes: list[Stage1TaxonomyNode]
+    edges: list[Stage1TaxonomyEdge]
+    generation_policy: dict[str, Any]
+
+
+class Stage2InstantiationLineage(TypedDict):
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    instantiation_id: str
+
+
+class Stage2Instantiation(TypedDict):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    text: str
+    lineage: Stage2InstantiationLineage
+
+
+class Stage2Rejection(TypedDict):
+    reason: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    candidate_instantiation_id: NotRequired[str]
+
+
+class Stage2AntiCollapseChecks(TypedDict):
+    executed: bool
+    check_name: str
+    threshold: float
+
+
+class Stage2LocalDiversificationOutput(TypedDict):
+    instantiations: list[Stage2Instantiation]
+    rejections: list[Stage2Rejection]
+    anti_collapse_checks: Stage2AntiCollapseChecks
+
+
+class Stage3Sample(TypedDict, total=False):
+    instantiation_id: Required[str]
+    taxonomy_node_id: Required[str]
+    meta_prompt_id: Required[str]
+    text: Required[str]
+    is_complexified: Required[bool]
+    complexity_source: Required[str]
+    source_intent: NotRequired[str]
+
+
+class Stage3SemanticPreservationFailure(TypedDict, total=False):
+    instantiation_id: Required[str]
+    taxonomy_node_id: Required[str]
+    meta_prompt_id: Required[str]
+    reason: Required[str]
+    source_intent: NotRequired[str]
+    candidate_text: NotRequired[str]
+    semantic_overlap_ratio: NotRequired[float]
+
+
+class Stage3ComplexificationOutput(TypedDict):
+    samples: list[Stage3Sample]
+    complexification_policy: dict[str, Any]
+    semantic_preservation_failures: list[Stage3SemanticPreservationFailure]
+
+
+CriticVerdictLiteral = Literal["accept", "reject"]
+AdjudicationPolicyLiteral = Literal["reject", "accept", "regenerate"]
+
+
+class Stage4DecisionRow(TypedDict):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    critic_a_decision: CriticVerdictLiteral
+    critic_b_decision: CriticVerdictLiteral
+    disagreement: bool
+    adjudication_policy: AdjudicationPolicyLiteral
+    quality_status: str
+    final_reason: str
+    regeneration_count: int
+    review_status: str
+
+
+class Stage4AcceptedSample(TypedDict, total=False):
+    instantiation_id: Required[str]
+    taxonomy_node_id: Required[str]
+    meta_prompt_id: Required[str]
+    critic_a_decision: Required[CriticVerdictLiteral]
+    critic_b_decision: Required[CriticVerdictLiteral]
+
+
+class Stage4RejectionLogEntry(TypedDict):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    reason: str
+    critic_a_decision: CriticVerdictLiteral
+    critic_b_decision: CriticVerdictLiteral
+    regeneration_count: int
+
+
+class Stage4RegenerationLogEntry(TypedDict):
+    instantiation_id: str
+    taxonomy_node_id: str
+    meta_prompt_id: str
+    regeneration_index: int
+    regenerated_text: str
+    critic_a_decision: CriticVerdictLiteral
+    critic_b_decision: CriticVerdictLiteral
+
+
+class Stage4AdjudicationOutput(TypedDict):
+    decisions: list[Stage4DecisionRow]
+    accepted_samples: list[Stage4AcceptedSample]
+    rejection_log: list[Stage4RejectionLogEntry]
+    regeneration_log: list[Stage4RegenerationLogEntry]
+    policy: dict[str, Any]
 
 
 def _require_keys(obj: dict[str, Any], keys: tuple[str, ...], *, context: str) -> None:

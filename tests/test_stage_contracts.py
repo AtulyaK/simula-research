@@ -3,12 +3,17 @@ from __future__ import annotations
 import copy
 import tempfile
 import unittest
+from typing import cast
 
 from simula_research.complexification import apply_complexification
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.local_diversification import build_local_diversification
 from simula_research.pipeline import run_pipeline
 from simula_research.stage_contracts import (
+    Stage1TaxonomyOutput,
+    Stage2LocalDiversificationOutput,
+    Stage3ComplexificationOutput,
+    Stage4AdjudicationOutput,
     validate_adjudication_output,
     validate_complexification_output,
     validate_local_diversification_output,
@@ -30,6 +35,17 @@ class StageContractsTests(unittest.TestCase):
             complexification=complexification,
             adjudication=adjudication,
         )
+
+    def test_exported_typed_dict_shapes_pass_validators_on_default_pipeline(self) -> None:
+        """Contract TypedDicts stay aligned with deterministic pipeline outputs (issue #31)."""
+        taxonomy = build_taxonomy("pilot-domain", TaxonomyConfig(max_depth=1, branching_factor=2))
+        local = build_local_diversification(taxonomy=taxonomy)
+        complexification = apply_complexification(samples=local["instantiations"])
+        adjudication = adjudicate_samples(samples=complexification["samples"])
+        validate_taxonomy_output(cast(Stage1TaxonomyOutput, taxonomy))
+        validate_local_diversification_output(cast(Stage2LocalDiversificationOutput, local))
+        validate_complexification_output(cast(Stage3ComplexificationOutput, complexification))
+        validate_adjudication_output(cast(Stage4AdjudicationOutput, adjudication))
 
     def test_validate_taxonomy_output_rejects_duplicate_node_ids(self) -> None:
         taxonomy = build_taxonomy("x", TaxonomyConfig(max_depth=1, branching_factor=2))
