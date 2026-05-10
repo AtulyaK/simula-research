@@ -4,6 +4,8 @@
 
 This playbook defines how to run and evaluate the initial Simula-style validation program. It standardizes hypotheses, ablations, acceptance checks, and iteration decisions.
 
+For provider-backed execution readiness (accounts, keys, budget controls, rollout phases, and real-data run gates), see `docs/llm-validation-readiness.md`.
+
 ## Validation hypotheses
 
 ### H1: Global diversification improves coverage
