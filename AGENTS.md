@@ -6,7 +6,7 @@ Issues are tracked in GitHub Issues for this repository. See `docs/agents/issue-
 
 ### New implementation agent briefing
 
-Paste **`docs/agents/next-agent-handoff.md`** at the start of a session so the agent inherits Milestone 3 state, constraints, and prioritized follow-ups.
+Paste **`docs/agents/next-agent-handoff.md`** at the start of a session so the agent inherits Milestone 3+ state, **definition of done**, **testing prerequisites** (Python/unittest/keys), constraints, and prioritized follow-ups (Issue **#10** HITL first).
 
 ### Triage labels
 
