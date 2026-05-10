@@ -13,6 +13,11 @@ from simula_research.validators import (
 
 
 class ValidatorTests(unittest.TestCase):
+    def test_required_artifact_stages_match_default_run_store_stage4_dir(self) -> None:
+        """Stage 4 folder must match FileSystemRunArtifactStore (issue #33 / handoff drift fix)."""
+        self.assertIn("40_dual_critic_quality", REQUIRED_ARTIFACT_STAGES)
+        self.assertNotIn("40_dual_critic", REQUIRED_ARTIFACT_STAGES)
+
     def _valid_manifest(self) -> dict[str, object]:
         return {
             "run_id": "run-20260430T190000Z-abcd1234",

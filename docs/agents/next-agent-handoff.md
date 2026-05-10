@@ -20,10 +20,11 @@ Relevant commits: **`df88524`** (contracts + comparability tests), **`73a0dc9`**
 
 ## Known follow-up (pick up in order)
 
-1. **Artifact directory name drift** — `validators.REQUIRED_ARTIFACT_STAGES` lists `40_dual_critic` but the pipeline persists to **`40_dual_critic_quality`**. Fixing this touches **paths** and possibly **Issue #7–#9** evidence comparability. Do it only with: explicit decision, optional `artifact_schema_version` bump, migration note, and rerun of a **small** reproducibility smoke (manifest + comparability structure), not a silent rename.
-2. **Generator / earlier-stage protocols** — **#29** only wired **critic verdict** injection. Taxonomy, local diversification, and complexification still use deterministic in-repo logic. When adding real LLM calls, inject behind **Protocols** with defaults that preserve **bit-identical** behavior on the default path.
-3. **Stage 0 / manifest completeness** — `manifest.validate_manifest` is minimal; `validators.validate_manifest_schema` is the full reproducibility set. If you unify them, document the two modes and keep Issue **#9** gates passing.
-4. **Optional typing** — TypedDict (or similar) **on top of** `stage_contracts` validators is a small, low-risk enhancement if you want editor-time checks.
+1. **Generator / earlier-stage protocols** — **#29** only wired **critic verdict** injection. Taxonomy, local diversification, and complexification still use deterministic in-repo logic. When adding real LLM calls, inject behind **Protocols** with defaults that preserve **bit-identical** behavior on the default path.
+2. **Stage 0 / manifest completeness** — `manifest.validate_manifest` is minimal; `validators.validate_manifest_schema` is the full reproducibility set. If you unify them, document the two modes and keep Issue **#9** gates passing.
+3. **Optional typing** — TypedDict (or similar) **on top of** `stage_contracts` validators is a small, low-risk enhancement if you want editor-time checks (see **#31** / merged PR when present).
+
+**Done:** Artifact directory name drift — validators + `docs/reproducibility-ops.md` aligned to persisted **`40_dual_critic_quality/`** (**#33**); no `artifact_schema_version` bump (default on-disk layout unchanged).
 
 ## Commands
 

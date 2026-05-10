@@ -41,10 +41,14 @@ Recommended subdirectories:
 - `10_taxonomy/` - taxonomy graph and node metadata
 - `20_local_diversification/` - meta-prompts and instantiations
 - `30_complexification/` - transformed samples and tags
-- `40_dual_critic/` - critic decisions, disagreements, rejection logs
+- `40_dual_critic_quality/` - critic decisions, disagreements, rejection logs (matches `FileSystemRunArtifactStore` / default pipeline)
 - `50_curated_dataset/` - accepted dataset outputs
 - `60_evaluation/` - metrics and run report
 - `70_diagnostics/` - failure analyses and debug summaries
+
+### Stage 4 directory name (validator alignment)
+
+`validate_artifact_tree` requires the same directory names the default pipeline persists via `FileSystemRunArtifactStore`. Stage 4 uses **`40_dual_critic_quality/`** (not `40_dual_critic/`). Older docs or out-of-tree layouts that used `40_dual_critic/` should rename to `40_dual_critic_quality/` or add a symlink so reproducibility checks match the default store.
 
 ## Run manifest schema (minimum)
 

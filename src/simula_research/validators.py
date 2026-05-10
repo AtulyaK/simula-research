@@ -25,7 +25,7 @@ REQUIRED_ARTIFACT_STAGES: tuple[str, ...] = (
     "10_taxonomy",
     "20_local_diversification",
     "30_complexification",
-    "40_dual_critic",
+    "40_dual_critic_quality",
     "50_curated_dataset",
     "60_evaluation",
     "70_diagnostics",
