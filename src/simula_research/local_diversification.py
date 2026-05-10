@@ -30,7 +30,17 @@ def build_local_diversification(
     taxonomy: dict[str, Any],
     per_node_instantiation_count: int = 3,
     overlap_rejection_threshold: float = 0.8,
+    *,
+    options: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    option_values = options or {}
+    per_node_instantiation_count = int(
+        option_values.get("per_node_instantiation_count", per_node_instantiation_count)
+    )
+    overlap_rejection_threshold = float(
+        option_values.get("overlap_rejection_threshold", overlap_rejection_threshold)
+    )
+
     accepted: list[dict[str, Any]] = []
     rejections: list[dict[str, Any]] = []
 

@@ -21,6 +21,11 @@ class Issue1TracerBulletTest(unittest.TestCase):
             manifest["model_ids"],
             {"generator": "gpt-4.1-mini", "critic_a": "gpt-4.1", "critic_b": "gpt-4.1"},
         )
+        self.assertIn("pipeline_config", manifest)
+        self.assertEqual(
+            manifest["pipeline_config"]["global_diversification_enabled"],
+            True,
+        )
 
         stage_outputs = result["stage_outputs"]
         self.assertEqual(

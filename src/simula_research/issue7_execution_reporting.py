@@ -69,6 +69,7 @@ def execute_issue7_matrix(
             model_ids=dict(request["model_ids"]),
             domain_objective=str(request["domain_objective"]),
             artifact_root=artifact_root,
+            pipeline_config=dict(request["pipeline_config"]),
         )
 
         stage4 = pipeline_result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
@@ -108,12 +109,6 @@ def execute_issue7_matrix(
         )
 
         quality = compute_quality_metrics(issue5_outputs=stage4)
-        if preset_id == "A1":
-            # A1 models degraded taxonomy shaping by reducing successful complexification evidence.
-            complexity["complexification_precision"] = max(0.0, complexity["complexification_precision"] - 0.35)
-        if preset_id == "A4":
-            # A4 simulates weaker quality filtering under single-critic mode.
-            quality["critic_agreement"] = max(0.0, float(quality["critic_agreement"] or 0.0) - 0.25)
 
         protocol = {
             "domain_objective": request["domain_objective"],
