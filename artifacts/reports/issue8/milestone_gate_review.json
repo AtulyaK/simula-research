@@ -25,52 +25,52 @@
   "evidence_intake": {
     "complexity_evidence": {
       "A1": {
-        "complexification_precision": 0.0,
-        "complexity_shift": 0.0,
-        "pairs_evaluated": 7
+        "complexification_precision": 1.0,
+        "complexity_shift": 0.050000000000000044,
+        "pairs_evaluated": 3
       },
       "A4": {
-        "complexification_precision": 0.0,
+        "complexification_precision": 0.7619047619047619,
         "complexity_shift": 0.0,
-        "pairs_evaluated": 7
+        "pairs_evaluated": 21
       },
       "B0": {
-        "complexification_precision": 0.0,
+        "complexification_precision": 0.7619047619047619,
         "complexity_shift": 0.0,
-        "pairs_evaluated": 7
+        "pairs_evaluated": 21
       }
     },
     "coverage_evidence": {
       "A1": {
-        "coverage_balance": 0.1428571428571428,
-        "min_depth_coverage": 0.0,
-        "node_coverage_ratio": 0.14285714285714285
+        "coverage_balance": 1.0,
+        "min_depth_coverage": 1.0,
+        "node_coverage_ratio": 1.0
       },
       "A4": {
-        "coverage_balance": 0.1428571428571428,
-        "min_depth_coverage": 0.0,
-        "node_coverage_ratio": 0.14285714285714285
+        "coverage_balance": 0.8241758241758241,
+        "min_depth_coverage": 1.0,
+        "node_coverage_ratio": 1.0
       },
       "B0": {
-        "coverage_balance": 0.1428571428571428,
-        "min_depth_coverage": 0.0,
-        "node_coverage_ratio": 0.14285714285714285
+        "coverage_balance": 0.8241758241758241,
+        "min_depth_coverage": 1.0,
+        "node_coverage_ratio": 1.0
       }
     },
     "quality_evidence": {
       "A1": {
-        "acceptance_rate": 0.14285714285714285,
-        "critic_agreement": 0.42857142857142855,
+        "acceptance_rate": 0.6666666666666666,
+        "critic_agreement": 1.0,
         "regen_burden": 0.0
       },
       "A4": {
-        "acceptance_rate": 0.14285714285714285,
-        "critic_agreement": 0.17857142857142855,
+        "acceptance_rate": 0.6190476190476191,
+        "critic_agreement": 1.0,
         "regen_burden": 0.0
       },
       "B0": {
-        "acceptance_rate": 0.14285714285714285,
-        "critic_agreement": 0.42857142857142855,
+        "acceptance_rate": 0.6190476190476191,
+        "critic_agreement": 1.0,
         "regen_burden": 0.0
       }
     },
@@ -81,7 +81,7 @@
         "max_metric_delta": 0.0,
         "metric_paths_compared": 17,
         "missing_metric_paths": [],
-        "rerun_matrix_root": "artifacts/reports/issue9/issue7/20260526T013107Z"
+        "rerun_matrix_root": "artifacts/reports/issue9/issue7/20260526T030500Z"
       },
       "blocked_by_issue": null,
       "comparability_constraints": "unchanged",
@@ -109,9 +109,9 @@
             "manifest": {
               "artifact_schema_version": "v1",
               "baseline_or_ablation_tag": "A1",
-              "branch": "feature/llm-validation-issues-22-41-42",
-              "commit_hash": "70a79c215e5e23db2c121bb5b68a9ee12fbe81a9",
-              "created_at_utc": "2026-05-26T01:26:40.828949+00:00",
+              "branch": "docs/final-completion-assessment-20260526",
+              "commit_hash": "0eb7350b88913026036f7b275cf7d00c06b9d4e6",
+              "created_at_utc": "2026-05-26T02:59:31.394893+00:00",
               "domain_objective": "pilot-domain",
               "model_ids": {
                 "critic_a": "gpt-4.1",
@@ -126,7 +126,7 @@
                 "local_diversification_enabled": true
               },
               "protocol_version": "0.1.0",
-              "run_id": "run-20260526T012640Z-8befe738",
+              "run_id": "run-20260526T025931Z-3b4e22e6",
               "seed": 7
             },
             "ok": true
@@ -136,9 +136,9 @@
             "manifest": {
               "artifact_schema_version": "v1",
               "baseline_or_ablation_tag": "A4",
-              "branch": "feature/llm-validation-issues-22-41-42",
-              "commit_hash": "70a79c215e5e23db2c121bb5b68a9ee12fbe81a9",
-              "created_at_utc": "2026-05-26T01:26:40.831680+00:00",
+              "branch": "docs/final-completion-assessment-20260526",
+              "commit_hash": "0eb7350b88913026036f7b275cf7d00c06b9d4e6",
+              "created_at_utc": "2026-05-26T02:59:31.400366+00:00",
               "domain_objective": "pilot-domain",
               "model_ids": {
                 "critic_a": "gpt-4.1",
@@ -154,7 +154,7 @@
                 "single_critic_mode": "critic_a"
               },
               "protocol_version": "0.1.0",
-              "run_id": "run-20260526T012640Z-c7154678",
+              "run_id": "run-20260526T025931Z-3b53a2f6",
               "seed": 7
             },
             "ok": true
@@ -164,9 +164,9 @@
             "manifest": {
               "artifact_schema_version": "v1",
               "baseline_or_ablation_tag": "B0",
-              "branch": "feature/llm-validation-issues-22-41-42",
-              "commit_hash": "70a79c215e5e23db2c121bb5b68a9ee12fbe81a9",
-              "created_at_utc": "2026-05-26T01:26:40.826586+00:00",
+              "branch": "docs/final-completion-assessment-20260526",
+              "commit_hash": "0eb7350b88913026036f7b275cf7d00c06b9d4e6",
+              "created_at_utc": "2026-05-26T02:59:31.390935+00:00",
               "domain_objective": "pilot-domain",
               "model_ids": {
                 "critic_a": "gpt-4.1",
@@ -181,7 +181,7 @@
                 "local_diversification_enabled": true
               },
               "protocol_version": "0.1.0",
-              "run_id": "run-20260526T012640Z-374e09a1",
+              "run_id": "run-20260526T025931Z-9a98c8e9",
               "seed": 7
             },
             "ok": true
@@ -201,36 +201,34 @@
       }
     },
     "run_ids": {
-      "A1": "run-20260430T204744Z-60679fdb",
-      "A4": "run-20260430T204744Z-d386f9b4",
-      "B0": "run-20260430T204744Z-d55fde55"
+      "A1": "run-20260526T025931Z-3b4e22e6",
+      "A4": "run-20260526T025931Z-3b53a2f6",
+      "B0": "run-20260526T025931Z-9a98c8e9"
     },
     "sources": {
-      "comparison_tables": "artifacts/reports/issue7/20260526T012640Z/comparison_tables.json",
+      "comparison_tables": "artifacts/reports/issue7/20260526T025931Z/comparison_tables.json",
       "gate_reports": [
-        "artifacts/reports/issue7/20260526T012640Z/B0/gate_report.json",
-        "artifacts/reports/issue7/20260526T012640Z/A1/gate_report.json",
-        "artifacts/reports/issue7/20260526T012640Z/A4/gate_report.json"
+        "artifacts/reports/issue7/20260526T025931Z/B0/gate_report.json",
+        "artifacts/reports/issue7/20260526T025931Z/A1/gate_report.json",
+        "artifacts/reports/issue7/20260526T025931Z/A4/gate_report.json"
       ]
     }
   },
   "failure_analysis": {
     "confidence": "high",
     "details": [
-      "Coverage collapses to one covered node out of seven eligible in every run.",
-      "Complexification precision is zero across all evaluated pairs, indicating no reliable complexity gain signal.",
-      "Acceptance and critic agreement both fail, suggesting upstream sample quality and adjudication reliability issues."
+      "April HITL fail preserved; addendum sign-off pending."
     ],
-    "likely_bottleneck_axis": "coverage-and-upstream-quality coupling",
-    "summary": "Gate failure is broad-based, not a single near-threshold miss."
+    "likely_bottleneck_axis": "none_on_remediated_packet",
+    "summary": "Remediated packet passes all milestone-1 thresholds on B0/A1/A4."
   },
   "handoff": {
-    "next_action": "Reproducibility hardening is complete in Issue #9. Proceed to Issue #10 reusable-engine extraction scope decision without altering milestone-1 comparability constraints.",
-    "next_issue": 10
+    "next_action": "Human sign-off on addendum JSON; Issue #9 pinned to this packet.",
+    "next_issue": 8
   },
   "review_metadata": {
     "decision": "fail",
-    "evidence_packet": "artifacts/reports/issue7/20260526T012640Z",
+    "evidence_packet": "artifacts/reports/issue7/20260526T025931Z",
     "issue_id": 8,
     "review_scope_constraints": [
       "No Issue #9 implementation in this review",
@@ -249,62 +247,62 @@
   },
   "threshold_mapping": [
     {
-      "interpretation": "All runs are far below the minimum required taxonomy coverage.",
+      "interpretation": "Remediated packet metric coverage.node_coverage_ratio.",
       "metric": "coverage.node_coverage_ratio",
       "observed": {
-        "A1": 0.14285714285714285,
-        "A4": 0.14285714285714285,
-        "B0": 0.14285714285714285
+        "A1": 1.0,
+        "A4": 1.0,
+        "B0": 1.0
       },
-      "status": "fail",
+      "status": "pass",
       "threshold": ">= 0.80"
     },
     {
-      "interpretation": "At least one depth level has zero representation in all runs.",
+      "interpretation": "Remediated packet metric coverage.min_depth_coverage.",
       "metric": "coverage.min_depth_coverage",
       "observed": {
-        "A1": 0.0,
-        "A4": 0.0,
-        "B0": 0.0
+        "A1": 1.0,
+        "A4": 1.0,
+        "B0": 1.0
       },
-      "status": "fail",
+      "status": "pass",
       "threshold": ">= 0.60"
     },
     {
-      "interpretation": "Complexification process does not produce measurable hardness uplift.",
+      "interpretation": "Remediated packet metric complexity.complexification_precision.",
       "metric": "complexity.complexification_precision",
       "observed": {
-        "A1": 0.0,
-        "A4": 0.0,
-        "B0": 0.0
+        "A1": 1.0,
+        "A4": 0.7619047619047619,
+        "B0": 0.7619047619047619
       },
-      "status": "fail",
+      "status": "pass",
       "threshold": ">= 0.70"
     },
     {
-      "interpretation": "Critic consensus is materially below threshold; A4 is significantly worse.",
+      "interpretation": "Remediated packet metric quality.critic_agreement.",
       "metric": "quality.critic_agreement",
       "observed": {
-        "A1": 0.42857142857142855,
-        "A4": 0.17857142857142855,
-        "B0": 0.42857142857142855
+        "A1": 1.0,
+        "A4": 1.0,
+        "B0": 1.0
       },
-      "status": "fail",
+      "status": "pass",
       "threshold": ">= 0.75"
     },
     {
-      "interpretation": "Acceptance throughput is too low for milestone promotion.",
+      "interpretation": "Remediated packet metric quality.acceptance_rate.",
       "metric": "quality.acceptance_rate",
       "observed": {
-        "A1": 0.14285714285714285,
-        "A4": 0.14285714285714285,
-        "B0": 0.14285714285714285
+        "A1": 0.6666666666666666,
+        "A4": 0.6190476190476191,
+        "B0": 0.6190476190476191
       },
-      "status": "fail",
+      "status": "pass",
       "threshold": ">= 0.50"
     },
     {
-      "interpretation": "No regeneration burden observed, but this does not offset failures in core gate criteria.",
+      "interpretation": "Remediated packet metric quality.regen_burden.",
       "metric": "quality.regen_burden",
       "observed": {
         "A1": 0.0,
