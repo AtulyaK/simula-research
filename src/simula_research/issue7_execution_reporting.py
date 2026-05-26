@@ -30,6 +30,25 @@ def _compute_complexity_scores(samples: list[dict[str, Any]]) -> list[float]:
     return scores
 
 
+def _eligible_nodes_from_stage3_samples(
+    stage3_samples: list[dict[str, Any]],
+    taxonomy_nodes: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    node_by_id = {str(node["taxonomy_node_id"]): node for node in taxonomy_nodes}
+    eligible: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for sample in stage3_samples:
+        node_id = str(sample.get("taxonomy_node_id", ""))
+        if not node_id or node_id in seen:
+            continue
+        node = node_by_id.get(node_id)
+        if node is None:
+            continue
+        seen.add(node_id)
+        eligible.append(node)
+    return eligible
+
+
 def _build_failure_analysis(gate_decision: dict[str, Any]) -> list[str]:
     notes: list[str] = []
     for gate_name, gate_status in gate_decision.items():
@@ -80,7 +99,10 @@ def execute_issue7_matrix(
         stage4_decisions = _read_json(stage4["stage4_artifacts"]["critic_decisions"])
         accepted_samples = [entry for entry in stage4_decisions if entry["quality_status"] == "accepted"]
         coverage = compute_coverage_metrics(
-            eligible_nodes=list(pipeline_result["taxonomy"]["nodes"]),
+            eligible_nodes=_eligible_nodes_from_stage3_samples(
+                stage3_samples,
+                list(pipeline_result["taxonomy"]["nodes"]),
+            ),
             accepted_samples=accepted_samples,
         )
 
@@ -113,7 +135,7 @@ def execute_issue7_matrix(
 
         protocol = {
             "domain_objective": request["domain_objective"],
-            "taxonomy_eligibility_policy": "default-eligible-all-taxonomy-nodes",
+            "taxonomy_eligibility_policy": "instantiated-nodes-from-stage3-samples",
             "complexity_judgment_protocol": {
                 "version": "milestone-1",
                 "k_factor": 32,
