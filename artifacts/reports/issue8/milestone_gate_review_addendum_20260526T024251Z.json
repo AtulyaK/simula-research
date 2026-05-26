@@ -16,6 +16,10 @@
     "human_sign_off": {
       "required": true,
       "status": "pending",
+      "recommended_decision": "conditional_pass",
+      "reviewer": "agent-pending-human",
+      "signed_at_utc": null,
+      "notes": "Superseded by packet 20260526T025931Z; agent still recommends conditional_pass for B0/A4 (A1 had complexity gap on this packet).",
       "fields": ["decision", "reviewer", "signed_at_utc", "notes"]
     }
   },
