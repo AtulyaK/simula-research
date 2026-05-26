@@ -12,9 +12,43 @@ Each run must be:
 - **replayable**: same config + seed + model versions can rerun deterministically where possible.
 - **auditable**: enough metadata exists to explain any deviation.
 
+## Manifest validation modes (boot vs full)
+
+Two validators apply at different lifecycle points. Do not confuse them when debugging missing-field errors.
+
+| Mode | Entry point | When it runs | On failure |
+|------|-------------|--------------|------------|
+| **boot** | `manifest.validate_manifest` or `validators.validate_manifest_by_mode(mode="boot")` | Start of `run_pipeline`, before stages execute | `ValueError` (boot wrapper returns `ok: false`) |
+| **full** | `validators.validate_manifest_schema` or `validate_manifest_by_mode(mode="full")` | Issue #9 reproducibility checks, pre-publication ops, CLI-style disk validation | Structured `{"ok": false, "issues": [...]}` |
+
+### Boot-required fields (`manifest.validate_manifest`)
+
+Used by the default pipeline only. Required keys:
+
+- `run_id`, `created_at_utc`, `seed`, `domain_objective`, `model_ids`
+- `protocol_version`, `artifact_schema_version`
+
+`run_pipeline` also attaches `pipeline_config` (and optional `provider_runtime`) on the in-memory manifest, but **boot validation does not require or type-check those keys**. They are required only under **full** validation below.
+
+### Full reproducibility fields (`validators.validate_manifest_schema`)
+
+Required for persisted `manifest.json` under `artifacts/runs/<run_id>/` when running Issue #9 checks or the operational checklist in this guide. Includes all boot fields **plus**:
+
+- `owner`, `branch`, `commit_hash`
+- `pipeline_config` (non-empty object)
+- `baseline_or_ablation_tag`
+
+`model_ids` values must be non-empty strings in full mode (boot only requires a non-empty object).
+
+### Operator guidance
+
+1. **Local pipeline / smoke runs** — `run_pipeline` boot validation is sufficient; returned manifest may fail full schema until you add Issue #9 metadata before archival.
+2. **Matrix / milestone evidence** — use manifests produced by `execute_issue7_matrix` or extend smoke manifests per the JSON example below; run `validate_manifest_schema` on disk.
+3. **Single entry point** — `validate_manifest_by_mode(manifest, mode="boot"|"full")` selects the mode explicitly without changing default pipeline behavior.
+
 ## Required run metadata
 
-Every run manifest must include:
+Every run manifest must include (full reproducibility mode):
 
 - `run_id`
 - `created_at_utc`
@@ -100,7 +134,7 @@ Issue #9 comparability hard gates treat prose in `details` as human-readable onl
 
 ## Operational checks before any report publication
 
-- Manifest complete and schema-valid.
+- Manifest complete and **full**-mode schema-valid (`validate_manifest_schema` or `validate_manifest_by_mode(mode="full")`).
 - Artifact tree complete for all required stages.
 - Metrics generated from persisted artifacts, not transient logs.
 - Gate decision references metric files by path.
