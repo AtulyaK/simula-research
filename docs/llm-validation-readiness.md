@@ -62,6 +62,28 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
   - backoff policy
   - max retry budget per run
 
+### Critic backend selection (env)
+
+Stage-4 critic integration is selected via `SIMULA_CRITIC_BACKEND` in `src/simula_research/critic_provider_adapter.py`:
+
+- `SIMULA_CRITIC_BACKEND=stub`: non-network, hash-parity evaluator for provider-shaped smoke.
+- `SIMULA_CRITIC_BACKEND=replay`: non-network deterministic replay (requires `SIMULA_CRITIC_REPLAY_JSON`).
+- `SIMULA_CRITIC_BACKEND=nim` (alias `nvidia`): **live** NVIDIA NIM backend (OpenAI-compatible chat completions).
+
+NIM backend env vars:
+
+- Required (one of):
+  - `NVIDIA_API_KEY`
+  - `NVAPI_KEY`
+- Optional endpoint/model:
+  - `SIMULA_NIM_BASE_URL` (or `SIMULA_NVIDIA_BASE_URL`)
+  - `SIMULA_NIM_MODEL` (or `SIMULA_NVIDIA_MODEL`)
+  - `SIMULA_CRITIC_MODEL_A`, `SIMULA_CRITIC_MODEL_B` (per-critic override)
+- Optional transport knobs (also recorded into `provider_runtime` metadata; **never** store the key itself):
+  - `SIMULA_HTTP_TIMEOUT_SECONDS`
+  - `SIMULA_HTTP_MAX_RETRIES`
+  - `SIMULA_HTTP_BACKOFF_BASE_SECONDS`
+
 ## 3) Data and compliance controls
 
 - Define whether prompts/responses may contain sensitive or regulated content.
@@ -194,6 +216,7 @@ You are ready to run full LLM-backed validation when all are checked:
 - [x] run manifest and artifact conventions are enforced for stage trees (`artifacts/runs/<run_id>/`); full `validate_manifest_schema` on disk requires Issue #9 fields (`created_at_utc`, `domain_objective`, …) — use `execute_issue7_matrix` or extend smoke `manifest.json` per `docs/reproducibility-ops.md`
 - [x] critic provider integration path is operational for **stub/replay** (`critic_provider_adapter`, sample evaluator seam, metadata echo); live HTTP vendors require keys and org approval
 - [x] provider-shaped smoke validated (stub backend, incident logs under `artifacts/reports/llm-smoke/`; reproducibility `exact` at gate-metric level for same seed)
+- [ ] NIM smoke validated (optional but recommended): `SIMULA_CRITIC_BACKEND=nim` with `NVIDIA_API_KEY` set, small run completes and manifests include `nim_critic` metadata (no secrets logged)
 - [ ] stage 1-3 provider plan is either implemented or explicitly out-of-scope
 - [x] ablation behavior fidelity is validated at execution level (`pipeline_config` → `run_pipeline`; tests `test_issue42_pipeline_config_execution.py`)
 - [ ] reproducibility policy for stochastic drift is documented

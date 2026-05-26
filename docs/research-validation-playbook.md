@@ -77,6 +77,60 @@ Stop if: required env vars are missing for your chosen backend, spend caps would
 
 For Issue #9 **full** manifest validation on disk, write `manifest.json` with all fields in `validators.validate_manifest_schema` (including `created_at_utc`, `domain_objective`, `owner`, `commit_hash`, `branch`). The minimal `run_pipeline` return manifest is sufficient for stage boot only.
 
+## Provider-backed smoke (NIM critic backend)
+
+Use this when you want the **real** network-backed critic path while keeping stages 1–3 deterministic. This calls `critic_sample_evaluator_from_env()` which selects `nvidia_critic_sample_evaluator()` when `SIMULA_CRITIC_BACKEND` is `nim` or `nvidia`.
+
+Notes:
+- This smoke is intentionally **small** to limit cost.
+- No prompts/responses are logged by the adapter; raised errors are sanitized (`nvidia_critic_request_failed:<Type>`).
+- Do **not** commit any API keys; export them in your shell only.
+
+```bash
+cd /path/to/simula-research
+export PYTHONPATH=src
+
+# Select the live backend (aliases: nim, nvidia)
+export SIMULA_CRITIC_BACKEND=nim
+
+# Required: at least one of these (code checks NVIDIA_API_KEY first, then NVAPI_KEY)
+export NVIDIA_API_KEY='...'
+# export NVAPI_KEY='...'
+
+# Optional transport knobs (recorded into provider_runtime metadata, not secrets)
+export SIMULA_HTTP_TIMEOUT_SECONDS=30
+export SIMULA_HTTP_MAX_RETRIES=2
+export SIMULA_HTTP_BACKOFF_BASE_SECONDS=0.5
+
+# Optional endpoint/model overrides
+# export SIMULA_NIM_BASE_URL='https://integrate.api.nvidia.com/v1/chat/completions'
+# export SIMULA_NIM_MODEL='llama-4-maverick-17b-128e-instruct'
+# export SIMULA_CRITIC_MODEL_A='...'
+# export SIMULA_CRITIC_MODEL_B='...'
+
+python3 - <<'PY'
+import tempfile
+from simula_research.critic_provider_adapter import critic_sample_evaluator_from_env, provider_runtime_from_env
+from simula_research.pipeline import run_pipeline
+
+evaluator = critic_sample_evaluator_from_env()
+runtime = provider_runtime_from_env()
+with tempfile.TemporaryDirectory() as tmp:
+    result = run_pipeline(
+        seed=7,
+        model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+        domain_objective="pilot-domain",
+        artifact_root=tmp,
+        taxonomy_config={"max_depth": 1, "branching_factor": 1},
+        local_diversification_config={"instantiations_per_prompt": 1},
+        provider_runtime=runtime,
+        critic_sample_evaluator=evaluator,
+    )
+    print("run_id", result["manifest"]["run_id"])
+    print("critic_backend", (runtime or {}).get("critic_backend"))
+PY
+```
+
 ## Per-run checklist
 
 Before run:
