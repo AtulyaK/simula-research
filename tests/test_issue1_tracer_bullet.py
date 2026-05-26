@@ -15,6 +15,9 @@ class Issue1TracerBulletTest(unittest.TestCase):
 
         manifest = result["manifest"]
         self.assertEqual(manifest["seed"], 7)
+        self.assertEqual(manifest["domain_objective"], "pilot-domain")
+        self.assertIn("created_at_utc", manifest)
+        self.assertTrue(str(manifest["created_at_utc"]).endswith("Z"))
         self.assertEqual(manifest["protocol_version"], "0.1.0")
         self.assertEqual(manifest["artifact_schema_version"], "0.1.0")
         self.assertEqual(

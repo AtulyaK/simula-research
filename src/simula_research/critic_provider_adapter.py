@@ -143,7 +143,7 @@ def _nvidia_api_key_from_env() -> str:
     key = (os.environ.get("NVAPI_KEY") or "").strip()
     if key:
         return key
-    raise ValueError("SIMULA_CRITIC_BACKEND=nvidia requires NVIDIA_API_KEY or NVAPI_KEY")
+    raise ValueError("SIMULA_CRITIC_BACKEND=nim requires NVIDIA_API_KEY or NVAPI_KEY")
 
 
 def _nvidia_model_for_critic(critic_id: str) -> str:
@@ -205,6 +205,7 @@ def nvidia_critic_sample_evaluator(
     backoff_base_s: float | None = None,
     max_tokens: int | None = None,
     http_post_json: Callable[..., dict[str, Any]] = _http_post_json,
+    event_log: list[dict[str, Any]] | None = None,
 ) -> CriticSampleEvaluatorFn:
     """
     Live NVIDIA NIM backend (OpenAI-compatible chat completions).
@@ -256,6 +257,7 @@ def nvidia_critic_sample_evaluator(
     def _eval(sample: dict[str, Any], critic_id: str) -> CriticVerdict:
         model = _nvidia_model_for_critic(critic_id)
         text = str(sample.get("text", ""))
+        instantiation_id = str(sample.get("instantiation_id", ""))
         payload = {
             "model": model,
             "messages": [
@@ -295,11 +297,35 @@ def nvidia_critic_sample_evaluator(
             except (urllib.error.URLError, TimeoutError, ValueError) as exc:
                 raise RuntimeError(f"nvidia_critic_request_failed:{type(exc).__name__}") from exc
 
-        return retry_with_backoff(
-            _op,
-            max_retries=resolved_max_retries,
-            backoff_base_s=resolved_backoff_base_s,
-        )
+        try:
+            return retry_with_backoff(
+                _op,
+                max_retries=resolved_max_retries,
+                backoff_base_s=resolved_backoff_base_s,
+            )
+        except Exception as exc:  # noqa: BLE001 - provider boundary must not fail open
+            # Fail-closed: any inability to produce a clear verdict yields "reject".
+            # Record structured metadata without leaking prompt text.
+            if event_log is not None:
+                event_log.append(
+                    {
+                        "backend": "nim",
+                        "critic_id": critic_id,
+                        "instantiation_id": instantiation_id,
+                        "model": model,
+                        "base_url": resolved_base_url,
+                        "timeout_s": resolved_timeout_s,
+                        "max_retries": resolved_max_retries,
+                        "error_type": type(exc).__name__,
+                        "error_code": (
+                            str(exc).split(":", 1)[0]
+                            if isinstance(exc, RuntimeError)
+                            else "nvidia_critic_error"
+                        ),
+                        "verdict": "reject",
+                    }
+                )
+            return "reject"
 
     return _eval
 
