@@ -106,8 +106,12 @@ def hash_based_critic_verdict(text: str, critic_id: str) -> CriticVerdict:
 
 
 def hash_based_critic_sample_evaluator(sample: dict[str, Any], critic_id: str) -> CriticVerdict:
-    """Offline default: lineage-keyed verdict with dual-critic parity (critic_id ignored)."""
+    """Offline default: sample-content verdict with dual-critic parity (critic_id ignored)."""
     _ = critic_id
-    lineage_key = f"{sample.get('taxonomy_node_id', '')}::{sample.get('instantiation_id', '')}"
-    digest = hashlib.sha1(lineage_key.encode("utf-8")).hexdigest()
+    sample_key = (
+        f"{sample.get('taxonomy_node_id', '')}::"
+        f"{sample.get('instantiation_id', '')}::"
+        f"{sample.get('text', '')}"
+    )
+    digest = hashlib.sha1(sample_key.encode("utf-8")).hexdigest()
     return "accept" if int(digest[:2], 16) % 10 < 8 else "reject"

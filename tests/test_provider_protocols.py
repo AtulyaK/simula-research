@@ -33,7 +33,19 @@ class ProviderProtocolsTests(unittest.TestCase):
             hash_based_critic_sample_evaluator(sample, "critic_b"),
         )
 
-    def test_default_adjudication_uses_lineage_sample_evaluator(self) -> None:
+    def test_hash_based_sample_evaluator_is_sensitive_to_text_mutations(self) -> None:
+        original = {
+            "instantiation_id": "inst-0",
+            "taxonomy_node_id": "tax-a",
+            "text": "alpha",
+        }
+        mutated = {**original, "text": "delta"}
+        self.assertNotEqual(
+            hash_based_critic_sample_evaluator(original, "critic_a"),
+            hash_based_critic_sample_evaluator(mutated, "critic_a"),
+        )
+
+    def test_default_adjudication_uses_hash_based_sample_evaluator(self) -> None:
         taxonomy = build_taxonomy("z", TaxonomyConfig(max_depth=1, branching_factor=2))
         local = build_local_diversification(taxonomy=taxonomy)
         comp = apply_complexification(samples=local["instantiations"])
