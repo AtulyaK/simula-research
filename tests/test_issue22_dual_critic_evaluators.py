@@ -104,6 +104,10 @@ class Issue22DualCriticEvaluatorsTests(unittest.TestCase):
         self.assertIn("[regen-1]", accepted["text"])
         self.assertEqual(accepted["critic_a_decision"], "accept")
         self.assertEqual(accepted["critic_b_decision"], "accept")
+        decision = adjudication["decisions"][0]
+        self.assertEqual(decision["critic_a_decision"], "accept")
+        self.assertEqual(decision["critic_b_decision"], "accept")
+        self.assertFalse(decision["disagreement"])
 
     def test_both_evaluator_hooks_rejected(self) -> None:
         with self.assertRaises(ValueError):
