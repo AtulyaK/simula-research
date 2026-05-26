@@ -67,6 +67,36 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                     0.75,
                 )
 
+    def test_milestone1_a1_gate_passes_complexification_precision(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="milestone1-a1-complexity-gate",
+                commit_hash="deadbeef",
+            )
+            gates = output["run_reports"]["A1"]["gate_report"]["gate_decision"]
+            self.assertEqual(gates["complexity.complexification_precision"]["status"], "pass")
+            self.assertGreaterEqual(
+                float(gates["complexity.complexification_precision"]["actual"]),
+                0.70,
+            )
+
+    def test_milestone1_matrix_all_presets_pass_overall_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="milestone1-matrix-all-pass",
+                commit_hash="deadbeef",
+            )
+            for preset_id in ("B0", "A1", "A4"):
+                self.assertEqual(
+                    output["run_reports"][preset_id]["gate_report"]["gate_decision"]["overall_status"],
+                    "pass",
+                    msg=f"{preset_id} gate failed",
+                )
+
     def test_milestone1_b0_gate_passes_coverage_and_acceptance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(

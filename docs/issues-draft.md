@@ -14,14 +14,16 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #5: complete on `main` (PR #21)
 - Issue #6 skeleton: complete on `main` (PR #19)
 - Issue #7: complete on `main` (PR #23)
-- Issue #8: complete with milestone review evidence in `artifacts/reports/issue8/`
+- Issue #8: **HITL addendum pending** — April review **fail** (`20260430T204744Z`); remediated packet **`20260526T024251Z`** on `main` (PR **#69**): **B0 pass**, **A4 pass**, **A1 fail** (`complexification_precision`); sign-off JSON `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.json`
 - Issue #9: complete on `main` (PR #25); reproducibility evidence in `artifacts/reports/issue9/`
-- Issue #10: **closed** (ADR **0004** Option A — `docs/adr/0004-engine-seam-scope.md`); follow-ons **#60–#62** open  
-- Milestone 3 follow-ons **#27–#30**: complete on `main` (commits `df88524`, `73a0dc9`)  
-- Post–Milestone 3 hardening: **#31** / **PR #32**, **#33** / **PR #34** — merged  
-- LLM / correctness wave: **PR #45** (#22/#41/#42), **PR #54** (#51), **PR #56** (#39/#50 docs), **PR #58** (#47 NIM fail-closed) — merged  
-- **`main` tests:** 74 unittest cases, OK (no API keys)  
-- Agent briefing: **`docs/agents/next-agent-handoff.md`** (implementation cycle closed; provider validation cycle open)
+- Issue #10: **closed** (ADR **0004** Option A — `docs/adr/0004-engine-seam-scope.md`)
+- ADR 0004 P1: **#60**, **#61** closed; **#62** deferred (`ready-for-human`)
+- Milestone 3 follow-ons **#27–#30**: complete on `main` (commits `df88524`, `73a0dc9`)
+- Post–Milestone 3 hardening: **#31** / **PR #32**, **#33** / **PR #34** — merged
+- M1 gate remediation: **PR #69** merged (`af9be6f`)
+- LLM / correctness wave: **PR #45**, **#54**, **#56**, **#58** — merged
+- **`main` tests:** 93 unittest cases, OK (no API keys)
+- Agent briefing: **`docs/agents/next-agent-handoff.md`** (implementation cycle closed; provider Phase 4 + Issue #8 sign-off open)
 
 ## Slice index
 
@@ -207,9 +209,14 @@ Conduct a human review of milestone-1 evidence, confirm pass/fail status, and ex
 
 ## Acceptance criteria
 
-- [x] Review includes coverage, complexity, and quality evidence.
-- [x] Decision is recorded as pass, conditional pass, or fail.
-- [x] Any threshold change is justified and linked to ADR workflow.
+- [x] Review includes coverage, complexity, and quality evidence (April packet + addendum `20260526T024251Z`).
+- [ ] Decision recorded as pass, conditional pass, or fail for **current** packet — **pending human** on `milestone_gate_review_addendum_20260526T024251Z.json` (agent recommends **conditional pass**: B0/A4 pass, A1 documented complexity gap).
+- [x] Any threshold change is justified and linked to ADR workflow (**keep thresholds**; no ADR edit proposed).
+
+**Evidence:**
+
+- Original: `artifacts/reports/issue8/milestone_gate_review.md` + `.json` → **fail** (`20260430T204744Z`)
+- Addendum: `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.{md,json}` → gate tables from `artifacts/reports/issue7/20260526T024251Z/`
 
 ---
 
@@ -243,19 +250,14 @@ Define which stage seams become reusable interfaces in next phase while preservi
 
 ## Acceptance criteria
 
-- [ ] Candidate interfaces are listed with rationale.
-- [ ] Migration scope excludes any change that invalidates baseline comparability.
-- [ ] Follow-up issue set or ADR updates are approved.
+- [x] Candidate interfaces are listed with rationale (ADR **0004**).
+- [x] Migration scope excludes any change that invalidates baseline comparability.
+- [x] Follow-up issue set approved (**#60–#62**).
 
 ## Recommendations: where to prompt next
 
-Use these prompts in order as you execute:
-
-1. **Close the first implementation cycle (HITL — current gate)**  
-   `Run Issue #10: list candidate reusable-engine interfaces (taxonomy, local diversification, complexification, adjudication, artifact store), rationale, and explicit exclusions that would break milestone-1 comparability. Produce approved follow-on GitHub issues or ADR drafts.`
-2. **If continuing engineering before LLM integration**  
-   `Read docs/agents/next-agent-handoff.md P1 items: add Protocol-based hooks for earlier stages with bit-identical defaults; document manifest validation modes (boot vs full reproducibility). Use /tdd; do not change thresholds without ADR 0003.`
-3. **If signals are weak on a new pilot rerun**  
-   `Use /diagnose on latest baseline+ablation outputs to identify whether coverage, complexity, or quality is the bottleneck and propose the smallest parameter-level change (not threshold formula edits unless ADR-approved).`
+1. **Issue #8 HITL sign-off (current)** — Review addendum JSON; record `human_sign_off`; confirm conditional pass for B0/A4 and A1 complexity documentation.
+2. **Provider Phase 4** — `docs/llm-validation-readiness.md`: credentials, optional NIM smoke, provider-backed B0/A1/A4 matrix, Issue #9 rerun on provider packet.
+3. **Playbook promotion** — After Phase 4, evaluate H1–H4 and second baseline stability per `docs/research-validation-playbook.md`.
 
 For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).

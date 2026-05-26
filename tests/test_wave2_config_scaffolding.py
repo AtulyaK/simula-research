@@ -26,6 +26,12 @@ class Wave2ConfigScaffoldingTest(unittest.TestCase):
         self.assertEqual(result["missing_fields"], {})
         self.assertEqual(result["non_comparable_fields"], [])
 
+    def test_a1_preset_uses_full_complexify_fraction_for_small_n_ablation(self) -> None:
+        preset = get_config_preset("A1")
+        self.assertEqual(preset["complexification_config"]["complexify_fraction"], 1.0)
+        request = build_run_request("A1")
+        self.assertEqual(request["complexification_config"]["complexify_fraction"], 1.0)
+
     def test_runner_request_contains_required_manifest_metadata(self) -> None:
         request = build_run_request("A4")
         self.assertEqual(request["seed"], 7)
