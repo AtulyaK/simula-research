@@ -53,13 +53,16 @@ def run_pipeline(
     if critic_verdict is not None and critic_sample_evaluator is not None:
         raise ValueError("critic_verdict and critic_sample_evaluator are mutually exclusive")
 
-    run_id = f"run-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
+    created_at = datetime.now(UTC)
+    run_id = f"run-{created_at.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
 
     manifest_pipeline = dict(pipeline_config) if pipeline_config is not None else dict(DEFAULT_PIPELINE_CONFIG)
 
     manifest: dict[str, Any] = {
         "run_id": run_id,
+        "created_at_utc": created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "seed": seed,
+        "domain_objective": domain_objective,
         "model_ids": model_ids,
         "protocol_version": PROTOCOL_VERSION,
         "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
