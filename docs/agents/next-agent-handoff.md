@@ -1,6 +1,6 @@
 # Next-agent handoff (Simula research repo)
 
-Use this document as the **primary paste-in briefing** for a new coding agent. It reflects `main` as of **2026-05-26**: Milestones **1–3** complete, Issue **#10** closed with **ADR 0004**, post-M3 hardening (**#31–#34** / PRs **#32**, **#34**), and LLM/correctness merges **PRs #45**, **#54**, **#56**, **#58**.
+Use this document as the **primary paste-in briefing** for a new coding agent. It reflects `main` as of **2026-05-26** (`af9be6f`): Milestones **1–3** complete, Issue **#10** closed with **ADR 0004**, post-M3 hardening, LLM/correctness merges (**PRs #45**, **#54**, **#56**, **#58**), P1 follow-ons **#60–#61** closed, and Milestone-1 gate remediation **PR #69** merged.
 
 ## Executive summary — two “done” notions
 
@@ -10,15 +10,25 @@ Per `docs/implementation-plan.md` and **ADR 0004**:
 
 1. **Milestones 1–2 evidence** remains comparable: baseline + ablations, gate reports, reproducibility (`artifacts/reports/issue7/`, `issue8/`, `issue9/`).
 2. **Milestone 3 seams** on `main`: stage validators, artifact store, critic hooks, comparability gates (**#27–#30**).
-3. **Issue #10** closed with **ADR 0004** (Option A): minimal seam formalization; follow-ons **#60–#62** filed; engine-core refactor deferred.
+3. **Issue #10** closed with **ADR 0004** (Option A); **#60–#61** closed; **#62** deferred (Option B refactor).
+
+### Milestone-1 gate evidence on `main` (packet `20260526T024251Z`, PR **#69**)
+
+| Preset | Overall gate | Notes |
+| --- | --- | --- |
+| **B0** | **pass** | All six ADR 0003 thresholds pass |
+| **A4** | **pass** | All six thresholds pass (`single_critic` ablation) |
+| **A1** | **fail** | `complexity.complexification_precision` = 0.667 &lt; 0.70 (3-sample, single-node ablation) |
+
+**Issue #8:** April 2026 HITL review remains **fail** on older packet (`20260430T204744Z`). Addendum **`20260526T024251Z`** supersedes gate tables for the remediated packet only; **human sign-off pending** on [`milestone_gate_review_addendum_20260526T024251Z.json`](../artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.json) (recommended: **conditional pass** for B0/A4, document A1 gap).
 
 ### Full provider-backed validation cycle — **not closed**
 
-Tracked in `docs/llm-validation-readiness.md` (Phases 0–4). Remaining before a defensible **provider-backed** milestone packet:
+Tracked in `docs/llm-validation-readiness.md` (Phase 4). Remaining before a defensible **provider-backed** milestone packet:
 
-- Optional live **NIM** smoke (`SIMULA_CRITIC_BACKEND=nim` + API key; org policy).
-- **#60** / **#61** (recommended before swapping Stages 1–3): protocol hooks with bit-identical defaults; manifest boot vs full-schema operator clarity.
-- Execute provider-backed **B0 / A1 / A4**, persist gate + comparison artifacts, baseline rerun classification, and gate recommendation — without changing ADR **0003** thresholds or metric formulas.
+- Org credentials / budget guardrails (human policy).
+- Optional live **NIM** smoke (`SIMULA_CRITIC_BACKEND=nim`).
+- Provider-backed **B0 / A1 / A4** matrix with persisted gate + comparison artifacts and baseline rerun classification — **no ADR 0003** threshold or metric formula changes.
 
 ---
 
@@ -30,14 +40,29 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 | Check | Status |
 | --- | --- |
-| Unit tests | **74 tests, OK** (stdlib `unittest` only; no `pip install`) |
+| Unit tests | **93 tests, OK** (stdlib `unittest` only; no `pip install`) |
 | Python | **3.11+** (3.13 used in CI/agents) |
 | API keys (unittest) | **Not required** (hash/stub/replay critics; deterministic Stages 1–3) |
 | API keys (live NIM critic) | `NVIDIA_API_KEY` or `NVAPI_KEY` when `SIMULA_CRITIC_BACKEND=nim` |
 
+**Latest `main` tip:** `af9be6f` (merge PR #69).
+
 ---
 
 ## Recently merged
+
+### Milestone-1 gate remediation
+
+| PR | Summary |
+| --- | --- |
+| **#69** | Lane-diversified local instantiations + lineage-keyed offline critic evaluator; Issue #7 packet `20260526T024251Z` (**B0/A4 pass**, **A1 fail** on complexity precision). |
+
+### P1 engineering (ADR 0004 follow-ons)
+
+| PR | Issue | Summary |
+| --- | --- | --- |
+| (direct) | **#60** | Protocol hooks for Stages 1–3 (bit-identical defaults). |
+| **#61** | **#61** | Manifest boot vs full-schema operator clarity. |
 
 ### Post–Milestone 3 hardening
 
@@ -50,10 +75,10 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 | PR | Issue(s) | Summary |
 | --- | --- | --- |
-| **#45** | **#22**, **#41**, **#42** | `CriticSampleEvaluatorFn`, `provider_runtime` metadata, `pipeline_config` execution fidelity for B0/A1/A4 (no report-only ablation hacks). |
-| **#54** | **#51** | Regenerated accepted samples persist final text + critic decisions in `accepted_samples`. |
-| **#56** | **#39**, **#50** | `docs/llm-validation-readiness.md`: NIM env vars, smoke commands, phase checklist updates. |
-| **#58** | **#47** | Fail-closed **NIM** critic backend; `provider_runtime.json` under stage 4; network-free NIM smoke test. |
+| **#45** | **#22**, **#41**, **#42** | `CriticSampleEvaluatorFn`, `provider_runtime` metadata, `pipeline_config` execution fidelity for B0/A1/A4. |
+| **#54** | **#51** | Regenerated accepted samples persist final text + critic decisions. |
+| **#56** | **#39**, **#50** | `docs/llm-validation-readiness.md`: NIM env vars, smoke commands, phase checklist. |
+| **#58** | **#47** | Fail-closed **NIM** critic backend; `provider_runtime.json` under stage 4. |
 
 **Canonical on-disk stage-4 directory:** `40_dual_critic_quality/` (not `40_dual_critic/`).
 
@@ -63,9 +88,9 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 **Approved scope:** Option A — minimal seam formalization (`docs/adr/0004-engine-seam-scope.md`).
 
-| On `main` today | Open P1 follow-ons | Deferred |
+| On `main` today | Closed follow-ons | Deferred |
 | --- | --- | --- |
-| Stage contracts, `RunArtifactStore`, critic verdict + sample evaluator, comparability gate, `pipeline_config` ablations | **#60** Stage 1–3 protocols (bit-identical defaults); **#61** manifest boot vs full schema | **#62** engine-core refactor (Option B) |
+| Stage contracts, `RunArtifactStore`, critic verdict + sample evaluator, comparability gate, `pipeline_config` ablations, Stages 1–3 protocol hooks (#60), manifest validation modes (#61) | **#60**, **#61** | **#62** engine-core refactor (Option B) |
 
 **Do-not-break:** ADR **0003** thresholds/metrics/gates; Issue **#9** comparability + `mixed_reason`; artifact layout; default TypedDict handoffs; metrics from **persisted artifacts** only.
 
@@ -77,33 +102,31 @@ See `docs/llm-validation-readiness.md` for full checklist. Summary:
 
 | Phase | Focus | Status on `main` |
 | --- | --- | --- |
-| **0** | Freeze protocol / run discipline | Met for deterministic pilot evidence; reuse playbook for provider batch |
-| **1** | Smallest real-LLM surface (Stage 4 critics) | **Mostly met**: sample evaluator seam, env adapter (`stub` / `replay` / `nim`), fail-closed NIM, provider metadata echo |
-| **2** | Stages 1–3 provider hooks | **Open — #60** (defaults must stay bit-identical) |
-| **3** | True ablation execution fidelity | **Met — #42** via `pipeline_config` in `execute_issue7_matrix` |
-| **4** | Full provider-backed validation packet | **Not met** — needs live matrix runs + gate/comparison artifacts + rerun classification |
-
-**Operator backends:** `SIMULA_CRITIC_BACKEND` in `critic_provider_adapter.py` — `stub` / `replay` (no network); `nim` / `nvidia` (live, fail-closed). Details in `docs/research-validation-playbook.md` and `docs/llm-validation-readiness.md`.
+| **0** | Freeze protocol / run discipline | Met for deterministic pilot evidence |
+| **1** | Smallest real-LLM surface (Stage 4 critics) | **Met** (seams + stub/replay/NIM path) |
+| **2** | Stages 1–3 provider hooks | **Met — #60** (bit-identical defaults) |
+| **3** | True ablation execution fidelity | **Met — #42** |
+| **4** | Full provider-backed validation packet | **Not met** — live matrix + gate/comparison + rerun on provider runs |
 
 ---
 
 ## Prioritized follow-ups
 
-### P1 — Ready for agents (`ready-for-agent`)
+### P0 — Human (`ready-for-human`)
 
-1. **#60 — Protocol hooks for Stages 1–3** — mirror `critic_verdict` / `artifact_store_factory`; golden tests vs current `run_pipeline` outputs.
-
-2. **#61 — Manifest validation modes** — document and/or unify `manifest.validate_manifest` (pipeline boot) vs `validators.validate_manifest_schema` (Issue #9 full set); keep `tests/test_issue9_reproducibility.py` green.
+1. **Issue #8 addendum sign-off** — review `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.{md,json}`; record `human_sign_off` in JSON; confirm **conditional pass** vs fail.
 
 ### P2 — Human / deferred
 
-- **#62 — Engine core refactor (Option B)** — deferred per ADR 0004; requires explicit human approval before large refactors.
+- **#62 — Engine core refactor (Option B)** — deferred per ADR 0004.
 
-### P3 — Provider validation batch (after P1 or explicit waiver)
+### P3 — Provider validation batch (Phase 4)
 
 - Configure org credentials/budget guardrails.
-- Run optional NIM smoke, then B0 → A1 → A4 with persisted `artifacts/runs/` + reports under `artifacts/reports/`.
-- Record reproducibility classification and gate recommendation; no threshold changes without ADR **0003** process.
+- Optional NIM smoke, then provider-backed B0 → A1 → A4 with persisted `artifacts/runs/` + reports.
+- Re-run Issue #9 baseline rerun classification on provider packet; gate recommendation — **no ADR 0003** changes.
+
+**Open PRs (2026-05-26):** draft **#68** (dual-critic correctness) — not required for deterministic milestone evidence.
 
 ---
 

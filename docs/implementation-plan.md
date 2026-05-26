@@ -152,37 +152,45 @@ Exit criteria:
 
 ## Current engineering status (live)
 
-**Last reviewed:** 2026-05-26 — `main`, `docs/agents/next-agent-handoff.md`.
+**Last reviewed:** 2026-05-26 — `main` @ `af9be6f`, `docs/agents/next-agent-handoff.md`.
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
-| **Milestone 1** | Met | Runnable stages + B0/A1/A4 execution + gate reporting (`artifacts/reports/issue7/`, `issue8/`). |
-| **Milestone 2** | Met | Manifest schema validation, baseline rerun classification, reproducibility evidence (`artifacts/reports/issue9/`, PR #25). |
+| **Milestone 1** | **Met (engineering)** | Runnable stages + B0/A1/A4 + gate reporting. Latest packet `artifacts/reports/issue7/20260526T024251Z/` (PR **#69**): **B0 pass**, **A4 pass**, **A1 fail** (`complexification_precision` on small-n ablation). |
+| **Milestone 1 (HITL)** | **Pending sign-off** | Issue #8 April review = **fail** (old packet). Addendum `20260526T024251Z` recommends **conditional pass**; human sign-off pending in JSON. |
+| **Milestone 2** | Met | Manifest schema validation, baseline rerun classification (`artifacts/reports/issue9/`, PR #25). |
 | **Milestone 3 (seams)** | Met on `main` | Stage contracts (#27), `RunArtifactStore` (#28), critic hooks (#29), comparability gate (#30). |
 | **Post–M3 hardening** | Met on `main` | TypedDict handoff types (#31 / PR #32); artifact tree `40_dual_critic_quality` (#33 / PR #34). |
-| **Issue #10 / ADR 0004** | **Closed** | Option A minimal seams; follow-ons **#60–#62** (`docs/adr/0004-engine-seam-scope.md`). |
-| **LLM Stage-4 path** | Met on `main` | PR #45 (#22/#41/#42); PR #54 (#51 regeneration artifact); PR #56 docs; PR #58 (#47 fail-closed NIM). |
-| **First implementation cycle** | **Closed** | Per ADR 0004 + Milestones 1–3 evidence. |
-| **Provider-backed validation cycle** | **Open** | See `docs/llm-validation-readiness.md` Phase 4; optional NIM smoke + matrix runs. |
+| **ADR 0004 P1 follow-ons** | **Closed** | **#60** Stages 1–3 protocol hooks; **#61** manifest validation modes. |
+| **Issue #10 / ADR 0004** | **Closed** | Option A minimal seams (`docs/adr/0004-engine-seam-scope.md`). |
+| **LLM Stage-4 path** | Met on `main` | PR #45, #54, #56, #58. |
+| **First implementation cycle** | **Closed** | Per ADR 0004 + Milestones 1–3 + remediated M1 gate packet on `main`. |
+| **Provider-backed validation cycle** | **Open** | `docs/llm-validation-readiness.md` Phase 4. |
+| **Playbook promotion** | **Open** | H1–H4 hypothesis acceptance + ≥2 stable baseline runs (`docs/research-validation-playbook.md`). |
 
 ### Remaining work (by track)
 
-**P1 engineering (does not block “implementation cycle closed”; blocks clean all-stage provider swap):**
+**P0 — Human:**
 
-1. **#60** — Protocol + factory hooks for Stages 1–3 with **bit-identical** defaults.  
-2. **#61** — Manifest boot vs full reproducibility validation clarity (keep Issue #9 tests green).
+1. **Issue #8 addendum** — sign `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.json` (conditional pass vs fail; A1 complexity gap).
 
 **Provider validation batch (Phase 4 in `docs/llm-validation-readiness.md`):**
 
 1. Org credentials/budget guardrails for live critics.  
 2. Optional NIM smoke, then provider-backed B0 / A1 / A4 with persisted artifacts and gate/comparison reports.  
-3. Baseline rerun classification and milestone gate recommendation — **no ADR 0003 threshold or metric formula changes**.
+3. Baseline rerun classification on provider packet and gate recommendation — **no ADR 0003** threshold or metric formula changes.
+
+**Playbook (`docs/research-validation-playbook.md` — promotion criteria):**
+
+1. Hypotheses **H1–H4** accepted or convincingly bounded (directional B0 vs ablation contrasts).  
+2. Metric trends stable across **≥2** repeated baseline runs.  
+3. Unresolved risks documented with owners (provider drift, cost, A1 small-n complexity interpretation).
 
 **Deferred:** **#62** engine-core module refactor (ADR 0004 Option B).
 
 ### Testing prerequisites
 
-- **Python 3.11+**; **74 tests** green on `main` via `PYTHONPATH=src python3 -m unittest discover -s tests -v`.  
+- **Python 3.11+**; **93 tests** green on `main` via `PYTHONPATH=src python3 -m unittest discover -s tests -v`.  
 - **No API keys** for unittest. Live NIM critic runs require `NVIDIA_API_KEY` / `NVAPI_KEY` per `docs/llm-validation-readiness.md`.
 
 ## Dependency map
