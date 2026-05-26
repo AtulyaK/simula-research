@@ -52,8 +52,8 @@ class Issue3LocalDiversificationTest(unittest.TestCase):
         }
         result = build_local_diversification(
             taxonomy=taxonomy,
-            per_node_instantiation_count=3,
-            overlap_rejection_threshold=0.75,
+            per_node_instantiation_count=4,
+            overlap_rejection_threshold=0.8,
         )
         self.assertGreater(len(result["rejections"]), 0)
         rejection = result["rejections"][0]

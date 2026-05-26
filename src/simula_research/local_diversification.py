@@ -26,6 +26,13 @@ def _token_overlap_ratio(left: str, right: str) -> float:
     return len(intersection) / denominator
 
 
+_LANE_TEMPLATES = (
+    "Define baseline competencies for {label} in {domain} (trace {inst}).",
+    "Contrast edge cases for {label} within {node_id} namespace {domain} (trace {inst}).",
+    "Synthesize assessment rubric for {label} progression {idx} in {domain} (trace {inst}).",
+)
+
+
 def build_local_diversification(
     taxonomy: dict[str, Any],
     per_node_instantiation_count: int = 3,
@@ -49,14 +56,17 @@ def build_local_diversification(
         label = node["label"]
         domain = taxonomy["domain_namespace"]
         meta_prompt_id = f"mp-{_stable_id(taxonomy_node_id, label)}"
-        meta_prompt_text = f"Generate samples for {domain} with focus on {label}"
 
         kept_for_node: list[dict[str, Any]] = []
         for idx in range(per_node_instantiation_count):
             instantiation_id = f"inst-{_stable_id(taxonomy_node_id, str(idx))}"
-            candidate_text = (
-                f"{domain}::{label} example {idx}. "
-                f"Reasoning path for {label} under {taxonomy_node_id}."
+            template = _LANE_TEMPLATES[idx % len(_LANE_TEMPLATES)]
+            candidate_text = template.format(
+                label=label,
+                domain=domain,
+                node_id=taxonomy_node_id,
+                inst=instantiation_id,
+                idx=idx,
             )
 
             is_duplicate = any(

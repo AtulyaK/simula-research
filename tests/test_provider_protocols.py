@@ -7,7 +7,10 @@ from simula_research.complexification import apply_complexification
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.local_diversification import build_local_diversification
 from simula_research.pipeline import run_pipeline
-from simula_research.provider_protocols import hash_based_critic_verdict
+from simula_research.provider_protocols import (
+    hash_based_critic_sample_evaluator,
+    hash_based_critic_verdict,
+)
 from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
 
 
@@ -19,12 +22,26 @@ class ProviderProtocolsTests(unittest.TestCase):
                 hash_based_critic_verdict(text, "critic_b"),
             )
 
-    def test_explicit_hash_based_matches_default_adjudication(self) -> None:
+    def test_hash_based_sample_evaluator_agrees_across_critics(self) -> None:
+        sample = {
+            "instantiation_id": "inst-abc",
+            "taxonomy_node_id": "tax-xyz",
+            "text": "sample body",
+        }
+        self.assertEqual(
+            hash_based_critic_sample_evaluator(sample, "critic_a"),
+            hash_based_critic_sample_evaluator(sample, "critic_b"),
+        )
+
+    def test_default_adjudication_uses_lineage_sample_evaluator(self) -> None:
         taxonomy = build_taxonomy("z", TaxonomyConfig(max_depth=1, branching_factor=2))
         local = build_local_diversification(taxonomy=taxonomy)
         comp = apply_complexification(samples=local["instantiations"])
         default_adj = adjudicate_samples(samples=comp["samples"])
-        explicit_adj = adjudicate_samples(samples=comp["samples"], critic_verdict=hash_based_critic_verdict)
+        explicit_adj = adjudicate_samples(
+            samples=comp["samples"],
+            critic_sample_evaluator=hash_based_critic_sample_evaluator,
+        )
         self.assertEqual(default_adj["decisions"], explicit_adj["decisions"])
         self.assertEqual(default_adj["accepted_samples"], explicit_adj["accepted_samples"])
 
