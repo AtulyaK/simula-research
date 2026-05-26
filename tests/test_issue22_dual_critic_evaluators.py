@@ -105,6 +105,48 @@ class Issue22DualCriticEvaluatorsTests(unittest.TestCase):
         self.assertEqual(accepted["critic_a_decision"], "accept")
         self.assertEqual(accepted["critic_b_decision"], "accept")
 
+        decision = adjudication["decisions"][0]
+        self.assertEqual(decision["final_reason"], "regeneration_consensus_accept")
+        self.assertEqual(decision["critic_a_decision"], "accept")
+        self.assertEqual(decision["critic_b_decision"], "accept")
+        self.assertFalse(decision["disagreement"])
+
+    def test_pipeline_persists_final_decisions_after_regenerated_acceptance(self) -> None:
+        def evaluator(sample: dict[str, Any], critic_id: str) -> str:
+            text = str(sample.get("text", ""))
+            if "[regen-1]" in text:
+                return "accept"
+            return "accept" if critic_id == "critic_a" else "reject"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            result = run_pipeline(
+                seed=42,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp_dir,
+                taxonomy_config={"max_depth": 1, "branching_factor": 2},
+                dual_critic_config={"disagreement_policy": "regenerate", "max_regenerations_per_sample": 1},
+                critic_sample_evaluator=evaluator,
+            )
+
+            stage4 = result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
+            decisions_path = Path(stage4["stage4_artifacts"]["critic_decisions"])
+            decisions = json.loads(decisions_path.read_text(encoding="utf-8"))
+
+        self.assertGreater(len(decisions), 0)
+        self.assertEqual(stage4["reviewed_samples"], len(decisions))
+        self.assertEqual(stage4["accepted_samples"], len(decisions))
+        self.assertEqual(stage4["agreements"], len(decisions))
+        self.assertEqual(stage4["disagreements"], 0)
+        for decision in decisions:
+            self.assertEqual(decision["final_reason"], "regeneration_consensus_accept")
+            self.assertEqual(decision["critic_a_decision"], "accept")
+            self.assertEqual(decision["critic_b_decision"], "accept")
+            self.assertFalse(decision["disagreement"])
+
+        quality = compute_quality_metrics(issue5_outputs=stage4)
+        self.assertEqual(quality["critic_agreement"], 1.0)
+
     def test_both_evaluator_hooks_rejected(self) -> None:
         with self.assertRaises(ValueError):
 
