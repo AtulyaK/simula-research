@@ -152,7 +152,7 @@ Exit criteria:
 
 ## Current engineering status (live)
 
-**Last reviewed:** 2026-05-26 — `main` @ `10fb389`, `docs/agents/next-agent-handoff.md`.
+**Last reviewed:** 2026-05-26 — `main` @ `242232e`, `docs/agents/next-agent-handoff.md`.
 
 ### Completion verdict
 

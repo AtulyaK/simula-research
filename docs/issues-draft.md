@@ -22,7 +22,7 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Post–Milestone 3 hardening: **#31** / **PR #32**, **#33** / **PR #34** — merged
 - M1 gate remediation: **PR #69** merged (`af9be6f`)
 - LLM / correctness wave: **PR #45**, **#54**, **#56**, **#58** — merged
-- **`main` tests:** 93 unittest cases, OK (no API keys)
+- **`main` tests:** 98 unittest cases, OK (no API keys)
 - Agent briefing: **`docs/agents/next-agent-handoff.md`** (engineering + deterministic validation complete; optional Phase 4 NIM/provider track)
 
 ## Slice index

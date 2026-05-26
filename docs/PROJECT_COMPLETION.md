@@ -1,6 +1,6 @@
 # Simula Research — Project Completion Status
 
-**Branch:** `main` @ `fc43471` (2026-05-26) · **Scope:** research-phase **engineering** (ADR 0001–0004, Milestones 1–3)
+**Branch:** `main` @ `242232e` (2026-05-26) · **Scope:** research-phase **engineering** (ADR 0001–0004, Milestones 1–3)
 
 ## Verdict
 
@@ -50,7 +50,7 @@ Baseline gate reference: `artifacts/reports/issue7/20260526T025931Z/B0/gate_repo
 
 | Action | Status |
 | --- | --- |
-| Issue #8 HITL sign-off | **Pending** — `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T025931Z.json` (`human_sign_off.status`: `pending`); agent recommends **conditional pass** for B0/A1/A4 on packet `20260526T025931Z` |
+| Issue #8 HITL sign-off | **Complete** — `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T025931Z.json` (`human_sign_off.status`: `signed`, `project-owner-delegated`, `2026-05-26T03:08:34Z`) |
 | Org credentials / budget for NIM | Optional — only for live provider validation |
 
 ---
@@ -73,7 +73,7 @@ Baseline gate reference: `artifacts/reports/issue7/20260526T025931Z/B0/gate_repo
 | Execute B0, A1, A4 | **Done (deterministic/hash)** — Issue #7 matrix packets on `main` |
 | Run/gate/comparison reports persisted | **Done** — `artifacts/reports/issue7/` |
 | Baseline rerun classification | **Done** — `exact` via `./scripts/run_issue9_comparability_check.sh` |
-| Milestone gate recommendation | **Conditional pass** recommended (all presets pass on `20260526T025931Z`; HITL JSON pending) |
+| Milestone gate recommendation | **Conditional pass signed** (all presets pass on `20260526T025931Z`; addendum signed) |
 | **Provider-backed** equivalent packet | **Not done** — optional; requires keys + org policy |
 
 ---
