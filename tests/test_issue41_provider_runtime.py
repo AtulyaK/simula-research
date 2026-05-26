@@ -45,6 +45,33 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
                 else:
                     env[key] = val
 
+    def test_provider_runtime_from_env_includes_nvidia_non_secret_fields(self) -> None:
+        env = os.environ
+        old = {
+            "SIMULA_CRITIC_BACKEND": env.get("SIMULA_CRITIC_BACKEND"),
+            "SIMULA_NVIDIA_BASE_URL": env.get("SIMULA_NVIDIA_BASE_URL"),
+            "SIMULA_NVIDIA_MODEL": env.get("SIMULA_NVIDIA_MODEL"),
+            "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
+            "NVAPI_KEY": env.get("NVAPI_KEY"),
+        }
+        try:
+            env["SIMULA_CRITIC_BACKEND"] = "nim"
+            env["SIMULA_NVIDIA_BASE_URL"] = "https://example.com/v1/chat/completions"
+            env["SIMULA_NVIDIA_MODEL"] = "some-model"
+            env["NVIDIA_API_KEY"] = "test-key"
+            env.pop("NVAPI_KEY", None)
+            meta = provider_runtime_from_env()
+            self.assertEqual(meta["critic_backend"], "nim")
+            self.assertEqual(meta["nim_critic"]["base_url"], "https://example.com/v1/chat/completions")
+            self.assertEqual(meta["nim_critic"]["default_model"], "some-model")
+            self.assertEqual(meta["nim_critic"]["api_key_env"], "NVIDIA_API_KEY")
+        finally:
+            for k, v in old.items():
+                if v is None:
+                    env.pop(k, None)
+                else:
+                    env[k] = v
+
 
 if __name__ == "__main__":
     unittest.main()
