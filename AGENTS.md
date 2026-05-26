@@ -6,7 +6,7 @@ Issues are tracked in GitHub Issues for this repository. See `docs/agents/issue-
 
 ### New implementation agent briefing
 
-Paste **`docs/agents/next-agent-handoff.md`** at the start of a session so the agent inherits Milestone 3+ state, **definition of done**, **testing prerequisites** (Python/unittest/keys), constraints, and prioritized follow-ups (Issue **#10** HITL first).
+Paste **`docs/agents/next-agent-handoff.md`** at the start of a session so the agent inherits Milestone 3+ state, **ADR 0004** scope, **testing prerequisites** (Python/unittest/keys), constraints, and prioritized follow-ups (**#60–#62**, provider validation phases).
 
 ### Triage labels
 
@@ -25,6 +25,7 @@ Domain docs use a multi-context layout via `CONTEXT-MAP.md` and per-context `CON
   - `docs/adr/0001-research-first-scope.md`
   - `docs/adr/0002-control-axes-as-first-class.md`
   - `docs/adr/0003-evaluation-protocol-and-thresholds.md`
+  - `docs/adr/0004-engine-seam-scope.md`
   - `contexts/core/CONTEXT.md`
   - `contexts/eval/CONTEXT.md`
 

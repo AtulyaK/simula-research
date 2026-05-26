@@ -11,7 +11,7 @@ Use this together with:
 - `docs/pipeline-spec.md` (stage contracts)
 - `docs/evaluation-metrics.md` (metric definitions and gates)
 - `docs/reproducibility-ops.md` (manifest/artifact/rerun protocol)
-- `docs/adr/0002-control-axes-as-first-class.md` and `docs/adr/0003-evaluation-protocol-and-thresholds.md` (non-negotiable comparability constraints)
+- `docs/adr/0002-control-axes-as-first-class.md`, `docs/adr/0003-evaluation-protocol-and-thresholds.md`, and `docs/adr/0004-engine-seam-scope.md` (comparability and seam constraints)
 - `docs/agents/next-agent-handoff.md` (current project status and prioritized follow-ups)
 
 ## What "ready for LLM validation" means

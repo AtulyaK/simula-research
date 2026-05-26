@@ -16,10 +16,12 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #7: complete on `main` (PR #23)
 - Issue #8: complete with milestone review evidence in `artifacts/reports/issue8/`
 - Issue #9: complete on `main` (PR #25); reproducibility evidence in `artifacts/reports/issue9/`
-- Issue #10: **open — HITL** (reusable-engine extraction scope); blocks formal “first cycle closed” declaration  
+- Issue #10: **closed** (ADR **0004** Option A — `docs/adr/0004-engine-seam-scope.md`); follow-ons **#60–#62** open  
 - Milestone 3 follow-ons **#27–#30**: complete on `main` (commits `df88524`, `73a0dc9`)  
-- Post–Milestone 3 hardening: **#31** / **PR #32** (TypedDict stage contracts), **#33** / **PR #34** (artifact tree stage-4 dir `40_dual_critic_quality` alignment)—merged to `main`  
-- Agent briefing: **`docs/agents/next-agent-handoff.md`** (testing prerequisites, P0/P1 follow-ups, definition of done)
+- Post–Milestone 3 hardening: **#31** / **PR #32**, **#33** / **PR #34** — merged  
+- LLM / correctness wave: **PR #45** (#22/#41/#42), **PR #54** (#51), **PR #56** (#39/#50 docs), **PR #58** (#47 NIM fail-closed) — merged  
+- **`main` tests:** 74 unittest cases, OK (no API keys)  
+- Agent briefing: **`docs/agents/next-agent-handoff.md`** (implementation cycle closed; provider validation cycle open)
 
 ## Slice index
 

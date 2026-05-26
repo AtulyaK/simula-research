@@ -152,28 +152,38 @@ Exit criteria:
 
 ## Current engineering status (live)
 
-**Last reviewed:** align with `main` and `docs/agents/next-agent-handoff.md`.
+**Last reviewed:** 2026-05-26 — `main`, `docs/agents/next-agent-handoff.md`.
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
 | **Milestone 1** | Met | Runnable stages + B0/A1/A4 execution + gate reporting (`artifacts/reports/issue7/`, `issue8/`). |
 | **Milestone 2** | Met | Manifest schema validation, baseline rerun classification, reproducibility evidence (`artifacts/reports/issue9/`, PR #25). |
-| **Milestone 3 (seams)** | Met on `main` | Stage contracts (#27), `RunArtifactStore` (#28), critic verdict hook (#29), comparability gate (#30). |
-| **Post–M3 hardening** | Met on `main` | TypedDict handoff types (#31 / PR #32); artifact tree validator vs `40_dual_critic_quality` (#33 / PR #34). |
-| **First-cycle closure** | **Pending HITL** | **Issue #10**: reusable-engine extraction scope, ADR/issue follow-ups, explicit comparability stance. |
+| **Milestone 3 (seams)** | Met on `main` | Stage contracts (#27), `RunArtifactStore` (#28), critic hooks (#29), comparability gate (#30). |
+| **Post–M3 hardening** | Met on `main` | TypedDict handoff types (#31 / PR #32); artifact tree `40_dual_critic_quality` (#33 / PR #34). |
+| **Issue #10 / ADR 0004** | **Closed** | Option A minimal seams; follow-ons **#60–#62** (`docs/adr/0004-engine-seam-scope.md`). |
+| **LLM Stage-4 path** | Met on `main` | PR #45 (#22/#41/#42); PR #54 (#51 regeneration artifact); PR #56 docs; PR #58 (#47 fail-closed NIM). |
+| **First implementation cycle** | **Closed** | Per ADR 0004 + Milestones 1–3 evidence. |
+| **Provider-backed validation cycle** | **Open** | See `docs/llm-validation-readiness.md` Phase 4; optional NIM smoke + matrix runs. |
 
-### Remaining work to declare the first implementation cycle “closed”
+### Remaining work (by track)
 
-1. **Human (Issue #10):** Approve candidate interfaces and follow-on issue set; optionally file ADRs for extraction boundaries.  
-2. **Engineering (optional but recommended before LLM swap):**  
-   - Inject **taxonomy / local diversification / complexification** behind protocols with **default = current deterministic behavior** (same as critic hook pattern).  
-   - **Document or unify** manifest validation modes so operators know when `manifest.validate_manifest` vs `validators.validate_manifest_schema` applies; keep Issue #9 tests passing.
+**P1 engineering (does not block “implementation cycle closed”; blocks clean all-stage provider swap):**
 
-### Testing prerequisites (no extra procurement for unittest)
+1. **#60** — Protocol + factory hooks for Stages 1–3 with **bit-identical** defaults.  
+2. **#61** — Manifest boot vs full reproducibility validation clarity (keep Issue #9 tests green).
 
-- **Python 3.11+** (TypedDict `Required` / `NotRequired`; CI may use newer).  
-- **Command:** `PYTHONPATH=src python3 -m unittest discover -s tests -v` from repository root.  
-- **No API keys** for current deterministic tests. Reserve provider keys and budget for when real models replace stubs.
+**Provider validation batch (Phase 4 in `docs/llm-validation-readiness.md`):**
+
+1. Org credentials/budget guardrails for live critics.  
+2. Optional NIM smoke, then provider-backed B0 / A1 / A4 with persisted artifacts and gate/comparison reports.  
+3. Baseline rerun classification and milestone gate recommendation — **no ADR 0003 threshold or metric formula changes**.
+
+**Deferred:** **#62** engine-core module refactor (ADR 0004 Option B).
+
+### Testing prerequisites
+
+- **Python 3.11+**; **74 tests** green on `main` via `PYTHONPATH=src python3 -m unittest discover -s tests -v`.  
+- **No API keys** for unittest. Live NIM critic runs require `NVIDIA_API_KEY` / `NVAPI_KEY` per `docs/llm-validation-readiness.md`.
 
 ## Dependency map
 
