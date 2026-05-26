@@ -192,6 +192,34 @@ class CriticProviderAdapterTests(unittest.TestCase):
                 else:
                     env[k] = v
 
+    def test_nvidia_evaluator_fails_closed_on_non_exact_verdict_text(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+
+            for model_text in ("I cannot accept this sample", "unacceptable", "accepted"):
+                with self.subTest(model_text=model_text):
+
+                    def fake_post_json(
+                        *,
+                        url: str,
+                        headers: dict[str, str],
+                        payload: dict[str, object],
+                        timeout_s: float,
+                    ) -> dict[str, object]:
+                        return {"choices": [{"message": {"content": model_text}}]}
+
+                    ev = nvidia_critic_sample_evaluator(http_post_json=fake_post_json, max_retries=0)
+                    with self.assertRaises(RuntimeError):
+                        ev({"instantiation_id": "i1", "text": "sample text"}, "critic_a")
+        finally:
+            for k, v in old.items():
+                if v is None:
+                    env.pop(k, None)
+                else:
+                    env[k] = v
+
 
 if __name__ == "__main__":
     unittest.main()
