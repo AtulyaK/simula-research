@@ -1,0 +1,106 @@
+{
+  "complexity_evidence": {
+    "calibrated_score_distribution": {
+      "p25": 0.9,
+      "p50": 0.9,
+      "p75": 0.9500000000000001
+    },
+    "complexification_pairs_evaluated": 21,
+    "complexification_precision": 0.7619047619047619,
+    "complexity_shift": 0.0
+  },
+  "coverage_evidence": {
+    "coverage_balance": 0.8241758241758241,
+    "covered_nodes": 7,
+    "depth_coverage_profile": {
+      "0": 1.0,
+      "1": 1.0,
+      "2": 1.0
+    },
+    "eligible_nodes": 7,
+    "node_coverage_ratio": 1.0
+  },
+  "failure_analysis": [
+    "No threshold failures detected for this run."
+  ],
+  "gate_summary": {
+    "complexity.complexification_precision": {
+      "actual": 0.7619047619047619,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.7
+    },
+    "coverage.min_depth_coverage": {
+      "actual": 1.0,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.6
+    },
+    "coverage.node_coverage_ratio": {
+      "actual": 1.0,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.8
+    },
+    "overall_status": "pass",
+    "quality.acceptance_rate": {
+      "actual": 0.6190476190476191,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.5
+    },
+    "quality.critic_agreement": {
+      "actual": 1.0,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.75
+    },
+    "quality.regen_burden": {
+      "actual": 0.0,
+      "comparator": "<=",
+      "status": "pass",
+      "threshold": 1.0
+    }
+  },
+  "protocol": {
+    "artifact_schema_version": "v1",
+    "baseline_or_ablation_tag": "A4",
+    "complexity_judgment_protocol": {
+      "initial_rating": 1000,
+      "k_factor": 32,
+      "minimum_comparisons_per_sample": 5,
+      "version": "milestone-1"
+    },
+    "critic_adjudication_config": {
+      "mode": "single_critic",
+      "policy": "reject_on_disagreement"
+    },
+    "domain_objective": "pilot-domain",
+    "evaluation_protocol_version": "milestone-1",
+    "hypothesis_focus": [
+      "H4"
+    ],
+    "protocol_version": "0.1.0",
+    "provider_runtime": {
+      "critic_backend": "hash_default",
+      "source": "environment"
+    },
+    "run_label": "ablation-single-critic",
+    "taxonomy_eligibility_policy": "instantiated-nodes-from-stage3-samples"
+  },
+  "quality_evidence": {
+    "acceptance_rate": 0.6190476190476191,
+    "critic_agreement": 1.0,
+    "disagreement_rate": 0.0,
+    "regen_burden": 0.0,
+    "requires_issue_5_outputs": false,
+    "todo_after_issue_5": []
+  },
+  "run_identity": {
+    "branch": "docs/final-completion-assessment-20260526",
+    "commit_hash": "0eb7350b88913026036f7b275cf7d00c06b9d4e6",
+    "run_id": "run-20260526T025931Z-3b53a2f6",
+    "seed": 7,
+    "timestamp_utc": "2026-05-26T02:59:31.400366+00:00"
+  }
+}
