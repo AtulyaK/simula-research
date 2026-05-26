@@ -62,6 +62,43 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
   - backoff policy
   - max retry budget per run
 
+### Live Stage-4 critic backend: NVIDIA NIM (OpenAI-compatible)
+
+This repo supports a **live** Stage-4 critic backend via NVIDIA NIM behind `SIMULA_CRITIC_BACKEND=nim` (alias: `nvidia`).
+
+**Default model** (if you do not override it): **`llama-4-maverick-17b-128e-instruct`**.
+
+**Required secrets (do not log):**
+
+- `NVIDIA_API_KEY` (preferred) or `NVAPI_KEY`
+
+**Non-secret transport/model knobs (safe to record in `provider_runtime`):**
+
+- `SIMULA_CRITIC_BACKEND=nim` (or `nvidia`)
+- `SIMULA_NIM_BASE_URL` (or `SIMULA_NVIDIA_BASE_URL`)  
+  Defaults to `https://integrate.api.nvidia.com/v1/chat/completions`
+- `SIMULA_NIM_MODEL` (or `SIMULA_NVIDIA_MODEL`)  
+  Defaults to `llama-4-maverick-17b-128e-instruct`
+- `SIMULA_CRITIC_MODEL_A`, `SIMULA_CRITIC_MODEL_B`  
+  Optional per-critic overrides (recommended for explicitness)
+- `SIMULA_NVIDIA_MAX_TOKENS`  
+  Max tokens for the critic response (defaults to 16; the critic is instructed to return exactly one token: `accept` or `reject`)
+- `SIMULA_HTTP_TIMEOUT_SECONDS` (defaults to 30)
+- `SIMULA_HTTP_MAX_RETRIES` (defaults to 2)
+- `SIMULA_HTTP_BACKOFF_BASE_SECONDS` (defaults to 0.5)
+
+**Safety invariants (by design):**
+
+- The live NIM evaluator **does not print prompts/responses**.
+- Errors raised by the transport wrapper are **sanitized** (no raw provider payloads).
+- Operator-facing structured logs should only contain **IDs + error types**, never sample text.
+
+**Stop conditions (operator guardrails):**
+
+- If you cannot confirm budget caps for the run, **do not start** live validation.
+- If you observe repeated `nvidia_critic_request_failed:*` errors beyond your retry budget, **stop the batch** and capture an incident note (without raw text).
+- If acceptance/rejection becomes unstable and dominates quality metrics, **stop** and run a focused diagnosis before continuing (do not “average it out”).
+
 ## 3) Data and compliance controls
 
 - Define whether prompts/responses may contain sensitive or regulated content.
@@ -77,6 +114,19 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
 - Persist complete run identity (`run_id`, seed, model IDs, protocol version, artifact schema version, commit hash, branch).
 - Persist artifacts under `artifacts/runs/<run_id>/...` following `docs/reproducibility-ops.md`.
 - Ensure stage-4 path alignment with current convention: `40_dual_critic_quality/`.
+
+### Deterministic `stub`/`replay` vs live `nim` (reproducibility expectations)
+
+Stage-4 critic non-determinism is handled explicitly via **backend selection**:
+
+- **`SIMULA_CRITIC_BACKEND=stub`**: deterministic, non-network “provider-shaped” path. Uses a hash-based verdict on text and is suitable for CI and baseline reproducibility checks.
+- **`SIMULA_CRITIC_BACKEND=replay`**: deterministic, non-network path that looks up verdicts from a fixed table (`SIMULA_CRITIC_REPLAY_JSON`). Use this when you need to **re-run exactly** against a previously captured critic decision table without re-contacting a provider.
+- **`SIMULA_CRITIC_BACKEND=nim`**: live provider-backed path. Even with `temperature=0`, you should treat it as **potentially drift-prone**. For “auditability”, always record:
+  - commit hash + branch,
+  - backend + base URL,
+  - explicit critic model IDs per critic (`SIMULA_CRITIC_MODEL_A` / `SIMULA_CRITIC_MODEL_B`),
+  - transport knobs (timeouts/retries),
+  - and any incident log about failures/retries (without raw text).
 
 ## 5) Baseline repo health gate
 

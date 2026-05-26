@@ -100,6 +100,12 @@ Regenerating runs: use `run_pipeline` / Issue #7 tooling; new runs land under `a
    - **#42** `pipeline_config` presets passed from `execute_issue7_matrix` into `run_pipeline` (A1 shallow taxonomy, A4 `single_critic_mode`, etc.); reporting-only A1/A4 metric hacks removed.  
    - **Adapter:** `src/simula_research/critic_provider_adapter.py` — `SIMULA_CRITIC_BACKEND` (`stub` / `replay`), retry helper, failure logging wrapper.
 
+2b. **Live NVIDIA NIM critic backend** — **PR [#48](https://github.com/AtulyaK/simula-research/pull/48)** (merged to `main`)  
+   - Enabled via `SIMULA_CRITIC_BACKEND=nim` (alias: `nvidia`) using stdlib HTTP.
+   - **Default model:** `llama-4-maverick-17b-128e-instruct` (override with `SIMULA_NIM_MODEL` / `SIMULA_NVIDIA_MODEL` or per-critic `SIMULA_CRITIC_MODEL_A/B`).
+   - **Secrets:** `NVIDIA_API_KEY` or `NVAPI_KEY` only; never print to logs.
+   - **Docs:** See `docs/llm-validation-readiness.md` and `docs/research-validation-playbook.md` for operator guardrails, stop conditions, and deterministic `stub`/`replay` vs live `nim` reproducibility expectations.
+
 3. **Generator / earlier-stage protocols**  
    - **#29** only injected **critic verdict**. Taxonomy, local diversification, and complexification are still deterministic in-repo logic.  
    - **Goal:** `Protocol` + factory hooks mirroring `critic_verdict` / `artifact_store_factory`, with **bit-identical** default factories.  

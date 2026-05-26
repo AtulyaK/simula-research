@@ -77,6 +77,67 @@ Stop if: required env vars are missing for your chosen backend, spend caps would
 
 For Issue #9 **full** manifest validation on disk, write `manifest.json` with all fields in `validators.validate_manifest_schema` (including `created_at_utc`, `domain_objective`, `owner`, `commit_hash`, `branch`). The minimal `run_pipeline` return manifest is sufficient for stage boot only.
 
+## Live provider smoke: NVIDIA NIM Stage-4 critics (only if keys already configured)
+
+This is the smallest live test of the merged NIM critic backend (**PR #48**). It uses stdlib HTTP and is designed to avoid logging raw sample text or provider payloads.
+
+**Critical constraints:**
+
+- Only run this if `NVIDIA_API_KEY` or `NVAPI_KEY` is already present in the environment.
+- Use explicit model IDs for auditability; default model is **`llama-4-maverick-17b-128e-instruct`**.
+- Treat live-provider runs as potentially drift-prone even at `temperature=0`.
+
+Suggested minimal smoke (tiny taxonomy; short run):
+
+```bash
+cd /path/to/simula-research
+export PYTHONPATH=src
+export SIMULA_CRITIC_BACKEND=nim
+
+# Optional but recommended (explicitness)
+export SIMULA_CRITIC_MODEL_A=llama-4-maverick-17b-128e-instruct
+export SIMULA_CRITIC_MODEL_B=llama-4-maverick-17b-128e-instruct
+
+# Transport guardrails (bounded retries + timeouts)
+export SIMULA_HTTP_TIMEOUT_SECONDS=30
+export SIMULA_HTTP_MAX_RETRIES=1
+export SIMULA_HTTP_BACKOFF_BASE_SECONDS=0.5
+
+python3 - <<'PY'
+import os
+import tempfile
+
+from simula_research.critic_provider_adapter import critic_sample_evaluator_from_env, provider_runtime_from_env
+from simula_research.pipeline import run_pipeline
+
+if not (os.environ.get("NVIDIA_API_KEY") or os.environ.get("NVAPI_KEY")):
+    raise SystemExit("Missing NVIDIA_API_KEY/NVAPI_KEY; skip live smoke.")
+
+evaluator = critic_sample_evaluator_from_env()
+runtime = provider_runtime_from_env()
+with tempfile.TemporaryDirectory() as tmp:
+    result = run_pipeline(
+        seed=7,
+        model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+        domain_objective="nim-smoke",
+        artifact_root=tmp,
+        taxonomy_config={"max_depth": 1, "branching_factor": 2},
+        provider_runtime=runtime,
+        critic_sample_evaluator=evaluator,
+    )
+    print("run_id", result["manifest"]["run_id"])
+    # Intentionally do NOT print sample texts or provider responses.
+    print("critic_backend", runtime.get("critic_backend"))
+    print("nim_default_model", runtime.get("nim_critic", {}).get("default_model"))
+PY
+```
+
+**Stop immediately** if:
+
+- you cannot confirm budget caps for the run,
+- repeated transport failures occur (`nvidia_critic_request_failed:*`),
+- or Stage contract validation fails.
+
 ## Per-run checklist
 
 Before run:
