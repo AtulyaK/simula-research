@@ -8,11 +8,11 @@ The **first implementation cycle** (see `docs/implementation-plan.md`) is comple
 
 1. **Milestone 1–2 evidence** exists and remains comparable: baseline + ablations, gate reports, reproducibility checks (`artifacts/reports/issue7/`, `issue8/`, `issue9/`).
 2. **Milestone 3 seams** are on `main`: stage validators, artifact store protocol, critic verdict hook, comparability gate tests (**#27–#30**).
-3. **Issue #10 (HITL)** is closed with an explicit decision: reusable-engine extraction scope, listed candidate interfaces, and approved follow-on issues or ADR updates—**without** waiving comparability unless formally recorded.
+3. **Issue #10 (HITL)** is **closed** with **ADR 0004** (Option A: minimal seam formalization): existing seams documented, Stage 1–3 protocol follow-ons filed, manifest-validation clarification filed, engine-core refactor explicitly deferred—**without** waiving comparability unless formally recorded.
 
-Optional engineering that **does not** block declaring the cycle “complete” for research ops but **does** block a clean “engine extraction” phase:
+Optional engineering that **does not** block declaring the cycle “complete” for research ops but **does** block a clean “swap providers on all stages” path:
 
-- Earlier-stage **generator protocols** (taxonomy, local diversification, complexification) with bit-identical defaults.
+- **Stage 1–3 generator protocols** with bit-identical defaults (see follow-on GitHub issues linked from #10).
 - **Manifest validation modes** documented or unified (`manifest.validate_manifest` vs `validators.validate_manifest_schema`).
 
 ---
@@ -25,6 +25,18 @@ Optional engineering that **does not** block declaring the cycle “complete” 
 | **#34** | **#33** | `validators.REQUIRED_ARTIFACT_STAGES`: stage-4 dir **`40_dual_critic_quality`** aligned with `FileSystemRunArtifactStore`; `docs/reproducibility-ops.md` migration note; contract test. |
 
 **Canonical on-disk stage-4 directory:** `40_dual_critic_quality/` (not `40_dual_critic/`).
+
+---
+
+## Issue #10 decision (ADR 0004)
+
+**Approved scope:** Option A — minimal seam formalization (`docs/adr/0004-engine-seam-scope.md`).
+
+| In scope now (on `main`) | Approved P1 follow-ons | Deferred |
+| --- | --- | --- |
+| Stage contracts, `RunArtifactStore`, critic verdict / sample evaluator hooks, comparability gate | Protocol hooks Stages 1–3 (bit-identical defaults); manifest boot vs full-schema clarity | “Engine core” module refactor (Option B) |
+
+**Do-not-break:** ADR 0003 thresholds/metrics/gates; Issue #9 comparability + `mixed_reason`; artifact layout (`40_dual_critic_quality/`); default pipeline handoff TypedDicts; metrics from persisted artifacts only.
 
 ---
 
@@ -80,38 +92,27 @@ Regenerating runs: use `run_pipeline` / Issue #7 tooling; new runs land under `a
 2. Preserve **baseline/ablation comparability** for milestone-1 evidence (`artifacts/reports/issue7/`, `issue8/`, `issue9/`) unless formally waived with rationale.
 3. **Structured comparability**: deliberate `mixed` axes must set `mixed_reason: documented_ablation` (see `docs/reproducibility-ops.md` and `src/simula_research/issue9_reproducibility.py`).
 4. **Control axes** (ADR **0002**): keep coverage, local diversity, complexity, and quality **separate** at stage boundaries—no silent merging of stages in public surfaces.
+5. **Engine seams** (ADR **0004**): new Protocol/factory hooks must use **bit-identical** default implementations unless comparability is formally waived.
 
 ---
 
-## Prioritized follow-ups (pick up in order to “finish the project”)
+## Prioritized follow-ups (pick up in order)
 
-### P0 — Close the engineering cycle (HITL)
+### P1 — Before relying on swapped providers on all stages
 
-1. **Issue #10 — Reusable-engine extraction scope (HITL)**  
-   - **Goal:** List candidate interfaces, migration boundaries, and approved follow-on GitHub issues or ADRs.  
-   - **Blocker:** Human decision; agent can draft options, not approve.  
-   - **Acceptance:** Issue #10 acceptance criteria in `docs/issues-draft.md` all checked with links to ADR/issue updates.
+1. **#60 — Stage 1–3 Protocol hooks (bit-identical defaults)** — mirror `critic_verdict` / `artifact_store_factory` pattern; golden tests vs current `run_pipeline` outputs.
 
-### P1 — Strongly recommended before real LLM integration
+2. **#61 — Manifest validation modes** — document and/or unify `manifest.validate_manifest` (pipeline boot / minimal) vs `validators.validate_manifest_schema` (full Issue #9 reproducibility); keep `tests/test_issue9_reproducibility.py` green.
 
-2. **Sample-aware critic + execution fidelity + metadata** — **PR [#45](https://github.com/AtulyaK/simula-research/pull/45)** (`feature/llm-validation-issues-22-41-42`); merge before relying on `main`.  
+3. **Sample-aware critic + execution fidelity + metadata** — merge **PR [#45](https://github.com/AtulyaK/simula-research/pull/45)** when ready (`feature/llm-validation-issues-22-41-42`).  
    - **#22** `CriticSampleEvaluatorFn` + `sample_evaluator_from_text_fn` / `recorded_sample_evaluator`; `run_pipeline(..., critic_sample_evaluator=...)` (mutually exclusive with `critic_verdict`).  
    - **#41** optional `provider_runtime` on manifest + stage 4 echo; `provider_runtime_from_env()` for operator transport metadata (no secrets).  
    - **#42** `pipeline_config` presets passed from `execute_issue7_matrix` into `run_pipeline` (A1 shallow taxonomy, A4 `single_critic_mode`, etc.); reporting-only A1/A4 metric hacks removed.  
    - **Adapter:** `src/simula_research/critic_provider_adapter.py` — `SIMULA_CRITIC_BACKEND` (`stub` / `replay`), retry helper, failure logging wrapper.
 
-3. **Generator / earlier-stage protocols**  
-   - **#29** only injected **critic verdict**. Taxonomy, local diversification, and complexification are still deterministic in-repo logic.  
-   - **Goal:** `Protocol` + factory hooks mirroring `critic_verdict` / `artifact_store_factory`, with **bit-identical** default factories.  
-   - **Tests:** Same golden outputs as current `run_pipeline` for default factories.
+### P2 — Optional / deferred
 
-4. **Stage 0 / manifest completeness**  
-   - `manifest.validate_manifest` is **minimal** (pipeline boot).  
-   - `validators.validate_manifest_schema` is the **full** reproducibility set (Issue #9).  
-   - **Goal:** Document “fast boot” vs “full reproducibility” modes in code + `docs/reproducibility-ops.md`, or unify with explicit mode flag—**must** keep `tests/test_issue9_reproducibility.py` green.
-
-### P2 — Done (reference only)
-
+- **#62 — Engine core refactor (Option B)** — deferred per ADR 0004; only after P1 seams are stable under repeated runs.
 - ~~Artifact directory name drift~~ — **#33** merged (**#34**): validators + docs aligned to `40_dual_critic_quality/`.  
 - ~~Optional typing on stage contracts~~ — **#31** merged (**#32**): TypedDict exports in `stage_contracts.py`.
 
@@ -127,7 +128,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 
 ## Workflow expectations (from `AGENTS.md` / repo rules)
 
-- Medium/large work: align with **`docs/research_paper.pdf`**, ADRs **0001–0003**, `contexts/core/CONTEXT.md`, `contexts/eval/CONTEXT.md`, `docs/pipeline-spec.md`, `docs/evaluation-metrics.md`, `docs/reproducibility-ops.md`.
+- Medium/large work: align with **`docs/research_paper.pdf`**, ADRs **0001–0004**, `contexts/core/CONTEXT.md`, `contexts/eval/CONTEXT.md`, `docs/pipeline-spec.md`, `docs/evaluation-metrics.md`, `docs/reproducibility-ops.md`.
 - Implementation: prefer **TDD** (red → green → refactor).
 - Bugs/regressions: diagnose before speculative fixes (`/diagnose` skill when applicable).
 
@@ -149,6 +150,7 @@ Create new work as **GitHub Issues** (`gh issue create`); system of record is de
 
 | Document | Use |
 | --- | --- |
+| `docs/adr/0004-engine-seam-scope.md` | Issue #10 approved scope + invariants |
 | `docs/issues-draft.md` | Issue acceptance criteria + verification snapshot |
 | `docs/implementation-plan.md` | Milestones 1–3 definitions and dependency map |
 | `docs/parallel-agent-prompts.md` | Copy/paste agent prompts + wave status table |
