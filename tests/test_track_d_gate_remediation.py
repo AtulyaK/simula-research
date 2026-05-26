@@ -34,6 +34,13 @@ class TrackDGateRemediationTests(unittest.TestCase):
         expected_count = sum(1 for sample in expected["samples"] if sample["is_complexified"])
         self.assertEqual(complexified_count, expected_count)
 
+    def test_local_diversification_retains_three_instantiations_per_node(self) -> None:
+        taxonomy = build_taxonomy("pilot-domain", TaxonomyConfig(max_depth=2, branching_factor=2))
+        local = build_local_diversification(taxonomy=taxonomy)
+        node_count = len(taxonomy["nodes"])
+        self.assertEqual(len(local["instantiations"]), node_count * 3)
+        self.assertEqual(len(local["rejections"]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

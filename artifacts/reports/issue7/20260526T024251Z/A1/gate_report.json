@@ -1,0 +1,104 @@
+{
+  "complexity": {
+    "calibrated_score_distribution": {
+      "p25": 0.7,
+      "p50": 0.9,
+      "p75": 0.925
+    },
+    "complexification_pairs_evaluated": 3,
+    "complexification_precision": 0.6666666666666666,
+    "complexity_shift": 0.0
+  },
+  "coverage": {
+    "coverage_balance": 1.0,
+    "covered_nodes": 1,
+    "depth_coverage_profile": {
+      "0": 1.0
+    },
+    "eligible_nodes": 1,
+    "node_coverage_ratio": 1.0
+  },
+  "gate_decision": {
+    "complexity.complexification_precision": {
+      "actual": 0.6666666666666666,
+      "comparator": ">=",
+      "status": "fail",
+      "threshold": 0.7
+    },
+    "coverage.min_depth_coverage": {
+      "actual": 1.0,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.6
+    },
+    "coverage.node_coverage_ratio": {
+      "actual": 1.0,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.8
+    },
+    "overall_status": "fail",
+    "quality.acceptance_rate": {
+      "actual": 0.6666666666666666,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.5
+    },
+    "quality.critic_agreement": {
+      "actual": 1.0,
+      "comparator": ">=",
+      "status": "pass",
+      "threshold": 0.75
+    },
+    "quality.regen_burden": {
+      "actual": 0.0,
+      "comparator": "<=",
+      "status": "pass",
+      "threshold": 1.0
+    }
+  },
+  "notes": [
+    "Failed threshold: complexity.complexification_precision (0.6666666666666666 >= 0.7)."
+  ],
+  "protocol": {
+    "artifact_schema_version": "v1",
+    "baseline_or_ablation_tag": "A1",
+    "complexity_judgment_protocol": {
+      "initial_rating": 1000,
+      "k_factor": 32,
+      "minimum_comparisons_per_sample": 5,
+      "version": "milestone-1"
+    },
+    "critic_adjudication_config": {
+      "mode": "dual_critic",
+      "policy": "reject_on_disagreement"
+    },
+    "domain_objective": "pilot-domain",
+    "evaluation_protocol_version": "milestone-1",
+    "hypothesis_focus": [
+      "H1"
+    ],
+    "protocol_version": "0.1.0",
+    "provider_runtime": {
+      "critic_backend": "hash_default",
+      "source": "environment"
+    },
+    "run_label": "ablation-no-global-diversification",
+    "taxonomy_eligibility_policy": "instantiated-nodes-from-stage3-samples"
+  },
+  "quality": {
+    "acceptance_rate": 0.6666666666666666,
+    "critic_agreement": 1.0,
+    "disagreement_rate": 0.0,
+    "regen_burden": 0.0,
+    "requires_issue_5_outputs": false,
+    "todo_after_issue_5": []
+  },
+  "run_identity": {
+    "branch": "feat/issue-60-stage-1-3-protocol-hooks",
+    "commit_hash": "750d351e5f8a62b349b86e6af0d4d00e2255871b",
+    "run_id": "run-20260526T024251Z-40967f68",
+    "seed": 7,
+    "timestamp_utc": "2026-05-26T02:42:51.758362+00:00"
+  }
+}

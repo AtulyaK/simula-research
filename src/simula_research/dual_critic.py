@@ -6,6 +6,7 @@ from simula_research.provider_protocols import (
     CriticSampleEvaluatorFn,
     CriticVerdict,
     CriticVerdictFn,
+    hash_based_critic_sample_evaluator,
     hash_based_critic_verdict,
 )
 
@@ -42,11 +43,15 @@ def adjudicate_samples(
     max_regenerations = adjudication_policy["max_regenerations_per_sample"]
     single_critic_mode = adjudication_policy["single_critic_mode"]
 
+    sample_evaluator = critic_sample_evaluator
+    if sample_evaluator is None and critic_verdict is None:
+        sample_evaluator = hash_based_critic_sample_evaluator
+
     text_decide: CriticVerdictFn = critic_verdict or hash_based_critic_verdict
 
     def _verdict_for_sample(sample_row: dict[str, Any], critic_id: str) -> CriticVerdict:
-        if critic_sample_evaluator is not None:
-            return critic_sample_evaluator(sample_row, critic_id)
+        if sample_evaluator is not None:
+            return sample_evaluator(sample_row, critic_id)
         return text_decide(str(sample_row.get("text", "")), critic_id)
 
     def _dual_verdicts(sample_row: dict[str, Any]) -> tuple[CriticVerdict, CriticVerdict]:

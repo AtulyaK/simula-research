@@ -67,6 +67,20 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                     0.75,
                 )
 
+    def test_milestone1_b0_gate_passes_coverage_and_acceptance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="milestone1-gate-remediation",
+                commit_hash="deadbeef",
+            )
+            gates = output["run_reports"]["B0"]["gate_report"]["gate_decision"]
+            self.assertEqual(gates["coverage.node_coverage_ratio"]["status"], "pass")
+            self.assertEqual(gates["coverage.min_depth_coverage"]["status"], "pass")
+            self.assertEqual(gates["quality.acceptance_rate"]["status"], "pass")
+            self.assertEqual(gates["overall_status"], "pass")
+
     def test_complexity_metrics_use_complexification_stage_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
