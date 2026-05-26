@@ -94,12 +94,18 @@ Regenerating runs: use `run_pipeline` / Issue #7 tooling; new runs land under `a
 
 ### P1 — Strongly recommended before real LLM integration
 
-2. **Generator / earlier-stage protocols**  
+2. **Sample-aware critic + execution fidelity + metadata** — **PR [#45](https://github.com/AtulyaK/simula-research/pull/45)** (`feature/llm-validation-issues-22-41-42`); merge before relying on `main`.  
+   - **#22** `CriticSampleEvaluatorFn` + `sample_evaluator_from_text_fn` / `recorded_sample_evaluator`; `run_pipeline(..., critic_sample_evaluator=...)` (mutually exclusive with `critic_verdict`).  
+   - **#41** optional `provider_runtime` on manifest + stage 4 echo; `provider_runtime_from_env()` for operator transport metadata (no secrets).  
+   - **#42** `pipeline_config` presets passed from `execute_issue7_matrix` into `run_pipeline` (A1 shallow taxonomy, A4 `single_critic_mode`, etc.); reporting-only A1/A4 metric hacks removed.  
+   - **Adapter:** `src/simula_research/critic_provider_adapter.py` — `SIMULA_CRITIC_BACKEND` (`stub` / `replay`), retry helper, failure logging wrapper.
+
+3. **Generator / earlier-stage protocols**  
    - **#29** only injected **critic verdict**. Taxonomy, local diversification, and complexification are still deterministic in-repo logic.  
    - **Goal:** `Protocol` + factory hooks mirroring `critic_verdict` / `artifact_store_factory`, with **bit-identical** default factories.  
    - **Tests:** Same golden outputs as current `run_pipeline` for default factories.
 
-3. **Stage 0 / manifest completeness**  
+4. **Stage 0 / manifest completeness**  
    - `manifest.validate_manifest` is **minimal** (pipeline boot).  
    - `validators.validate_manifest_schema` is the **full** reproducibility set (Issue #9).  
    - **Goal:** Document “fast boot” vs “full reproducibility” modes in code + `docs/reproducibility-ops.md`, or unify with explicit mode flag—**must** keep `tests/test_issue9_reproducibility.py` green.

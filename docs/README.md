@@ -15,6 +15,7 @@ This folder is organized around "what is active now" vs "reference material".
 - [`evaluation-metrics.md`](./evaluation-metrics.md): coverage, complexity, and quality metrics
 - [`reproducibility-ops.md`](./reproducibility-ops.md): manifest and rerun protocol guidance
 - [`research-validation-playbook.md`](./research-validation-playbook.md): baseline and ablation operating playbook
+- [`llm-validation-readiness.md`](./llm-validation-readiness.md): real-LLM rollout checklist, env wiring, and phase plan
 
 ## Governance
 

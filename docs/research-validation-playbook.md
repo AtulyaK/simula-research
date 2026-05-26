@@ -37,6 +37,46 @@ Use one domain objective at a time. Run baseline first, then ablations.
 
 If resources are limited, prioritize `B0`, `A1`, and `A4`.
 
+## Provider-backed smoke (stdlib / no live vendor keys)
+
+Use this for a **smallest viable** provider-shaped run: env-derived metadata plus the `stub` critic backend (hash parity through `sample_evaluator_from_text_fn`). No API keys are read or logged.
+
+Prerequisites: Python 3.11+, repo root, tests green.
+
+```bash
+cd /path/to/simula-research
+export PYTHONPATH=src
+export SIMULA_CRITIC_BACKEND=stub
+export SIMULA_HTTP_TIMEOUT_SECONDS=30
+export SIMULA_HTTP_MAX_RETRIES=2
+python3 - <<'PY'
+import tempfile
+from simula_research.critic_provider_adapter import critic_sample_evaluator_from_env, provider_runtime_from_env
+from simula_research.pipeline import run_pipeline
+
+evaluator = critic_sample_evaluator_from_env()
+runtime = provider_runtime_from_env()
+with tempfile.TemporaryDirectory() as tmp:
+    result = run_pipeline(
+        seed=7,
+        model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+        domain_objective="pilot-domain",
+        artifact_root=tmp,
+        taxonomy_config={"max_depth": 1, "branching_factor": 2},
+        provider_runtime=runtime,
+        critic_sample_evaluator=evaluator,
+    )
+    print("run_id", result["manifest"]["run_id"])
+    print("manifest keys", sorted(result["manifest"].keys()))
+PY
+```
+
+Deterministic **replay** table: set `SIMULA_CRITIC_BACKEND=replay` and `SIMULA_CRITIC_REPLAY_JSON` to a JSON file containing a list of `[instantiation_id, critic_id, text, verdict]` rows (see `tests/test_critic_provider_adapter.py`).
+
+Stop if: required env vars are missing for your chosen backend, spend caps would be exceeded, or stage contract validation fails (inspect stderr / rerun with a fixed `artifact_root` under `artifacts/runs/`).
+
+For Issue #9 **full** manifest validation on disk, write `manifest.json` with all fields in `validators.validate_manifest_schema` (including `created_at_utc`, `domain_objective`, `owner`, `commit_hash`, `branch`). The minimal `run_pipeline` return manifest is sufficient for stage boot only.
+
 ## Per-run checklist
 
 Before run:

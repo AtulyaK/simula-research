@@ -79,7 +79,9 @@
         "classification": "exact",
         "drift_threshold": 0.02,
         "max_metric_delta": 0.0,
-        "rerun_matrix_root": "artifacts/reports/issue9/issue7/20260509T160651Z"
+        "metric_paths_compared": 17,
+        "missing_metric_paths": [],
+        "rerun_matrix_root": "artifacts/reports/issue9/issue7/20260526T013107Z"
       },
       "blocked_by_issue": null,
       "comparability_constraints": "unchanged",
@@ -91,7 +93,7 @@
           "ok": true
         },
         "fixed_protocol_comparability": {
-          "details": "Comparability constraints pass, with mixed axes limited to documented ablation design.",
+          "details": "Comparability constraints pass; any mixed axes declare mixed_reason=documented_ablation.",
           "ok": true
         },
         "reproducibility": {
@@ -107,9 +109,9 @@
             "manifest": {
               "artifact_schema_version": "v1",
               "baseline_or_ablation_tag": "A1",
-              "branch": "feature/issue-7-execute-b0-a1-a4",
-              "commit_hash": "5d631a8",
-              "created_at_utc": "2026-04-30T20:47:44.068750+00:00",
+              "branch": "feature/llm-validation-issues-22-41-42",
+              "commit_hash": "70a79c215e5e23db2c121bb5b68a9ee12fbe81a9",
+              "created_at_utc": "2026-05-26T01:26:40.828949+00:00",
               "domain_objective": "pilot-domain",
               "model_ids": {
                 "critic_a": "gpt-4.1",
@@ -124,7 +126,7 @@
                 "local_diversification_enabled": true
               },
               "protocol_version": "0.1.0",
-              "run_id": "run-20260430T204744Z-60679fdb",
+              "run_id": "run-20260526T012640Z-8befe738",
               "seed": 7
             },
             "ok": true
@@ -134,9 +136,9 @@
             "manifest": {
               "artifact_schema_version": "v1",
               "baseline_or_ablation_tag": "A4",
-              "branch": "feature/issue-7-execute-b0-a1-a4",
-              "commit_hash": "5d631a8",
-              "created_at_utc": "2026-04-30T20:47:44.072523+00:00",
+              "branch": "feature/llm-validation-issues-22-41-42",
+              "commit_hash": "70a79c215e5e23db2c121bb5b68a9ee12fbe81a9",
+              "created_at_utc": "2026-05-26T01:26:40.831680+00:00",
               "domain_objective": "pilot-domain",
               "model_ids": {
                 "critic_a": "gpt-4.1",
@@ -152,7 +154,7 @@
                 "single_critic_mode": "critic_a"
               },
               "protocol_version": "0.1.0",
-              "run_id": "run-20260430T204744Z-d386f9b4",
+              "run_id": "run-20260526T012640Z-c7154678",
               "seed": 7
             },
             "ok": true
@@ -162,9 +164,9 @@
             "manifest": {
               "artifact_schema_version": "v1",
               "baseline_or_ablation_tag": "B0",
-              "branch": "feature/issue-7-execute-b0-a1-a4",
-              "commit_hash": "5d631a8",
-              "created_at_utc": "2026-04-30T20:47:44.064727+00:00",
+              "branch": "feature/llm-validation-issues-22-41-42",
+              "commit_hash": "70a79c215e5e23db2c121bb5b68a9ee12fbe81a9",
+              "created_at_utc": "2026-05-26T01:26:40.826586+00:00",
               "domain_objective": "pilot-domain",
               "model_ids": {
                 "critic_a": "gpt-4.1",
@@ -179,7 +181,7 @@
                 "local_diversification_enabled": true
               },
               "protocol_version": "0.1.0",
-              "run_id": "run-20260430T204744Z-d55fde55",
+              "run_id": "run-20260526T012640Z-374e09a1",
               "seed": 7
             },
             "ok": true
@@ -188,7 +190,7 @@
       },
       "paper_alignment": {
         "control_axis_interpretability": "Coverage/complexity/quality axes are interpreted only under fixed protocol and reproducible rerun evidence.",
-        "fixed_protocol_comparability": "Comparability constraints pass, with mixed axes limited to documented ablation design.",
+        "fixed_protocol_comparability": "Comparability constraints pass; any mixed axes declare mixed_reason=documented_ablation.",
         "traceability_auditability": "Audit traces include comparison tables, per-run gate reports, run IDs, and reconstructed manifests."
       },
       "status": "exact",
@@ -204,11 +206,11 @@
       "B0": "run-20260430T204744Z-d55fde55"
     },
     "sources": {
-      "comparison_tables": "artifacts/reports/issue7/20260430T204744Z/comparison_tables.json",
+      "comparison_tables": "artifacts/reports/issue7/20260526T012640Z/comparison_tables.json",
       "gate_reports": [
-        "artifacts/reports/issue7/20260430T204744Z/B0/gate_report.json",
-        "artifacts/reports/issue7/20260430T204744Z/A1/gate_report.json",
-        "artifacts/reports/issue7/20260430T204744Z/A4/gate_report.json"
+        "artifacts/reports/issue7/20260526T012640Z/B0/gate_report.json",
+        "artifacts/reports/issue7/20260526T012640Z/A1/gate_report.json",
+        "artifacts/reports/issue7/20260526T012640Z/A4/gate_report.json"
       ]
     }
   },
@@ -228,7 +230,7 @@
   },
   "review_metadata": {
     "decision": "fail",
-    "evidence_packet": "artifacts/reports/issue7/20260430T204744Z",
+    "evidence_packet": "artifacts/reports/issue7/20260526T012640Z",
     "issue_id": 8,
     "review_scope_constraints": [
       "No Issue #9 implementation in this review",
@@ -239,10 +241,10 @@
     "review_type": "milestone-1-hitl-gate-review"
   },
   "threshold_adjustment_recommendation": {
-    "adr_note": "No ADR trigger in Issue #8 because no threshold value change is proposed. If thresholds are revised after Issue #9 reproducibility and follow-on diagnosis, open an ADR documenting trade-offs.",
+    "adr_note": "Safe alternative: maintain existing thresholds until hard gates pass.",
     "adr_required": false,
     "proposed_changes": [],
-    "rationale": "Observed misses are large and systematic. Lowering thresholds now would reduce gate discrimination instead of addressing pipeline bottlenecks.",
+    "rationale": "Rejected threshold tuning because Issue #9 hard gates are not all satisfied. Resolve reproducibility, audit-trace, and comparability evidence first.",
     "recommendation": "keep_thresholds_as_is"
   },
   "threshold_mapping": [
