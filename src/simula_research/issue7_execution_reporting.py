@@ -60,7 +60,6 @@ def execute_issue7_matrix(
 
     run_reports: dict[str, dict[str, Any]] = {}
     baseline_scores: list[float] = []
-    baseline_pairs: list[dict[str, bool]] = []
 
     for preset_id in PRESET_IDS:
         request = build_run_request(preset_id)
@@ -101,11 +100,10 @@ def execute_issue7_matrix(
         ]
         if preset_id == "B0":
             baseline_scores = run_scores
-            baseline_pairs = complexification_pairs
         complexity = compute_complexity_metrics(
             run_complexity_scores=run_scores,
             baseline_complexity_scores=baseline_scores or run_scores,
-            complexification_pairs=baseline_pairs if preset_id == "A1" else complexification_pairs,
+            complexification_pairs=complexification_pairs,
         )
 
         quality = compute_quality_metrics(issue5_outputs=stage4)
