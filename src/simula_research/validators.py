@@ -1,7 +1,21 @@
+"""Reproducibility validators for on-disk runs (Issue #9).
+
+``validate_manifest_schema`` applies the **full** manifest field set from
+``docs/reproducibility-ops.md``. ``manifest.validate_manifest`` is the narrower
+**boot** check used by ``run_pipeline`` before stages run.
+
+Use ``validate_manifest_by_mode`` when operators need a single entry point with
+explicit ``mode="boot"`` or ``mode="full"``.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+
+from simula_research.manifest import validate_manifest
+
+ManifestValidationMode = Literal["boot", "full"]
 
 # Reproducibility-ops required manifest fields.
 REQUIRED_MANIFEST_FIELDS: tuple[str, ...] = (
@@ -42,6 +56,11 @@ def _validation_result(kind: str, issues: list[str], assumptions: list[str]) -> 
 
 
 def validate_manifest_schema(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Validate manifest against the full reproducibility-ops field set.
+
+    Returns a structured result dict (does not raise). Boot-only manifests from
+    ``run_pipeline`` are expected to fail until Issue #9 fields are added on disk.
+    """
     issues: list[str] = []
     assumptions = [
         "Manifest payload is already parsed as JSON object",
@@ -74,6 +93,48 @@ def validate_manifest_schema(manifest: dict[str, Any]) -> dict[str, Any]:
         issues.append("field pipeline_config must be an object")
 
     return _validation_result(kind="manifest", issues=issues, assumptions=assumptions)
+
+
+def validate_manifest_by_mode(
+    manifest: dict[str, Any],
+    *,
+    mode: ManifestValidationMode = "boot",
+) -> dict[str, Any]:
+    """Validate manifest in boot or full reproducibility mode.
+
+    - ``boot``: delegates to ``manifest.validate_manifest`` (pipeline default).
+    - ``full``: delegates to ``validate_manifest_schema`` (Issue #9 / ops).
+    """
+    if mode == "full":
+        result = validate_manifest_schema(manifest)
+        result["validation_mode"] = "full"
+        return result
+
+    try:
+        validate_manifest(manifest)
+    except ValueError as exc:
+        return {
+            **_validation_result(
+                kind="manifest",
+                issues=[str(exc)],
+                assumptions=[
+                    "Boot mode uses manifest.validate_manifest (raises converted to issues)",
+                ],
+            ),
+            "validation_mode": "boot",
+        }
+
+    return {
+        **_validation_result(
+            kind="manifest",
+            issues=[],
+            assumptions=[
+                "Boot mode uses manifest.validate_manifest",
+                "Does not require owner, branch, commit_hash, or baseline_or_ablation_tag",
+            ],
+        ),
+        "validation_mode": "boot",
+    }
 
 
 def validate_artifact_tree(run_root: str | Path) -> dict[str, Any]:

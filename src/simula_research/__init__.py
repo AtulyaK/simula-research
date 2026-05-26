@@ -1,5 +1,9 @@
 from simula_research.pipeline import run_pipeline
-from simula_research.validators import validate_artifact_tree, validate_manifest_schema
+from simula_research.validators import (
+    validate_artifact_tree,
+    validate_manifest_by_mode,
+    validate_manifest_schema,
+)
 from simula_research.evaluation_metrics import (
     build_gate_report,
     compute_complexity_metrics,
@@ -10,6 +14,7 @@ from simula_research.evaluation_metrics import (
 __all__ = [
     "run_pipeline",
     "validate_manifest_schema",
+    "validate_manifest_by_mode",
     "validate_artifact_tree",
     "compute_coverage_metrics",
     "compute_complexity_metrics",
