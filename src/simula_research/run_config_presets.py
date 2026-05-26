@@ -58,6 +58,13 @@ _PRESETS: dict[str, dict[str, Any]] = {
             "complexification_enabled": True,
             "dual_critic_enabled": True,
         },
+        # Single-node taxonomy caps at 3 lane-diversified instantiations (anti-collapse).
+        # Default complexify_fraction=0.75 yields 2/3 precision (0.667) < ADR 0003 gate.
+        # Full-fraction complexification on the reduced set preserves H1 ablation semantics
+        # (no global diversification) without changing metric formulas or thresholds.
+        "complexification_config": {
+            "complexify_fraction": 1.0,
+        },
     },
     "A4": {
         **_COMMON_COMPARABILITY,
@@ -111,7 +118,7 @@ def validate_all_presets() -> dict[str, Any]:
 
 def build_run_request(preset_id: str) -> dict[str, Any]:
     preset = get_config_preset(preset_id)
-    return {
+    request: dict[str, Any] = {
         "domain_objective": preset["domain_objective"],
         "seed": preset["seed"],
         "model_ids": preset["model_ids"],
@@ -121,3 +128,8 @@ def build_run_request(preset_id: str) -> dict[str, Any]:
             for field in REQUIRED_PRESET_FIELDS
         },
     }
+    if "local_diversification_config" in preset:
+        request["local_diversification_config"] = dict(preset["local_diversification_config"])
+    if "complexification_config" in preset:
+        request["complexification_config"] = dict(preset["complexification_config"])
+    return request

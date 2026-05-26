@@ -11,7 +11,10 @@ from simula_research.evaluation_metrics import (
     compute_coverage_metrics,
     compute_quality_metrics,
 )
-from simula_research.critic_provider_adapter import provider_runtime_from_env
+from simula_research.critic_provider_adapter import (
+    critic_sample_evaluator_from_env,
+    provider_runtime_from_env,
+)
 from simula_research.pipeline import run_pipeline
 from simula_research.run_config_presets import PRESET_IDS, build_run_request, validate_all_presets
 
@@ -84,14 +87,23 @@ def execute_issue7_matrix(
     for preset_id in PRESET_IDS:
         request = build_run_request(preset_id)
         provider_runtime = provider_runtime_from_env()
-        pipeline_result = run_pipeline(
-            seed=int(request["seed"]),
-            model_ids=dict(request["model_ids"]),
-            domain_objective=str(request["domain_objective"]),
-            artifact_root=artifact_root,
-            pipeline_config=dict(request["pipeline_config"]),
-            provider_runtime=provider_runtime,
-        )
+        critic_sample_evaluator = critic_sample_evaluator_from_env()
+        pipeline_kwargs: dict[str, Any] = {
+            "seed": int(request["seed"]),
+            "model_ids": dict(request["model_ids"]),
+            "domain_objective": str(request["domain_objective"]),
+            "artifact_root": artifact_root,
+            "pipeline_config": dict(request["pipeline_config"]),
+            "provider_runtime": provider_runtime,
+            "critic_sample_evaluator": critic_sample_evaluator,
+        }
+        if request.get("local_diversification_config") is not None:
+            pipeline_kwargs["local_diversification_config"] = dict(
+                request["local_diversification_config"]
+            )
+        if request.get("complexification_config") is not None:
+            pipeline_kwargs["complexification_config"] = dict(request["complexification_config"])
+        pipeline_result = run_pipeline(**pipeline_kwargs)
 
         stage4 = pipeline_result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
         stage3 = pipeline_result["stage_outputs"]["stage_3_complexification"]

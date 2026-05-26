@@ -1,9 +1,12 @@
 # Issue #8 Milestone-1 Gate Review Addendum
 
+> **Superseded for A1 complexity gate:** see `milestone_gate_review_addendum_20260526T025231Z.md` (packet `20260526T025231Z`; B0/A1/A4 all pass).
+
 - **Packet ID:** `20260526T024251Z`
 - **Supersedes evidence for:** baseline gate decision only; does **not** amend the April 2026 HITL review in `milestone_gate_review.md`
 - **Issue #7 evidence:** `artifacts/reports/issue7/20260526T024251Z/`
-- **Branch / commit:** `fix/milestone1-gate-remediation-phase2` (see gate reports for exact hash)
+- **Branch / commit:** merged on `main` as **`af9be6f`** (PR #69); gate reports may still list pre-merge branch in `run_identity`
+- **Machine-readable sign-off:** `milestone_gate_review_addendum_20260526T024251Z.json` (`human_sign_off.status`: **pending**)
 
 ## Executive summary
 
