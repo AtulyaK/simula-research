@@ -16,3 +16,4 @@ Define how synthetic datasets are evaluated in the research reproduction workflo
 - Every run stores config, seed, and model settings.
 - Metrics are computed from persisted artifacts, not transient logs.
 - Baseline and variant runs are comparable by fixed evaluation protocol.
+- Provider-backed runs record non-secret transport metadata (`provider_runtime`); evaluation thresholds and metric formulas remain governed by ADR **0003** (no silent drift).

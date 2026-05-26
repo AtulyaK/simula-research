@@ -4,7 +4,7 @@ This folder is organized around "what is active now" vs "reference material".
 
 ## Start here (active execution)
 
-- [`agents/next-agent-handoff.md`](./agents/next-agent-handoff.md): **primary agent briefing** — definition of done, P0/P1 follow-ups, testing prerequisites (Python, unittest, keys), links to PRs/issues
+- [`agents/next-agent-handoff.md`](./agents/next-agent-handoff.md): **primary agent briefing** — implementation vs provider-validation “done”, ADR 0004, **#60–#62**, testing prerequisites, merged PR snapshot
 - [`parallel-agent-prompts.md`](./parallel-agent-prompts.md): wave prompt library plus execution-status table (through Wave 9)
 - [`issues-draft.md`](./issues-draft.md): issue-by-issue acceptance criteria and current completion notes
 - [`implementation-plan.md`](./implementation-plan.md): milestone roadmap, **live status table**, dependency map, testing prerequisites

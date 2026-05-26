@@ -22,3 +22,4 @@ Define the Simula-style synthetic data generation mechanism as a research reprod
 - Coverage, complexity, and quality are tracked as independent axes.
 - Pipeline outputs are reproducible from run config and seed state.
 - Regeneration paths are explicit when quality checks fail.
+- Stage boundaries expose injectable seams (artifact store, critics; Stages 1–3 protocols per ADR **0004** / Issue **#60**) with **bit-identical** deterministic defaults unless comparability is formally waived.
