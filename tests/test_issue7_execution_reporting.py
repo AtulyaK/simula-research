@@ -50,26 +50,22 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             )
             self.assertEqual(len(comparison_tables["coverage_comparison"]), 3)
 
-    def test_failed_gate_includes_threshold_failure_notes(self) -> None:
+    def test_track_d_remediation_improves_critic_agreement_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
                 artifact_root=tmp_dir,
                 report_root=tmp_dir,
-                branch_name="feature/issue-7-execute-b0-a1-a4",
+                branch_name="track-d-gate-remediation",
                 commit_hash="deadbeef",
             )
 
-            has_failed_gate = False
-            for per_run in output["run_reports"].values():
-                gate_status = per_run["gate_report"]["gate_decision"]["overall_status"]
-                if gate_status == "fail":
-                    has_failed_gate = True
-                    self.assertGreater(len(per_run["failure_analysis"]), 0)
-                    self.assertTrue(
-                        any("failed threshold" in note.lower() for note in per_run["failure_analysis"])
-                    )
-
-            self.assertTrue(has_failed_gate)
+            for preset_id in ("B0", "A1", "A4"):
+                gates = output["run_reports"][preset_id]["gate_report"]["gate_decision"]
+                self.assertEqual(gates["quality.critic_agreement"]["status"], "pass")
+                self.assertGreaterEqual(
+                    float(gates["quality.critic_agreement"]["actual"]),
+                    0.75,
+                )
 
     def test_complexity_metrics_use_complexification_stage_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
