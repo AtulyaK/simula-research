@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.manifest import validate_manifest
+from simula_research.operator_log import log_detail, log_stage_complete, log_stage_start, log_step
 from simula_research.provider_protocols import (
     ComplexificationProviderFn,
     CriticSampleEvaluatorFn,
@@ -82,6 +83,11 @@ def run_pipeline(
         manifest["provider_runtime"] = dict(provider_runtime)
     validate_manifest(manifest)
 
+    log_step(f"pipeline run_id={run_id} seed={seed}")
+    if provider_runtime:
+        backend = provider_runtime.get("critic_backend", "unknown")
+        log_detail("critic_backend", backend)
+
     stage_outputs: dict[str, Any] = {
         stage_name: {"status": "placeholder", "run_id": run_id} for stage_name in STAGE_NAMES
     }
@@ -90,6 +96,7 @@ def run_pipeline(
     if pipeline_config is not None and not pipeline_config.get("global_diversification_enabled", True):
         taxonomy_cfg = {"max_depth": 0, "branching_factor": 1}
 
+    log_stage_start("10_taxonomy", max_depth=taxonomy_cfg.get("max_depth", 2))
     taxonomy_fn = taxonomy_provider or default_taxonomy_provider
     taxonomy = taxonomy_fn(
         domain_objective,
@@ -103,19 +110,31 @@ def run_pipeline(
     store_factory = artifact_store_factory or (lambda root: FileSystemRunArtifactStore(root))
     store = store_factory(run_root)
     artifacts = store.persist_taxonomy(taxonomy)
+    log_stage_complete(
+        "10_taxonomy",
+        node_count=len(taxonomy["nodes"]),
+        edge_count=len(taxonomy["edges"]),
+    )
 
     local_options = dict(local_diversification_config or {})
     if pipeline_config is not None and not pipeline_config.get("local_diversification_enabled", True):
         local_options["per_node_instantiation_count"] = 1
 
+    log_stage_start("20_local_diversification")
     local_fn = local_diversification_provider or default_local_diversification_provider
     local_diversification = local_fn(taxonomy, options=local_options or None)
     local_artifacts = store.persist_local_diversification(local_diversification)
+    log_stage_complete(
+        "20_local_diversification",
+        instantiations=len(local_diversification["instantiations"]),
+        rejections=len(local_diversification["rejections"]),
+    )
 
     complex_cfg = dict(complexification_config or {})
     if pipeline_config is not None and not pipeline_config.get("complexification_enabled", True):
         complex_cfg["complexify_fraction"] = 0.0
 
+    log_stage_start("30_complexification", complexify_fraction=complex_cfg.get("complexify_fraction", 0.75))
     complex_fn = complexification_provider or default_complexification_provider
     complexification = complex_fn(
         local_diversification["instantiations"],
@@ -124,11 +143,21 @@ def run_pipeline(
         strategy=str(complex_cfg.get("strategy", "append_reasoning")),
     )
     complex_artifacts = store.persist_complexification(complexification)
+    log_stage_complete(
+        "30_complexification",
+        samples=len(complexification["samples"]),
+        complexified=sum(1 for s in complexification["samples"] if s["is_complexified"]),
+    )
 
     dual_cfg = dict(dual_critic_config or {})
     if pipeline_config is not None and not pipeline_config.get("dual_critic_enabled", True):
         dual_cfg["single_critic_mode"] = str(pipeline_config.get("single_critic_mode", "critic_a"))
 
+    log_stage_start(
+        "40_dual_critic_quality",
+        sample_count=len(complexification["samples"]),
+        dual_critic=manifest_pipeline.get("dual_critic_enabled", True),
+    )
     adjudication = adjudicate_samples(
         samples=complexification["samples"],
         policy=dual_cfg or None,
@@ -145,6 +174,12 @@ def run_pipeline(
     if provider_runtime:
         adjudication_artifact_payload["provider_runtime"] = dict(provider_runtime)
     dual_critic_artifacts = store.persist_dual_critic(adjudication_artifact_payload)
+    log_stage_complete(
+        "40_dual_critic_quality",
+        reviewed=len(adjudication["decisions"]),
+        accepted=len(adjudication["accepted_samples"]),
+        regenerations=len(adjudication["regeneration_log"]),
+    )
 
     stage_outputs["stage_1_global_diversification"] = {
         "status": "completed",
@@ -207,4 +242,5 @@ def run_pipeline(
         stage4_payload["provider_runtime"] = dict(provider_runtime)
     stage_outputs["stage_4_dual_critic_quality_verification"] = stage4_payload
 
+    log_step("pipeline complete")
     return {"manifest": manifest, "stage_outputs": stage_outputs, "taxonomy": taxonomy}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -10,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
+from simula_research.operator_log import log_detail, log_step
 from simula_research.provider_protocols import (
     CriticSampleEvaluatorFn,
     CriticVerdict,
@@ -21,7 +23,8 @@ from simula_research.provider_protocols import (
 T = TypeVar("T")
 
 _NIM_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-_NIM_DEFAULT_MODEL = "llama-4-maverick-17b-128e-instruct"
+_NIM_DEFAULT_MODEL = "mistralai/mistral-large-3-675b-instruct-2512"
+_NIM_DEFAULT_MAX_RPM = 40.0
 
 
 def _parse_positive_float(name: str, raw: str) -> float:
@@ -43,6 +46,71 @@ def _parse_positive_int(name: str, raw: str) -> int:
     if value <= 0:
         raise ValueError(f"{name} must be positive, got {value!r}")
     return value
+
+
+def _parse_positive_float_optional(name: str, raw: str | None, default: float) -> float:
+    if raw is None or not str(raw).strip():
+        return default
+    return _parse_positive_float(name, str(raw).strip())
+
+
+def _nim_max_rpm_from_env() -> float:
+    return _parse_positive_float_optional(
+        "SIMULA_NIM_MAX_RPM",
+        os.environ.get("SIMULA_NIM_MAX_RPM"),
+        _NIM_DEFAULT_MAX_RPM,
+    )
+
+
+class _NimRequestRateLimiter:
+    """Serialize NIM HTTP calls to respect a max requests-per-minute budget (default 40)."""
+
+    def __init__(
+        self,
+        max_rpm: float,
+        *,
+        sleep_fn: Callable[[float], None] = time.sleep,
+        monotonic: Callable[[], float] = time.monotonic,
+    ) -> None:
+        if max_rpm <= 0:
+            raise ValueError("max_rpm must be positive")
+        self._min_interval_s = 60.0 / max_rpm
+        self._sleep_fn = sleep_fn
+        self._monotonic = monotonic
+        self._lock = threading.Lock()
+        self._last_at = 0.0
+        self._has_prior_request = False
+
+    def wait_turn(self) -> None:
+        with self._lock:
+            now = self._monotonic()
+            if self._has_prior_request:
+                elapsed = now - self._last_at
+                if elapsed < self._min_interval_s:
+                    delay_s = self._min_interval_s - elapsed
+                    log_detail("nim_rate_limit_wait_s", round(delay_s, 2))
+                    self._sleep_fn(delay_s)
+            self._last_at = self._monotonic()
+            self._has_prior_request = True
+
+
+_nim_rate_limiter: _NimRequestRateLimiter | None = None
+_nim_rate_limiter_lock = threading.Lock()
+
+
+def _get_nim_rate_limiter() -> _NimRequestRateLimiter:
+    global _nim_rate_limiter
+    with _nim_rate_limiter_lock:
+        if _nim_rate_limiter is None:
+            _nim_rate_limiter = _NimRequestRateLimiter(_nim_max_rpm_from_env())
+        return _nim_rate_limiter
+
+
+def reset_nim_rate_limiter_for_tests() -> None:
+    """Clear process-global limiter so tests can change SIMULA_NIM_MAX_RPM between cases."""
+    global _nim_rate_limiter
+    with _nim_rate_limiter_lock:
+        _nim_rate_limiter = None
 
 
 def provider_runtime_from_env() -> dict[str, Any]:
@@ -78,6 +146,7 @@ def provider_runtime_from_env() -> dict[str, Any]:
         payload["nim_critic"] = {
             "base_url": base_url,
             "default_model": default_model,
+            "max_rpm": _nim_max_rpm_from_env(),
             "api_key_env": (
                 "NVIDIA_API_KEY"
                 if os.environ.get("NVIDIA_API_KEY")
@@ -253,11 +322,23 @@ def nvidia_critic_sample_evaluator(
         resolved_max_tokens = 16
 
     api_key = _nvidia_api_key_from_env()
+    request_seq = {"n": 0}
+
+    def _short_instantiation_id(instantiation_id: str) -> str:
+        if len(instantiation_id) <= 16:
+            return instantiation_id or "(none)"
+        return f"...{instantiation_id[-8:]}"
 
     def _eval(sample: dict[str, Any], critic_id: str) -> CriticVerdict:
+        request_seq["n"] += 1
+        req_n = request_seq["n"]
         model = _nvidia_model_for_critic(critic_id)
         text = str(sample.get("text", ""))
         instantiation_id = str(sample.get("instantiation_id", ""))
+        log_step(
+            f"nim request #{req_n} critic={critic_id} "
+            f"sample={_short_instantiation_id(instantiation_id)} model={model}"
+        )
         payload = {
             "model": model,
             "messages": [
@@ -282,6 +363,7 @@ def nvidia_critic_sample_evaluator(
 
         def _op() -> CriticVerdict:
             try:
+                _get_nim_rate_limiter().wait_turn()
                 resp = http_post_json(
                     url=resolved_base_url,
                     headers=headers,
@@ -298,11 +380,13 @@ def nvidia_critic_sample_evaluator(
                 raise RuntimeError(f"nvidia_critic_request_failed:{type(exc).__name__}") from exc
 
         try:
-            return retry_with_backoff(
+            verdict = retry_with_backoff(
                 _op,
                 max_retries=resolved_max_retries,
                 backoff_base_s=resolved_backoff_base_s,
             )
+            log_detail(f"nim_request_{req_n}_verdict", verdict)
+            return verdict
         except Exception as exc:  # noqa: BLE001 - provider boundary must not fail open
             # Fail-closed: any inability to produce a clear verdict yields "reject".
             # Record structured metadata without leaking prompt text.
@@ -316,6 +400,7 @@ def nvidia_critic_sample_evaluator(
                         "base_url": resolved_base_url,
                         "timeout_s": resolved_timeout_s,
                         "max_retries": resolved_max_retries,
+                        "max_rpm": _nim_max_rpm_from_env(),
                         "error_type": type(exc).__name__,
                         "error_code": (
                             str(exc).split(":", 1)[0]
@@ -325,6 +410,8 @@ def nvidia_critic_sample_evaluator(
                         "verdict": "reject",
                     }
                 )
+            log_detail(f"nim_request_{req_n}_verdict", "reject")
+            log_detail(f"nim_request_{req_n}_fail_closed", True)
             return "reject"
 
     return _eval

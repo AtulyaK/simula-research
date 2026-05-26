@@ -15,6 +15,7 @@ from simula_research.critic_provider_adapter import (
     critic_sample_evaluator_from_env,
     provider_runtime_from_env,
 )
+from simula_research.operator_log import log_detail, log_step
 from simula_research.pipeline import run_pipeline
 from simula_research.run_config_presets import PRESET_IDS, build_run_request, validate_all_presets
 
@@ -80,11 +81,14 @@ def execute_issue7_matrix(
     execution_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     matrix_root = Path(report_root) / "issue7" / execution_id
     matrix_root.mkdir(parents=True, exist_ok=True)
+    log_step(f"issue7 matrix start execution_id={execution_id}")
+    log_detail("matrix_root", str(matrix_root))
 
     run_reports: dict[str, dict[str, Any]] = {}
     baseline_scores: list[float] = []
 
     for preset_id in PRESET_IDS:
+        log_step(f"preset {preset_id} start")
         request = build_run_request(preset_id)
         provider_runtime = provider_runtime_from_env()
         critic_sample_evaluator = critic_sample_evaluator_from_env()
@@ -207,6 +211,10 @@ def execute_issue7_matrix(
             "failure_analysis": failure_analysis,
             "artifacts": {"run_report": str(run_report_path), "gate_report": str(gate_report_path)},
         }
+        log_step(
+            f"preset {preset_id} complete run_id={run_identity['run_id']} "
+            f"gate={gate_report['gate_decision']['overall_status']}"
+        )
 
     comparison_tables = {
         "coverage_comparison": [
@@ -247,6 +255,7 @@ def execute_issue7_matrix(
         json.dumps(comparison_tables, indent=2, sort_keys=True),
         encoding="utf-8",
     )
+    log_step(f"issue7 matrix complete comparison_tables={comparison_tables_path}")
 
     return {
         "execution_id": execution_id,

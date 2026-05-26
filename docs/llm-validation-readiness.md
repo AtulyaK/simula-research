@@ -83,6 +83,8 @@ NIM backend env vars:
   - `SIMULA_HTTP_TIMEOUT_SECONDS`
   - `SIMULA_HTTP_MAX_RETRIES`
   - `SIMULA_HTTP_BACKOFF_BASE_SECONDS`
+- Rate limit (client-side spacing for integrate API free tier, default **40 RPM**):
+  - `SIMULA_NIM_MAX_RPM` (minimum interval ≈ `60 / RPM` seconds between HTTP calls)
 
 ## 3) Data and compliance controls
 
@@ -189,6 +191,16 @@ export SIMULA_CRITIC_BACKEND=stub   # or nim + NVIDIA_API_KEY for live critics
 ```
 
 Stochastic drift classification for provider reruns: `docs/provider-stochastic-reproducibility-policy.md`.
+
+Operator plan (Track A + Track B): `docs/nvidia-nim-track-ab-plan.md`.
+
+```bash
+source scripts/nim_env_defaults.sh
+export NVIDIA_API_KEY='...'
+./scripts/run_nim_smoke.sh
+./scripts/run_track_a_phase4_nim.sh
+./scripts/run_track_b_promotion_assessment.sh artifacts/reports/issue7/<execution_id>
+```
 
 ## Resource Planning Template
 

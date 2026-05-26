@@ -19,6 +19,10 @@ export PYTHONPATH=src
 
 : "${SIMULA_CRITIC_BACKEND:=stub}"
 
+# shellcheck source=/dev/null
+source "$ROOT/scripts/verbose_lib.sh"
+simula_log "issue7 matrix script start backend=${SIMULA_CRITIC_BACKEND}"
+
 python3 - <<'PY'
 import os
 import subprocess
@@ -45,3 +49,4 @@ print("matrix_root", output["matrix_root"])
 print("comparison_tables", output["comparison_tables_path"])
 print("critic_backend", os.environ.get("SIMULA_CRITIC_BACKEND", "hash_default"))
 PY
+simula_log "issue7 matrix script finished"

@@ -16,3 +16,16 @@ dist/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local environment secrets (keep .env.example committed)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Local pipeline run outputs (regenerable)
+artifacts/runs/
+
+# Ephemeral LLM / matrix smoke outputs
+artifacts/reports/llm-smoke/
+artifacts/reports/issue9/issue7/
