@@ -198,6 +198,41 @@ class CriticProviderAdapterTests(unittest.TestCase):
                 else:
                     env[k] = v
 
+    def test_nvidia_evaluator_rejects_non_exact_verdict_tokens(self) -> None:
+        import simula_research.critic_provider_adapter as adapter
+
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        prev_sleep = adapter.time.sleep
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            adapter.reset_nim_rate_limiter_for_tests()
+            adapter.time.sleep = lambda _s: None
+            events: list[dict[str, object]] = []
+            responses = iter(("unacceptable", "accepted", "I cannot accept this sample"))
+
+            def fake_post_json(*, url: str, headers: dict[str, str], payload: dict[str, object], timeout_s: float) -> dict[str, object]:
+                return {"choices": [{"message": {"content": next(responses)}}]}
+
+            ev = nvidia_critic_sample_evaluator(
+                http_post_json=fake_post_json,
+                max_retries=0,
+                event_log=events,
+            )
+
+            for sample_id in ("i1", "i2", "i3"):
+                verdict = ev({"instantiation_id": sample_id, "text": "sample"}, "critic_a")
+                self.assertEqual(verdict, "reject")
+            self.assertEqual(len(events), 3)
+        finally:
+            adapter.time.sleep = prev_sleep
+            adapter.reset_nim_rate_limiter_for_tests()
+            for k, v in old.items():
+                if v is None:
+                    env.pop(k, None)
+                else:
+                    env[k] = v
+
 
 if __name__ == "__main__":
     unittest.main()
