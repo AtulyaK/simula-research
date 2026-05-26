@@ -1,6 +1,6 @@
 # Simula Research — Project Completion Status
 
-**Branch:** `main` @ `0885feb` (2026-05-26) · **Scope:** research-phase **engineering** (ADR 0001–0004, Milestones 1–3)
+**Branch:** `main` @ `242232e` (2026-05-26) · **Scope:** research-phase **engineering** (ADR 0001–0004, Milestones 1–3)
 
 ## Verdict
 

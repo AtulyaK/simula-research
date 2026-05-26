@@ -1,6 +1,6 @@
 # Next-agent handoff (Simula research repo)
 
-Use this document as the **primary paste-in briefing** for a new coding agent. It reflects `main` as of **2026-05-26** (`0885feb`): research **implementation** and **deterministic validation** are **COMPLETE**; Issue **#8** HITL addendum **signed conditional_pass** on packet `20260526T025931Z` (PR **#76**). Phase 4 NIM/provider validation is an **optional post-completion track**.
+Use this document as the **primary paste-in briefing** for a new coding agent. It reflects `main` as of **2026-05-26** (`242232e`): research **implementation** and **deterministic validation** are **COMPLETE**; Issue **#8** HITL addendum **signed conditional_pass** on packet `20260526T025931Z` (PR **#76**). Phase 4 NIM/provider validation is an **optional post-completion track**.
 
 ## Final project completion assessment (2026-05-26)
 
@@ -59,7 +59,7 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 | API keys (unittest) | **Not required** |
 | API keys (live NIM critic) | `NVIDIA_API_KEY` or `NVAPI_KEY` when `SIMULA_CRITIC_BACKEND=nim` |
 
-**Latest `main` tip:** `0885feb` (merge PR **#77**).
+**Latest `main` tip:** `242232e` (merge PR **#77**).
 
 ---
 
