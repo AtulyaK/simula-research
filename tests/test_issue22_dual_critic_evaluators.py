@@ -81,6 +81,30 @@ class Issue22DualCriticEvaluatorsTests(unittest.TestCase):
         )
         self.assertTrue(any("[regen-1]" in entry for entry in seen_texts))
 
+    def test_regenerated_acceptance_preserves_regenerated_text_and_final_decisions(self) -> None:
+        def evaluator(sample: dict[str, Any], critic_id: str) -> str:
+            text = str(sample.get("text", ""))
+            if "[regen-1]" in text:
+                return "accept"
+            return "accept" if critic_id == "critic_a" else "reject"
+
+        sample = {
+            "instantiation_id": "r2",
+            "taxonomy_node_id": "t1",
+            "meta_prompt_id": "m1",
+            "text": "base",
+        }
+        adjudication = adjudicate_samples(
+            samples=[sample],
+            policy={"disagreement_policy": "regenerate", "max_regenerations_per_sample": 1},
+            critic_sample_evaluator=evaluator,
+        )
+        self.assertEqual(len(adjudication["accepted_samples"]), 1)
+        accepted = adjudication["accepted_samples"][0]
+        self.assertIn("[regen-1]", accepted["text"])
+        self.assertEqual(accepted["critic_a_decision"], "accept")
+        self.assertEqual(accepted["critic_b_decision"], "accept")
+
     def test_both_evaluator_hooks_rejected(self) -> None:
         with self.assertRaises(ValueError):
 

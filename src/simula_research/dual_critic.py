@@ -70,6 +70,9 @@ def adjudicate_samples(
         source_text = str(sample.get("text", ""))
         regen_count = 0
         critic_a_decision, critic_b_decision = _dual_verdicts(sample)
+        final_text = source_text
+        final_critic_a_decision = critic_a_decision
+        final_critic_b_decision = critic_b_decision
 
         if critic_a_decision == critic_b_decision:
             final_status = "accepted" if critic_a_decision == "accept" else "rejected"
@@ -103,6 +106,9 @@ def adjudicate_samples(
                 if regen_a_decision == "accept" and regen_b_decision == "accept":
                     final_status = "accepted"
                     final_reason = "regeneration_consensus_accept"
+                    final_text = regen_text
+                    final_critic_a_decision = regen_a_decision
+                    final_critic_b_decision = regen_b_decision
                     break
 
         decisions.append(
@@ -125,8 +131,9 @@ def adjudicate_samples(
             accepted_samples.append(
                 {
                     **sample,
-                    "critic_a_decision": critic_a_decision,
-                    "critic_b_decision": critic_b_decision,
+                    "text": final_text,
+                    "critic_a_decision": final_critic_a_decision,
+                    "critic_b_decision": final_critic_b_decision,
                     "quality_status": "accepted",
                     "regeneration_count": regen_count,
                 }
