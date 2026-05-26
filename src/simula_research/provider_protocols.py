@@ -43,7 +43,6 @@ def recorded_sample_evaluator(
 
 
 def hash_based_critic_verdict(text: str, critic_id: str) -> CriticVerdict:
-    """Deterministic offline stub with high dual-critic agreement (text-only hash)."""
-    _ = critic_id
-    digest = hashlib.sha1(text.encode("utf-8")).hexdigest()
+    """Deterministic stub that preserves separate Critic A/B verdict streams."""
+    digest = hashlib.sha1(f"{critic_id}::{text}".encode("utf-8")).hexdigest()
     return "accept" if int(digest[:2], 16) % 2 == 0 else "reject"

@@ -50,7 +50,7 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             )
             self.assertEqual(len(comparison_tables["coverage_comparison"]), 3)
 
-    def test_track_d_remediation_improves_critic_agreement_gate(self) -> None:
+    def test_issue7_matrix_reports_independent_default_critic_agreement(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
                 artifact_root=tmp_dir,
@@ -59,13 +59,15 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                 commit_hash="deadbeef",
             )
 
-            for preset_id in ("B0", "A1", "A4"):
-                gates = output["run_reports"][preset_id]["gate_report"]["gate_decision"]
-                self.assertEqual(gates["quality.critic_agreement"]["status"], "pass")
-                self.assertGreaterEqual(
-                    float(gates["quality.critic_agreement"]["actual"]),
-                    0.75,
-                )
+            b0_report = output["run_reports"]["B0"]
+            b0_quality = b0_report["quality"]
+            b0_gates = b0_report["gate_report"]["gate_decision"]
+
+            self.assertGreater(b0_quality["disagreement_rate"], 0.0)
+            self.assertEqual(b0_gates["quality.critic_agreement"]["status"], "fail")
+            self.assertTrue(
+                any("quality.critic_agreement" in note for note in b0_report["failure_analysis"])
+            )
 
     def test_complexity_metrics_use_complexification_stage_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

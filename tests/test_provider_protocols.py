@@ -12,12 +12,24 @@ from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
 
 
 class ProviderProtocolsTests(unittest.TestCase):
-    def test_hash_based_critic_verdict_agrees_across_critics_for_same_text(self) -> None:
-        for text in ("alpha case", "beta case", "gamma case"):
-            self.assertEqual(
-                hash_based_critic_verdict(text, "critic_a"),
-                hash_based_critic_verdict(text, "critic_b"),
-            )
+    def test_hash_based_critic_verdict_is_critic_identity_sensitive(self) -> None:
+        self.assertNotEqual(
+            hash_based_critic_verdict("alpha case", "critic_a"),
+            hash_based_critic_verdict("alpha case", "critic_b"),
+        )
+
+    def test_default_adjudication_can_record_critic_disagreement(self) -> None:
+        sample = {
+            "instantiation_id": "inst-alpha",
+            "taxonomy_node_id": "node-alpha",
+            "meta_prompt_id": "meta-alpha",
+            "text": "alpha case",
+        }
+
+        adjudication = adjudicate_samples(samples=[sample])
+
+        self.assertEqual(adjudication["decisions"][0]["disagreement"], True)
+        self.assertEqual(adjudication["decisions"][0]["quality_status"], "rejected")
 
     def test_explicit_hash_based_matches_default_adjudication(self) -> None:
         taxonomy = build_taxonomy("z", TaxonomyConfig(max_depth=1, branching_factor=2))
