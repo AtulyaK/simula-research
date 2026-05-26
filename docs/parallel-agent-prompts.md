@@ -281,17 +281,15 @@ Goals:
 
 ```text
 Read docs/agents/next-agent-handoff.md in full first. It now includes:
-- Definition of “done” for the first engineering cycle (Milestones 1–3 + Issue #10 HITL).
-- Testing prerequisites (Python 3.11+, unittest command, no API keys for deterministic path).
-- P0: Issue #10 (reusable-engine scope — human approval).
-- P1: earlier-stage Protocol hooks with bit-identical defaults; manifest boot vs full-schema documentation.
-- Completed post-M3 merges: PR #32 (#31 TypedDict), PR #34 (#33 artifact stage dir alignment).
+- First implementation cycle closed (Milestones 1–3 + ADR 0004); provider validation cycle open (docs/llm-validation-readiness.md).
+- Testing prerequisites (Python 3.11+, 74 unittest cases on main, no API keys for deterministic path).
+- P1: Issues #60 (Stage 1–3 protocols), #61 (manifest validation modes); #62 engine-core refactor deferred.
+- Recent merges: PRs #45, #54, #56, #58 (LLM/correctness); PRs #32, #34 (post-M3 hardening).
 
 Your first actions:
 1) Confirm tests pass: PYTHONPATH=src python3 -m unittest discover -s tests -v
-2) If doing AFK work: open ONE GitHub issue per vertical slice, then branch and PR.
-3) If the task is Issue #10: produce a decision memo + follow-on issues/ADRs; do not merge comparability-breaking refactors without explicit waiver text.
-4) Do not change thresholds/metric formulas/ablations/protocol semantics without paper justification + docs/adr/0003-evaluation-protocol-and-thresholds.md impact notes.
+2) If doing AFK work: pick ONE open issue (#60 or #61), branch and PR.
+3) Do not change thresholds/metric formulas/ablations/protocol semantics without paper justification + docs/adr/0003-evaluation-protocol-and-thresholds.md impact notes.
 
 Paste the Paper Alignment Check into PR descriptions when the change is substantial.
 ```
