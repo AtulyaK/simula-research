@@ -14,7 +14,7 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Issue #5: complete on `main` (PR #21)
 - Issue #6 skeleton: complete on `main` (PR #19)
 - Issue #7: complete on `main` (PR #23)
-- Issue #8: **HITL addendum pending** — April review **fail** (`20260430T204744Z`); remediated packet **`20260526T024251Z`** on `main` (PR **#69**): **B0 pass**, **A4 pass**, **A1 fail** (`complexification_precision`); sign-off JSON `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.json`
+- Issue #8: **HITL signed conditional_pass** — April review **fail** preserved (`20260430T204744Z`); canonical remediated packet **`20260526T025931Z`** on `main` (PR **#76**): **B0/A1/A4 pass**; sign-off JSON `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T025931Z.json`
 - Issue #9: complete on `main` (PR #25); reproducibility evidence in `artifacts/reports/issue9/`
 - Issue #10: **closed** (ADR **0004** Option A — `docs/adr/0004-engine-seam-scope.md`)
 - ADR 0004 P1: **#60**, **#61** closed; **#62** deferred (`ready-for-human`)
@@ -22,8 +22,8 @@ This is the working issue pack for implementation sequencing. Slices are intenti
 - Post–Milestone 3 hardening: **#31** / **PR #32**, **#33** / **PR #34** — merged
 - M1 gate remediation: **PR #69** merged (`af9be6f`)
 - LLM / correctness wave: **PR #45**, **#54**, **#56**, **#58** — merged
-- **`main` tests:** 93 unittest cases, OK (no API keys)
-- Agent briefing: **`docs/agents/next-agent-handoff.md`** (implementation cycle closed; provider Phase 4 + Issue #8 sign-off open)
+- **`main` tests:** 98 unittest cases, OK (no API keys)
+- Agent briefing: **`docs/agents/next-agent-handoff.md`** (engineering + deterministic validation complete; optional Phase 4 NIM/provider track)
 
 ## Slice index
 
@@ -210,13 +210,13 @@ Conduct a human review of milestone-1 evidence, confirm pass/fail status, and ex
 ## Acceptance criteria
 
 - [x] Review includes coverage, complexity, and quality evidence (April packet + addendum `20260526T024251Z`).
-- [ ] Decision recorded as pass, conditional pass, or fail for **current** packet — **pending human** on `milestone_gate_review_addendum_20260526T024251Z.json` (agent recommends **conditional pass**: B0/A4 pass, A1 documented complexity gap).
+- [x] Decision recorded as pass, conditional pass, or fail for **current** packet — **signed conditional_pass** on `milestone_gate_review_addendum_20260526T025931Z.json` (`project-owner-delegated`, `2026-05-26T03:08:34Z`).
 - [x] Any threshold change is justified and linked to ADR workflow (**keep thresholds**; no ADR edit proposed).
 
 **Evidence:**
 
-- Original: `artifacts/reports/issue8/milestone_gate_review.md` + `.json` → **fail** (`20260430T204744Z`)
-- Addendum: `artifacts/reports/issue8/milestone_gate_review_addendum_20260526T024251Z.{md,json}` → gate tables from `artifacts/reports/issue7/20260526T024251Z/`
+- Original: `artifacts/reports/issue8/milestone_gate_review.md` + `.json` → **fail** (`20260430T204744Z`; preserved in `decision_history`)
+- Addendum chain: `20260526T024251Z` → `20260526T025231Z` → **`20260526T025931Z`** — gate tables from `artifacts/reports/issue7/20260526T025931Z/`
 
 ---
 
@@ -256,8 +256,7 @@ Define which stage seams become reusable interfaces in next phase while preservi
 
 ## Recommendations: where to prompt next
 
-1. **Issue #8 HITL sign-off (current)** — Review addendum JSON; record `human_sign_off`; confirm conditional pass for B0/A4 and A1 complexity documentation.
-2. **Provider Phase 4** — `docs/llm-validation-readiness.md`: credentials, optional NIM smoke, provider-backed B0/A1/A4 matrix, Issue #9 rerun on provider packet.
-3. **Playbook promotion** — After Phase 4, evaluate H1–H4 and second baseline stability per `docs/research-validation-playbook.md`.
+1. **Optional Phase 4** — Provider-backed B0/A1/A4 + Issue #9 rerun on live packet (`docs/llm-validation-readiness.md`); optional NIM smoke; org credentials / budget guardrails.
+2. **Playbook promotion** — After any Phase 4 work, evaluate H1–H4 and second baseline stability per `docs/research-validation-playbook.md`.
 
 For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).
