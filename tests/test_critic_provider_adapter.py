@@ -192,6 +192,34 @@ class CriticProviderAdapterTests(unittest.TestCase):
                 else:
                     env[k] = v
 
+    def test_nvidia_evaluator_requires_exact_verdict_token(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+
+            for raw in ("unacceptable", "I cannot accept this sample", "accepted"):
+                with self.subTest(raw=raw):
+
+                    def fake_post_json(
+                        *,
+                        url: str,
+                        headers: dict[str, str],
+                        payload: dict[str, object],
+                        timeout_s: float,
+                    ) -> dict[str, object]:
+                        return {"choices": [{"message": {"content": raw}}]}
+
+                    ev = nvidia_critic_sample_evaluator(http_post_json=fake_post_json, max_retries=0)
+                    with self.assertRaises(RuntimeError):
+                        ev({"instantiation_id": "i1", "text": "sample"}, "critic_a")
+        finally:
+            for k, v in old.items():
+                if v is None:
+                    env.pop(k, None)
+                else:
+                    env[k] = v
+
 
 if __name__ == "__main__":
     unittest.main()
