@@ -6,14 +6,21 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from simula_research.complexification import apply_complexification
 from simula_research.dual_critic import adjudicate_samples
-from simula_research.local_diversification import build_local_diversification
 from simula_research.manifest import validate_manifest
-from simula_research.provider_protocols import CriticSampleEvaluatorFn, CriticVerdictFn
+from simula_research.provider_protocols import (
+    ComplexificationProviderFn,
+    CriticSampleEvaluatorFn,
+    CriticVerdictFn,
+    LocalDiversificationProviderFn,
+    TaxonomyProviderFn,
+    default_complexification_provider,
+    default_local_diversification_provider,
+    default_taxonomy_provider,
+)
 from simula_research.run_artifact_store import FileSystemRunArtifactStore, RunArtifactStore
 from simula_research.stage_contracts import validate_stage_handoffs
-from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
+from simula_research.taxonomy import TaxonomyConfig
 
 PROTOCOL_VERSION = "0.1.0"
 ARTIFACT_SCHEMA_VERSION = "0.1.0"
@@ -47,6 +54,9 @@ def run_pipeline(
     pipeline_config: dict[str, Any] | None = None,
     provider_runtime: dict[str, Any] | None = None,
     artifact_store_factory: Callable[[Path], RunArtifactStore] | None = None,
+    taxonomy_provider: TaxonomyProviderFn | None = None,
+    local_diversification_provider: LocalDiversificationProviderFn | None = None,
+    complexification_provider: ComplexificationProviderFn | None = None,
     critic_verdict: CriticVerdictFn | None = None,
     critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
 ) -> dict[str, object]:
@@ -80,9 +90,10 @@ def run_pipeline(
     if pipeline_config is not None and not pipeline_config.get("global_diversification_enabled", True):
         taxonomy_cfg = {"max_depth": 0, "branching_factor": 1}
 
-    taxonomy = build_taxonomy(
-        domain_objective=domain_objective,
-        config=TaxonomyConfig(
+    taxonomy_fn = taxonomy_provider or default_taxonomy_provider
+    taxonomy = taxonomy_fn(
+        domain_objective,
+        TaxonomyConfig(
             max_depth=int(taxonomy_cfg.get("max_depth", 2)),
             branching_factor=int(taxonomy_cfg.get("branching_factor", 2)),
         ),
@@ -97,18 +108,17 @@ def run_pipeline(
     if pipeline_config is not None and not pipeline_config.get("local_diversification_enabled", True):
         local_options["per_node_instantiation_count"] = 1
 
-    local_diversification = build_local_diversification(
-        taxonomy=taxonomy,
-        options=local_options or None,
-    )
+    local_fn = local_diversification_provider or default_local_diversification_provider
+    local_diversification = local_fn(taxonomy, options=local_options or None)
     local_artifacts = store.persist_local_diversification(local_diversification)
 
     complex_cfg = dict(complexification_config or {})
     if pipeline_config is not None and not pipeline_config.get("complexification_enabled", True):
         complex_cfg["complexify_fraction"] = 0.0
 
-    complexification = apply_complexification(
-        samples=local_diversification["instantiations"],
+    complex_fn = complexification_provider or default_complexification_provider
+    complexification = complex_fn(
+        local_diversification["instantiations"],
         complexify_fraction=float(complex_cfg.get("complexify_fraction", 0.75)),
         semantic_overlap_threshold=float(complex_cfg.get("semantic_overlap_threshold", 0.55)),
         strategy=str(complex_cfg.get("strategy", "append_reasoning")),

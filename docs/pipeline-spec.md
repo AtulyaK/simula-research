@@ -172,6 +172,8 @@ Filesystem persistence for Stages 1–4 uses `src/simula_research/run_artifact_s
 
 Dual-critic adjudication accepts an optional `critic_verdict` callable (`CriticVerdictFn` in `src/simula_research/provider_protocols.py`); the default remains the deterministic hash-based stub used for research-phase replay.
 
+Stages 1–3 accept optional provider callables (`TaxonomyProviderFn`, `LocalDiversificationProviderFn`, `ComplexificationProviderFn`) on `run_pipeline`; defaults (`default_taxonomy_provider`, `default_local_diversification_provider`, `default_complexification_provider`) delegate to the in-repo deterministic implementations with no behavior change when hooks are omitted (Issue #60).
+
 ## Configuration knobs by control axis
 
 ### Coverage
