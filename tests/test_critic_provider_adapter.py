@@ -198,6 +198,40 @@ class CriticProviderAdapterTests(unittest.TestCase):
                 else:
                     env[k] = v
 
+    def test_nvidia_evaluator_accept_substrings_fail_closed(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        ambiguous_outputs = ["accepted", "unacceptable", "I cannot accept this sample"]
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            for output in ambiguous_outputs:
+                events: list[dict[str, object]] = []
+
+                def fake_post_json(
+                    *,
+                    url: str,
+                    headers: dict[str, str],
+                    payload: dict[str, object],
+                    timeout_s: float,
+                    model_output: str = output,
+                ) -> dict[str, object]:
+                    return {"choices": [{"message": {"content": model_output}}]}
+
+                ev = nvidia_critic_sample_evaluator(
+                    http_post_json=fake_post_json,
+                    max_retries=0,
+                    event_log=events,
+                )
+                verdict = ev({"instantiation_id": "i1", "text": "candidate sample"}, "critic_a")
+                self.assertEqual(verdict, "reject", output)
+                self.assertEqual(events[0]["verdict"], "reject")
+        finally:
+            for k, v in old.items():
+                if v is None:
+                    env.pop(k, None)
+                else:
+                    env[k] = v
+
 
 if __name__ == "__main__":
     unittest.main()
