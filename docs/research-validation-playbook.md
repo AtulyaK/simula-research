@@ -128,7 +128,8 @@ export SIMULA_HTTP_BACKOFF_BASE_SECONDS=0.5
 
 # Optional endpoint/model overrides
 # export SIMULA_NIM_BASE_URL='https://integrate.api.nvidia.com/v1/chat/completions'
-# export SIMULA_NIM_MODEL='llama-4-maverick-17b-128e-instruct'
+# export SIMULA_NIM_MODEL='mistralai/mistral-large-3-675b-instruct-2512'
+# export SIMULA_NIM_MAX_RPM=40
 # export SIMULA_CRITIC_MODEL_A='...'
 # export SIMULA_CRITIC_MODEL_B='...'
 
