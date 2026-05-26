@@ -77,6 +77,30 @@ Stop if: required env vars are missing for your chosen backend, spend caps would
 
 For Issue #9 **full** manifest validation on disk, write `manifest.json` with all fields in `validators.validate_manifest_schema` (including `created_at_utc`, `domain_objective`, `owner`, `commit_hash`, `branch`). The minimal `run_pipeline` return manifest is sufficient for stage boot only.
 
+## Issue #7 matrix (B0 / A1 / A4)
+
+`execute_issue7_matrix` wires `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into each preset run. Shell wrappers:
+
+```bash
+cd /path/to/simula-research
+chmod +x scripts/run_issue7_matrix.sh scripts/run_issue9_comparability_check.sh
+export PYTHONPATH=src
+export SIMULA_CRITIC_BACKEND=stub
+./scripts/run_issue7_matrix.sh
+./scripts/run_issue9_comparability_check.sh
+```
+
+### Matrix with NIM critic (live)
+
+```bash
+export SIMULA_CRITIC_BACKEND=nim
+export NVIDIA_API_KEY='...'
+export SIMULA_HTTP_TIMEOUT_SECONDS=30
+./scripts/run_issue7_matrix.sh
+```
+
+Provider stochastic rerun policy: `docs/provider-stochastic-reproducibility-policy.md`.
+
 ## Provider-backed smoke (NIM critic backend)
 
 Use this when you want the **real** network-backed critic path while keeping stages 1–3 deterministic. This calls `critic_sample_evaluator_from_env()` which selects `nvidia_critic_sample_evaluator()` when `SIMULA_CRITIC_BACKEND` is `nim` or `nvidia`.

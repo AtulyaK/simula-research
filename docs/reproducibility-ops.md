@@ -117,6 +117,8 @@ Recommended subdirectories:
 
 ## Drift policy
 
+See **`docs/provider-stochastic-reproducibility-policy.md`** for provider-backed critic classification (`exact` / `acceptable_drift` / `mismatch`) and Phase 4 operator workflow. Code uses `ACCEPTABLE_DRIFT_MAX_DELTA = 0.02` in `issue9_reproducibility.py` (not configurable without ADR 0003 review).
+
 Some model providers can introduce nondeterminism. When exact matching fails:
 
 - classify drift source:

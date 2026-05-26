@@ -28,9 +28,9 @@ class Issue7ProviderMatrixTests(unittest.TestCase):
                     branch_name="provider-matrix-stub",
                     commit_hash="cafebabe",
                 )
-            protocol = output["run_reports"]["B0"]["protocol"]
-            self.assertEqual(protocol["provider_runtime"]["critic_backend"], "stub")
-            self.assertEqual(protocol["provider_runtime"]["http_transport"]["timeout_s"], 30.0)
+                protocol = output["run_reports"]["B0"]["protocol"]
+                self.assertEqual(protocol["provider_runtime"]["critic_backend"], "stub")
+                self.assertEqual(protocol["provider_runtime"]["http_transport"]["timeout_s"], 30.0)
         finally:
             for key, value in old.items():
                 if value is None:

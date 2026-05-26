@@ -34,7 +34,7 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
 - Helpers for rollout: `sample_evaluator_from_text_fn` (parity / replay vs hash path), `recorded_sample_evaluator` (offline replay from a fixed verdict table). `critic_verdict` and `critic_sample_evaluator` are **mutually exclusive** at the pipeline boundary.
 - **Provider/runtime metadata (Issue #41):** optional `provider_runtime` dict is merged into the run `manifest` and echoed under `stage_outputs.stage_4_dual_critic_quality_verification.provider_runtime` when supplied. `provider_runtime_from_env()` in `critic_provider_adapter.py` collects **non-secret** transport knobs from environment variables for operator runs.
 - **Execution fidelity (Issue #42):** `execute_issue7_matrix` passes each preset’s `pipeline_config` into `run_pipeline`, which maps toggles to taxonomy/local/complexification/dual-critic execution (A1 shallow taxonomy, A4 `single_critic_mode`, etc.). Reporting-time metric hacks for A1/A4 have been removed; matrix metrics now reflect actual stage outputs.
-- **Env-based critic wiring:** `critic_sample_evaluator_from_env()` returns `None` (hash default), or a **non-network** `stub` / `replay` evaluator for smoke tests (`SIMULA_CRITIC_BACKEND`, `SIMULA_CRITIC_REPLAY_JSON`). The live NVIDIA NIM backend is available behind `SIMULA_CRITIC_BACKEND=nim` (requires `NVIDIA_API_KEY` or `NVAPI_KEY`) and is **fail-closed** on ambiguous outputs (invalid/unclear verdicts become `reject` with structured event logging). See `docs/research-validation-playbook.md` for the operator snippet.
+- **Env-based critic wiring:** `critic_sample_evaluator_from_env()` returns `None` (hash default), or a **non-network** `stub` / `replay` evaluator for smoke tests (`SIMULA_CRITIC_BACKEND`, `SIMULA_CRITIC_REPLAY_JSON`). The live NVIDIA NIM backend is available behind `SIMULA_CRITIC_BACKEND=nim` (requires `NVIDIA_API_KEY` or `NVAPI_KEY`) and is **fail-closed** on ambiguous outputs (invalid/unclear verdicts become `reject` with structured event logging). **`execute_issue7_matrix`** passes both `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into `run_pipeline` for B0/A1/A4. See `docs/research-validation-playbook.md` and `scripts/run_issue7_matrix.sh`.
 - Stages 1–3 remain deterministic in-repo logic by default (Phase 2 of this guide).
 
 ### Issue #7 matrix
@@ -178,6 +178,18 @@ Deliverable:
 
 - A complete validation packet equivalent to Issue #7/#8/#9 evidence, but provider-backed.
 
+Operator commands (from repo root):
+
+```bash
+chmod +x scripts/run_issue7_matrix.sh scripts/run_issue9_comparability_check.sh
+export PYTHONPATH=src
+export SIMULA_CRITIC_BACKEND=stub   # or nim + NVIDIA_API_KEY for live critics
+./scripts/run_issue7_matrix.sh
+./scripts/run_issue9_comparability_check.sh
+```
+
+Stochastic drift classification for provider reruns: `docs/provider-stochastic-reproducibility-policy.md`.
+
 ## Resource Planning Template
 
 Before each validation batch, fill this table:
@@ -219,7 +231,7 @@ You are ready to run full LLM-backed validation when all are checked:
 - [ ] NIM smoke validated (optional but recommended): `SIMULA_CRITIC_BACKEND=nim` with `NVIDIA_API_KEY` set, small run completes and manifests include `nim_critic` metadata (no secrets logged)
 - [ ] stage 1-3 provider plan is either implemented or explicitly out-of-scope
 - [x] ablation behavior fidelity is validated at execution level (`pipeline_config` → `run_pipeline`; tests `test_issue42_pipeline_config_execution.py`)
-- [ ] reproducibility policy for stochastic drift is documented
+- [x] reproducibility policy for stochastic drift is documented (`docs/provider-stochastic-reproducibility-policy.md`)
 - [ ] Paper/ADR constraints acknowledged in run packet
 
 ## Notes on thresholds and formulas
