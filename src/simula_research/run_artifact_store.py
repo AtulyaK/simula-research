@@ -102,13 +102,22 @@ class FileSystemRunArtifactStore:
         decisions_path = critic_dir / "critic_decisions.json"
         rejections_path = critic_dir / "rejections.json"
         regenerations_path = critic_dir / "regenerations.json"
+        provider_runtime_path = critic_dir / "provider_runtime.json"
+        nim_event_log_path = critic_dir / "nim_event_log.json"
 
         decisions_path.write_text(_dump_json(adjudication["decisions"]), encoding="utf-8")
         rejections_path.write_text(_dump_json(adjudication["rejection_log"]), encoding="utf-8")
         regenerations_path.write_text(_dump_json(adjudication["regeneration_log"]), encoding="utf-8")
 
-        return {
+        artifacts: dict[str, str] = {
             "critic_decisions": str(decisions_path),
             "rejections": str(rejections_path),
             "regenerations": str(regenerations_path),
         }
+        if "provider_runtime" in adjudication:
+            provider_runtime_path.write_text(_dump_json(adjudication["provider_runtime"]), encoding="utf-8")
+            artifacts["provider_runtime"] = str(provider_runtime_path)
+        if "nim_event_log" in adjudication:
+            nim_event_log_path.write_text(_dump_json(adjudication["nim_event_log"]), encoding="utf-8")
+            artifacts["nim_event_log"] = str(nim_event_log_path)
+        return artifacts

@@ -131,7 +131,10 @@ def run_pipeline(
         complexification=complexification,
         adjudication=adjudication,
     )
-    dual_critic_artifacts = store.persist_dual_critic(adjudication)
+    adjudication_artifact_payload = dict(adjudication)
+    if provider_runtime:
+        adjudication_artifact_payload["provider_runtime"] = dict(provider_runtime)
+    dual_critic_artifacts = store.persist_dual_critic(adjudication_artifact_payload)
 
     stage_outputs["stage_1_global_diversification"] = {
         "status": "completed",
