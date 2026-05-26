@@ -256,8 +256,7 @@ Define which stage seams become reusable interfaces in next phase while preservi
 
 ## Recommendations: where to prompt next
 
-1. **Optional Phase 4** — Provider-backed B0/A1/A4 + Issue #9 rerun on live packet (`docs/llm-validation-readiness.md`); optional NIM smoke.
-2. **Provider Phase 4** — `docs/llm-validation-readiness.md`: credentials, optional NIM smoke, provider-backed B0/A1/A4 matrix, Issue #9 rerun on provider packet.
-3. **Playbook promotion** — After Phase 4, evaluate H1–H4 and second baseline stability per `docs/research-validation-playbook.md`.
+1. **Optional Phase 4** — Provider-backed B0/A1/A4 + Issue #9 rerun on live packet (`docs/llm-validation-readiness.md`); optional NIM smoke; org credentials / budget guardrails.
+2. **Playbook promotion** — After any Phase 4 work, evaluate H1–H4 and second baseline stability per `docs/research-validation-playbook.md`.
 
 For detailed wave-by-wave copy/paste prompts, use [`docs/parallel-agent-prompts.md`](./parallel-agent-prompts.md).
