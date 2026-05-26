@@ -152,7 +152,7 @@ Exit criteria:
 
 ## Current engineering status (live)
 
-**Last reviewed:** 2026-05-26 — `main` @ `dd8eb87`, `docs/agents/next-agent-handoff.md`.
+**Last reviewed:** 2026-05-26 — `main` @ `242232e`, `docs/agents/next-agent-handoff.md`.
 
 ### Completion verdict
 
@@ -160,26 +160,25 @@ Exit criteria:
 | --- | --- |
 | **Implementation (Milestones 1–3 + ADR 0004 Option A + P1 #60–#61)** | **Complete** |
 | **Deterministic validation (unittest + Issue #7/#9 evidence)** | **Complete** |
-| **Provider-backed validation (LLM Phase 4)** | **Not complete** — human credentials / org policy only |
+| **Provider-backed validation (LLM Phase 4)** | **Optional post-completion track** — human credentials / org policy only |
 | **Issue #62 (engine-core refactor, Option B)** | **Closed — wontfix / deferred** |
 
 | Milestone | Status | Notes |
 | --- | --- | --- |
-| **Milestone 1** | **Met** | Runnable stages + B0/A1/A4 + gate reporting. Canonical packet `artifacts/reports/issue7/20260526T025231Z/` (PRs **#69**, **#70**): **B0/A1/A4 pass**. |
-| **Milestone 1 (HITL)** | **Human sign-off pending** | April review **fail** on legacy packet `20260430T204744Z`. Use addendum `20260526T025231Z` for promotion tables. |
+| **Milestone 1** | **Met** | Runnable stages + B0/A1/A4 + gate reporting. Canonical packet `artifacts/reports/issue7/20260526T025931Z/` (PRs **#69**, **#70**, **#76**): **B0/A1/A4 pass**. |
+| **Milestone 1 (HITL)** | **Signed conditional_pass** | April review **fail** on legacy packet `20260430T204744Z` (preserved). Addendum `20260526T025931Z` signed `project-owner-delegated`. |
 | **Milestone 2** | **Met** | Manifest schema validation, baseline rerun classification (`artifacts/reports/issue9/`, PR #25). |
 | **Milestone 3 (seams)** | **Met** | Stage contracts (#27), `RunArtifactStore` (#28), critic hooks (#29), comparability gate (#30). |
 | **Post–M3 hardening** | **Met** | TypedDict handoff types (#31 / PR #32); artifact tree `40_dual_critic_quality` (#33 / PR #34). |
 | **ADR 0004 P1 follow-ons** | **Closed** | **#60**, **#61**; **#62** deferred closed. |
 | **Issue #10 / ADR 0004** | **Closed** | Option A minimal seams. |
 | **LLM readiness Phases 0–3** | **Met** | Seams + deterministic Stages 1–3 + execution fidelity. |
-| **LLM readiness Phase 4** | **Open (human)** | Live provider matrix — see `docs/llm-validation-readiness.md`. |
-| **First implementation cycle** | **Closed** | Engineering + deterministic validation complete on `main`. |
+| **LLM readiness Phase 4** | **Optional post-completion** | Live provider matrix — see `docs/llm-validation-readiness.md`. |
+| **First implementation cycle** | **Complete** | Engineering + deterministic validation complete on `main`. |
 
-### Human-blocked only (no agent engineering required)
+### Optional post-completion (no agent engineering required)
 
-1. **Issue #8** — `human_sign_off` on milestone gate addendum for packet `20260526T025231Z` (recommended conditional pass for B0/A1/A4).
-2. **NIM / org policy** — API keys and budget guardrails before Phase 4 provider-backed runs.
+1. **NIM / org policy (Phase 4)** — API keys and budget guardrails before optional provider-backed B0/A1/A4 runs.
 
 Playbook promotion (H1–H4, ≥2 baseline stability) is **post–Phase 4** research ops, not a blocker for implementation closure.
 

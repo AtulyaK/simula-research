@@ -19,11 +19,12 @@
     "agent_recommendation": "conditional_pass",
     "human_sign_off": {
       "required": true,
-      "status": "pending",
+      "status": "signed",
+      "decision": "conditional_pass",
       "recommended_decision": "conditional_pass",
-      "reviewer": "agent-pending-human",
-      "signed_at_utc": null,
-      "notes": "Agent recommends conditional_pass: B0/A1/A4 all pass on commit-pinned packet after PR #70; awaiting human signature.",
+      "reviewer": "project-owner-delegated",
+      "signed_at_utc": "2026-05-26T03:08:34Z",
+      "notes": "User delegated acceptance of agent-recommended conditional_pass on commit-pinned packet 20260526T025931Z (PR #70). April 2026 fail review preserved in milestone_gate_review.md and milestone_gate_review.json decision_history.",
       "fields": ["decision", "reviewer", "signed_at_utc", "notes"]
     }
   },
@@ -146,7 +147,7 @@
     "deviations": "none on thresholds or metric formulas"
   },
   "handoff": {
-    "next_action": "Human records decision in human_sign_off; Issue #9 comparability check uses this packet as B0 baseline evidence.",
+    "next_action": "Engineering and deterministic validation complete; optional Phase 4 NIM/provider packet per docs/llm-validation-readiness.md.",
     "blocks_provider_phase_4": false
   }
 }
