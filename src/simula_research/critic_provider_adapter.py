@@ -183,16 +183,10 @@ def _verdict_from_model_text(raw: str) -> CriticVerdict:
     text = (raw or "").strip().lower()
     if not text:
         raise ValueError("nvidia_critic_invalid_response")
-    first = text.split()[0]
-    if first.startswith("accept"):
+    first = text.split()[0].strip(".,;:!?'\"()[]{}")
+    if first == "accept":
         return "accept"
-    if first.startswith("reject"):
-        return "reject"
-    has_accept = "accept" in text
-    has_reject = "reject" in text
-    if has_accept and not has_reject:
-        return "accept"
-    if has_reject and not has_accept:
+    if first == "reject":
         return "reject"
     raise ValueError("nvidia_critic_invalid_response")
 
