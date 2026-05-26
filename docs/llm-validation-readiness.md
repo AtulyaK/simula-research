@@ -191,8 +191,9 @@ You are ready to run full LLM-backed validation when all are checked:
 
 - [x] baseline test suite is green (`PYTHONPATH=src python3 -m unittest discover -s tests -v`)
 - [ ] provider credentials and budget guardrails are configured (human / org policy)
-- [ ] run manifest and artifact conventions are enforced
+- [x] run manifest and artifact conventions are enforced for stage trees (`artifacts/runs/<run_id>/`); full `validate_manifest_schema` on disk requires Issue #9 fields (`created_at_utc`, `domain_objective`, …) — use `execute_issue7_matrix` or extend smoke `manifest.json` per `docs/reproducibility-ops.md`
 - [x] critic provider integration path is operational for **stub/replay** (`critic_provider_adapter`, sample evaluator seam, metadata echo); live HTTP vendors require keys and org approval
+- [x] provider-shaped smoke validated (stub backend, incident logs under `artifacts/reports/llm-smoke/`; reproducibility `exact` at gate-metric level for same seed)
 - [ ] stage 1-3 provider plan is either implemented or explicitly out-of-scope
 - [x] ablation behavior fidelity is validated at execution level (`pipeline_config` → `run_pipeline`; tests `test_issue42_pipeline_config_execution.py`)
 - [ ] reproducibility policy for stochastic drift is documented

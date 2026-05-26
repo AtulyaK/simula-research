@@ -94,7 +94,7 @@ Regenerating runs: use `run_pipeline` / Issue #7 tooling; new runs land under `a
 
 ### P1 — Strongly recommended before real LLM integration
 
-2. **Sample-aware critic + execution fidelity + metadata (implemented together — verify PR / branch before relying on `main`)**  
+2. **Sample-aware critic + execution fidelity + metadata** — **PR [#45](https://github.com/AtulyaK/simula-research/pull/45)** (`feature/llm-validation-issues-22-41-42`); merge before relying on `main`.  
    - **#22** `CriticSampleEvaluatorFn` + `sample_evaluator_from_text_fn` / `recorded_sample_evaluator`; `run_pipeline(..., critic_sample_evaluator=...)` (mutually exclusive with `critic_verdict`).  
    - **#41** optional `provider_runtime` on manifest + stage 4 echo; `provider_runtime_from_env()` for operator transport metadata (no secrets).  
    - **#42** `pipeline_config` presets passed from `execute_issue7_matrix` into `run_pipeline` (A1 shallow taxonomy, A4 `single_critic_mode`, etc.); reporting-only A1/A4 metric hacks removed.  

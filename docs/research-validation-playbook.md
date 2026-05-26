@@ -75,6 +75,8 @@ Deterministic **replay** table: set `SIMULA_CRITIC_BACKEND=replay` and `SIMULA_C
 
 Stop if: required env vars are missing for your chosen backend, spend caps would be exceeded, or stage contract validation fails (inspect stderr / rerun with a fixed `artifact_root` under `artifacts/runs/`).
 
+For Issue #9 **full** manifest validation on disk, write `manifest.json` with all fields in `validators.validate_manifest_schema` (including `created_at_utc`, `domain_objective`, `owner`, `commit_hash`, `branch`). The minimal `run_pipeline` return manifest is sufficient for stage boot only.
+
 ## Per-run checklist
 
 Before run:
