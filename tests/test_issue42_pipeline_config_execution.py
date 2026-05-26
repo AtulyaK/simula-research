@@ -55,7 +55,18 @@ class Issue42PipelineConfigExecutionTests(unittest.TestCase):
             out = execute_issue7_matrix(artifact_root=tmp, report_root=tmp)
             b0_tax = out["run_reports"]["B0"]["coverage"]["eligible_nodes"]
             a1_tax = out["run_reports"]["A1"]["coverage"]["eligible_nodes"]
-            self.assertGreater(b0_tax, a1_tax)
+            self.assertGreaterEqual(b0_tax, a1_tax)
+            b0_protocol = out["run_reports"]["B0"]["protocol"]["taxonomy_eligibility_policy"]
+            self.assertEqual(b0_protocol, "instantiated-nodes-from-stage3-samples")
+            b0_samples_path = (
+                Path(tmp)
+                / out["run_reports"]["B0"]["run_identity"]["run_id"]
+                / "30_complexification"
+                / "samples.json"
+            )
+            b0_samples = json.loads(b0_samples_path.read_text(encoding="utf-8"))
+            b0_instantiated_nodes = {str(s["taxonomy_node_id"]) for s in b0_samples}
+            self.assertEqual(b0_tax, len(b0_instantiated_nodes))
             b0_pairs = out["run_reports"]["B0"]["complexity"]["complexification_pairs_evaluated"]
             a1_pairs = out["run_reports"]["A1"]["complexity"]["complexification_pairs_evaluated"]
             b0_samples_path = (

@@ -109,7 +109,7 @@ def run_pipeline(
 
     complexification = apply_complexification(
         samples=local_diversification["instantiations"],
-        complexify_fraction=float(complex_cfg.get("complexify_fraction", 0.5)),
+        complexify_fraction=float(complex_cfg.get("complexify_fraction", 0.75)),
         semantic_overlap_threshold=float(complex_cfg.get("semantic_overlap_threshold", 0.55)),
         strategy=str(complex_cfg.get("strategy", "append_reasoning")),
     )

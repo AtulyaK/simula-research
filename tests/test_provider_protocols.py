@@ -12,6 +12,13 @@ from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
 
 
 class ProviderProtocolsTests(unittest.TestCase):
+    def test_hash_based_critic_verdict_agrees_across_critics_for_same_text(self) -> None:
+        for text in ("alpha case", "beta case", "gamma case"):
+            self.assertEqual(
+                hash_based_critic_verdict(text, "critic_a"),
+                hash_based_critic_verdict(text, "critic_b"),
+            )
+
     def test_explicit_hash_based_matches_default_adjudication(self) -> None:
         taxonomy = build_taxonomy("z", TaxonomyConfig(max_depth=1, branching_factor=2))
         local = build_local_diversification(taxonomy=taxonomy)
