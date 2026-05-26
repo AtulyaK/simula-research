@@ -11,7 +11,10 @@ from simula_research.evaluation_metrics import (
     compute_coverage_metrics,
     compute_quality_metrics,
 )
-from simula_research.critic_provider_adapter import provider_runtime_from_env
+from simula_research.critic_provider_adapter import (
+    critic_sample_evaluator_from_env,
+    provider_runtime_from_env,
+)
 from simula_research.pipeline import run_pipeline
 from simula_research.run_config_presets import PRESET_IDS, build_run_request, validate_all_presets
 
@@ -84,6 +87,7 @@ def execute_issue7_matrix(
     for preset_id in PRESET_IDS:
         request = build_run_request(preset_id)
         provider_runtime = provider_runtime_from_env()
+        critic_sample_evaluator = critic_sample_evaluator_from_env()
         pipeline_result = run_pipeline(
             seed=int(request["seed"]),
             model_ids=dict(request["model_ids"]),
@@ -91,6 +95,7 @@ def execute_issue7_matrix(
             artifact_root=artifact_root,
             pipeline_config=dict(request["pipeline_config"]),
             provider_runtime=provider_runtime,
+            critic_sample_evaluator=critic_sample_evaluator,
         )
 
         stage4 = pipeline_result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
