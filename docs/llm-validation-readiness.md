@@ -41,6 +41,19 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
 
 `src/simula_research/issue7_execution_reporting.py` passes preset `pipeline_config` into `run_pipeline` so B0/A1/A4 differ in persisted artifacts and downstream metrics without report-only adjustments.
 
+For free-tier or rate-limited provider validation, use the opt-in reduced-size
+mode. It overrides the local instantiation count for every preset and records
+the override in each run protocol:
+
+```powershell
+$env:SIMULA_CRITIC_BACKEND = "nim"
+py -3 -m simula_research.cli matrix --per-node-instantiations 1
+```
+
+The Bash wrapper accepts the equivalent
+`SIMULA_MATRIX_PER_NODE_INSTANTIATIONS=1` setting. The default matrix size is
+unchanged when the option is omitted.
+
 ## Prerequisites Checklist
 
 ## 1) Runtime and tools

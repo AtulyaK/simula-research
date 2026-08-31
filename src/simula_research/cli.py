@@ -22,11 +22,16 @@ def _git_value(*args: str, fallback: str) -> str:
 
 
 def _run_matrix(args: argparse.Namespace) -> int:
+    matrix_kwargs: dict[str, Any] = {
+        "artifact_root": args.artifact_root,
+        "report_root": args.report_root,
+        "branch_name": args.branch,
+        "commit_hash": args.commit,
+    }
+    if args.per_node_instantiations is not None:
+        matrix_kwargs["per_node_instantiation_count"] = args.per_node_instantiations
     result = execute_issue7_matrix(
-        artifact_root=args.artifact_root,
-        report_root=args.report_root,
-        branch_name=args.branch,
-        commit_hash=args.commit,
+        **matrix_kwargs,
     )
     print("execution_id", result["execution_id"])
     print("matrix_root", result["matrix_root"])
@@ -54,6 +59,12 @@ def _build_parser() -> argparse.ArgumentParser:
     matrix.add_argument(
         "--commit",
         default=_git_value("rev-parse", "HEAD", fallback="unknown"),
+    )
+    matrix.add_argument(
+        "--per-node-instantiations",
+        type=int,
+        default=None,
+        help="Override samples generated per taxonomy node for smaller provider runs.",
     )
     matrix.set_defaults(handler=_run_matrix)
     return parser

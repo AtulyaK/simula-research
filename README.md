@@ -55,6 +55,16 @@ $env:SIMULA_CRITIC_BACKEND = "stub"  # use "nim" for live critics
 py -3 -m simula_research.cli matrix
 ```
 
+For rate-limited providers, run an opt-in smaller matrix while preserving the
+same B0/A1/A4 semantics:
+
+```powershell
+py -3 -m simula_research.cli matrix --per-node-instantiations 1
+```
+
+The Bash wrapper accepts the equivalent `SIMULA_MATRIX_PER_NODE_INSTANTIATIONS=1`
+environment variable.
+
 The existing `scripts/run_issue7_matrix.sh` wrapper is equivalent for Bash
 environments. The staged flow for the first end-to-end validation cycle is:
 

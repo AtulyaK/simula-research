@@ -130,7 +130,15 @@ def execute_issue7_matrix(
     report_root: str | Path = "artifacts/reports",
     branch_name: str = "unknown",
     commit_hash: str = "unknown",
+    per_node_instantiation_count: int | None = None,
 ) -> dict[str, Any]:
+    if per_node_instantiation_count is not None and (
+        isinstance(per_node_instantiation_count, bool)
+        or not isinstance(per_node_instantiation_count, int)
+        or per_node_instantiation_count <= 0
+    ):
+        raise ValueError("per_node_instantiation_count must be a positive integer")
+
     preset_validation = validate_all_presets()
     if not preset_validation["ok"]:
         raise ValueError(f"Preset validation failed: {preset_validation['issues']}")
@@ -172,10 +180,14 @@ def execute_issue7_matrix(
             "provider_event_log": provider_event_log,
             "critic_sample_evaluator": critic_sample_evaluator,
         }
-        if request.get("local_diversification_config") is not None:
-            pipeline_kwargs["local_diversification_config"] = dict(
-                request["local_diversification_config"]
+        local_diversification_config = request.get("local_diversification_config")
+        if per_node_instantiation_count is not None:
+            local_diversification_config = dict(local_diversification_config or {})
+            local_diversification_config["per_node_instantiation_count"] = (
+                per_node_instantiation_count
             )
+        if local_diversification_config is not None:
+            pipeline_kwargs["local_diversification_config"] = dict(local_diversification_config)
         if request.get("complexification_config") is not None:
             pipeline_kwargs["complexification_config"] = dict(request["complexification_config"])
         pipeline_result = run_pipeline(**pipeline_kwargs)
@@ -231,6 +243,10 @@ def execute_issue7_matrix(
         }
         if provider_runtime:
             protocol["provider_runtime"] = provider_runtime
+        if per_node_instantiation_count is not None:
+            protocol["matrix_overrides"] = {
+                "per_node_instantiation_count": per_node_instantiation_count,
+            }
         run_identity = {
             "run_id": pipeline_result["manifest"]["run_id"],
             "seed": pipeline_result["manifest"]["seed"],

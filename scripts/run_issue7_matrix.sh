@@ -34,12 +34,20 @@ try:
 except Exception:
     commit = "unknown"
 
-output = execute_issue7_matrix(
-    artifact_root=os.environ.get("SIMULA_ARTIFACT_ROOT", "artifacts/runs"),
-    report_root=os.environ.get("SIMULA_REPORT_ROOT", "artifacts/reports"),
-    branch_name=branch,
-    commit_hash=commit,
-)
+matrix_kwargs = {
+    "artifact_root": os.environ.get("SIMULA_ARTIFACT_ROOT", "artifacts/runs"),
+    "report_root": os.environ.get("SIMULA_REPORT_ROOT", "artifacts/reports"),
+    "branch_name": branch,
+    "commit_hash": commit,
+}
+raw_limit = os.environ.get("SIMULA_MATRIX_PER_NODE_INSTANTIATIONS")
+if raw_limit:
+    limit = int(raw_limit)
+    if limit <= 0:
+        raise ValueError("SIMULA_MATRIX_PER_NODE_INSTANTIATIONS must be a positive integer")
+    matrix_kwargs["per_node_instantiation_count"] = limit
+
+output = execute_issue7_matrix(**matrix_kwargs)
 print("execution_id", output["execution_id"])
 print("matrix_root", output["matrix_root"])
 print("comparison_tables", output["comparison_tables_path"])

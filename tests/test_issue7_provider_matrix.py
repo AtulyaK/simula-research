@@ -12,6 +12,39 @@ from simula_research.issue7_execution_reporting import execute_issue7_matrix
 
 
 class Issue7ProviderMatrixTests(unittest.TestCase):
+    def test_matrix_accepts_opt_in_per_node_instantiation_limit(self) -> None:
+        env = os.environ
+        old = env.get("SIMULA_CRITIC_BACKEND")
+        try:
+            env["SIMULA_CRITIC_BACKEND"] = "stub"
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                output = execute_issue7_matrix(
+                    artifact_root=tmp_dir,
+                    report_root=tmp_dir,
+                    branch_name="provider-matrix-reduced",
+                    commit_hash="reduced",
+                    per_node_instantiation_count=1,
+                )
+                manifest_path = Path(output["run_reports"]["B0"]["artifacts"]["manifest"])
+                instantiations = json.loads(
+                    (
+                        manifest_path.parent.parent
+                        / "20_local_diversification"
+                        / "instantiations.json"
+                    ).read_text(encoding="utf-8")
+                )
+                self.assertEqual(len(instantiations), 7)
+                protocol = output["run_reports"]["B0"]["protocol"]
+                self.assertEqual(
+                    protocol["matrix_overrides"]["per_node_instantiation_count"],
+                    1,
+                )
+        finally:
+            if old is None:
+                env.pop("SIMULA_CRITIC_BACKEND", None)
+            else:
+                env["SIMULA_CRITIC_BACKEND"] = old
+
     def test_matrix_with_stub_backend_records_provider_runtime(self) -> None:
         env = os.environ
         old = {
