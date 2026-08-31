@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from datetime import datetime
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Literal
 
@@ -59,6 +60,9 @@ REQUIRED_ARTIFACT_FILES: dict[str, tuple[str, ...]] = {
     "60_evaluation": ("evaluation_handoff.json",),
     "70_diagnostics": ("diagnostics_summary.json",),
 }
+
+INTEGRITY_ALGORITHM = "sha256"
+INTEGRITY_SCHEMA_VERSION = "0.1.0"
 
 
 def _validation_result(kind: str, issues: list[str], assumptions: list[str]) -> dict[str, Any]:
@@ -212,6 +216,7 @@ def validate_artifact_tree(run_root: str | Path) -> dict[str, Any]:
             issues.append(f"missing required artifact stage directory: {stage_dir}")
 
     manifest_path = root_path / "00_spec" / "manifest.json"
+    canonical_spec = manifest_path.exists()
     if not manifest_path.exists() and (root_path / "manifest.json").exists():
         manifest_path = root_path / "manifest.json"
     manifest = _read_json_object(manifest_path, issues, "manifest.json")
@@ -223,6 +228,10 @@ def validate_artifact_tree(run_root: str | Path) -> dict[str, Any]:
             issues.append(f"manifest.json: field run_id {run_id!r} does not match run root name {root_path.name!r}")
 
     loaded: dict[str, Any] = {}
+    if canonical_spec:
+        for filename in ("run_config.json", "stage_outputs.json", "artifact_integrity.json"):
+            key = f"00_spec/{filename}"
+            loaded[key] = _read_json_file(root_path / key, issues, key)
     for stage_dir, filenames in REQUIRED_ARTIFACT_FILES.items():
         for filename in filenames:
             key = f"{stage_dir}/{filename}"
@@ -245,6 +254,13 @@ def validate_artifact_tree(run_root: str | Path) -> dict[str, Any]:
         regenerations=loaded.get("40_dual_critic_quality/regenerations.json"),
         issues=issues,
     )
+    if canonical_spec:
+        _validate_artifact_integrity(
+            root_path=root_path,
+            manifest=manifest,
+            integrity=loaded.get("00_spec/artifact_integrity.json"),
+            issues=issues,
+        )
 
     return _validation_result(kind="artifacts", issues=issues, assumptions=assumptions)
 
@@ -273,6 +289,90 @@ def _read_json_object(path: Path, issues: list[str], label: str) -> dict[str, An
         issues.append(f"artifact file must contain a JSON object: {label}")
         return None
     return payload
+
+
+def _validate_artifact_integrity(
+    *,
+    root_path: Path,
+    manifest: dict[str, Any] | None,
+    integrity: Any,
+    issues: list[str],
+) -> None:
+    if not isinstance(integrity, dict):
+        return
+
+    if integrity.get("schema_version") != INTEGRITY_SCHEMA_VERSION:
+        issues.append("artifact_integrity.json: unsupported schema_version")
+    if integrity.get("algorithm") != INTEGRITY_ALGORITHM:
+        issues.append("artifact_integrity.json: algorithm must be sha256")
+    if manifest is not None and integrity.get("run_id") != manifest.get("run_id"):
+        issues.append("artifact_integrity.json: run_id does not match manifest.json")
+
+    records = integrity.get("files")
+    if not isinstance(records, dict):
+        issues.append("artifact_integrity.json: files must be an object")
+        return
+
+    integrity_path = root_path / "00_spec" / "artifact_integrity.json"
+    actual_paths = {
+        path.relative_to(root_path).as_posix()
+        for path in root_path.rglob("*")
+        if path.is_file() and path != integrity_path
+    }
+    recorded_paths = {str(path) for path in records}
+    for path in sorted(actual_paths - recorded_paths):
+        issues.append(f"artifact_integrity.json: untracked file: {path}")
+    for path in sorted(recorded_paths - actual_paths):
+        issues.append(f"artifact_integrity.json: missing recorded file: {path}")
+
+    for relative_path, record in records.items():
+        if not isinstance(relative_path, str):
+            issues.append("artifact_integrity.json: file paths must be strings")
+            continue
+        path_parts = Path(relative_path).parts
+        if Path(relative_path).is_absolute() or ".." in path_parts:
+            issues.append(f"artifact_integrity.json: invalid relative path: {relative_path}")
+            continue
+        if relative_path == integrity_path.relative_to(root_path).as_posix():
+            issues.append("artifact_integrity.json: integrity file must not record itself")
+            continue
+        if not isinstance(record, dict):
+            issues.append(f"artifact_integrity.json: record must be an object: {relative_path}")
+            continue
+        expected_hash = record.get("sha256")
+        expected_size = record.get("size_bytes")
+        if (
+            not isinstance(expected_hash, str)
+            or len(expected_hash) != 64
+            or any(character not in "0123456789abcdef" for character in expected_hash.lower())
+        ):
+            issues.append(f"artifact_integrity.json: invalid sha256: {relative_path}")
+            continue
+        if (
+            not isinstance(expected_size, int)
+            or isinstance(expected_size, bool)
+            or expected_size < 0
+        ):
+            issues.append(f"artifact_integrity.json: invalid size_bytes: {relative_path}")
+            continue
+
+        file_path = root_path / relative_path
+        if not file_path.is_file():
+            continue
+        digest = sha256()
+        size_bytes = 0
+        try:
+            with file_path.open("rb") as file_handle:
+                for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+                    size_bytes += len(chunk)
+        except OSError as exc:
+            issues.append(f"artifact_integrity.json: cannot read {relative_path}: {exc}")
+            continue
+        if size_bytes != expected_size:
+            issues.append(f"artifact_integrity.json: size mismatch: {relative_path}")
+        if digest.hexdigest() != expected_hash:
+            issues.append(f"artifact_integrity.json: sha256 mismatch: {relative_path}")
 
 
 def _string_id(value: Any) -> str | None:

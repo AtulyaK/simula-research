@@ -73,6 +73,32 @@ class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
             )
             self.assertEqual(persisted_manifest, result["manifest"])
 
+            persisted_run_config = json.loads(
+                (run_root / "00_spec" / "run_config.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(persisted_run_config["run_id"], result["manifest"]["run_id"])
+            self.assertEqual(
+                persisted_run_config["taxonomy_config"],
+                {"max_depth": 1, "branching_factor": 1},
+            )
+            self.assertEqual(
+                persisted_run_config["local_diversification_config"]["per_node_instantiation_count"],
+                3,
+            )
+            self.assertEqual(
+                persisted_run_config["complexification_config"]["complexify_fraction"],
+                0.75,
+            )
+            self.assertEqual(
+                persisted_run_config["dual_critic_config"]["disagreement_policy"],
+                "reject",
+            )
+            persisted_integrity = json.loads(
+                (run_root / "00_spec" / "artifact_integrity.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(persisted_integrity["run_id"], result["manifest"]["run_id"])
+            self.assertIn("10_taxonomy/taxonomy_nodes.json", persisted_integrity["files"])
+
             persisted_stage_outputs = json.loads(
                 (run_root / "00_spec" / "stage_outputs.json").read_text(encoding="utf-8")
             )
@@ -102,6 +128,90 @@ class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
             )
             self.assertEqual(diagnostics["stage4_rejection_count"], len(stage4_rejections))
             self.assertEqual(diagnostics["semantic_preservation_failure_count"], 0)
+
+    def test_run_config_records_effective_pipeline_overrides(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 4, "branching_factor": 3},
+                local_diversification_config={
+                    "per_node_instantiation_count": 5,
+                    "overlap_rejection_threshold": 0.4,
+                },
+                complexification_config={
+                    "complexify_fraction": 1.0,
+                    "semantic_overlap_threshold": 0.2,
+                    "strategy": "custom",
+                },
+                dual_critic_config={
+                    "disagreement_policy": "accept",
+                    "max_regenerations_per_sample": 4,
+                },
+                pipeline_config={
+                    "global_diversification_enabled": False,
+                    "local_diversification_enabled": False,
+                    "complexification_enabled": False,
+                    "dual_critic_enabled": False,
+                    "single_critic_mode": "critic_b",
+                },
+            )
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            persisted = json.loads(
+                (run_root / "00_spec" / "run_config.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(
+            persisted["pipeline_config"],
+            {
+                "global_diversification_enabled": False,
+                "local_diversification_enabled": False,
+                "complexification_enabled": False,
+                "dual_critic_enabled": False,
+                "single_critic_mode": "critic_b",
+            },
+        )
+        self.assertEqual(persisted["taxonomy_config"], {"max_depth": 0, "branching_factor": 1})
+        self.assertEqual(
+            persisted["local_diversification_config"]["per_node_instantiation_count"],
+            1,
+        )
+        self.assertEqual(
+            persisted["local_diversification_config"]["overlap_rejection_threshold"],
+            0.4,
+        )
+        self.assertEqual(persisted["complexification_config"]["complexify_fraction"], 0.0)
+        self.assertEqual(persisted["complexification_config"]["strategy"], "custom")
+        self.assertEqual(persisted["dual_critic_config"]["disagreement_policy"], "accept")
+        self.assertEqual(persisted["dual_critic_config"]["single_critic_mode"], "critic_b")
+
+    def test_artifact_integrity_validation_detects_tampering(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 1, "branching_factor": 1},
+            )
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            samples_path = run_root / "30_complexification" / "samples.json"
+            samples_path.write_text(
+                samples_path.read_text(encoding="utf-8") + "\n",
+                encoding="utf-8",
+            )
+
+            validation = validate_artifact_tree(run_root)
+
+        self.assertFalse(validation["ok"])
+        self.assertTrue(
+            any(
+                issue == "artifact_integrity.json: sha256 mismatch: 30_complexification/samples.json"
+                for issue in validation["issues"]
+            )
+        )
 
     def test_pipeline_artifacts_validate_with_full_manifest_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

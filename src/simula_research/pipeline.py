@@ -75,7 +75,67 @@ def run_pipeline(
     created_at = datetime.now(UTC)
     run_id = f"run-{created_at.strftime('%Y%m%dT%H%M%SZ')}-{uuid4().hex[:8]}"
 
-    manifest_pipeline = dict(pipeline_config) if pipeline_config is not None else dict(DEFAULT_PIPELINE_CONFIG)
+    manifest_pipeline = {
+        **DEFAULT_PIPELINE_CONFIG,
+        **dict(pipeline_config or {}),
+    }
+
+    taxonomy_cfg = dict(taxonomy_config or {})
+    if pipeline_config is not None and not pipeline_config.get("global_diversification_enabled", True):
+        taxonomy_cfg = {"max_depth": 0, "branching_factor": 1}
+    resolved_taxonomy_config = {
+        "max_depth": int(taxonomy_cfg.get("max_depth", 2)),
+        "branching_factor": int(taxonomy_cfg.get("branching_factor", 2)),
+    }
+
+    local_options = dict(local_diversification_config or {})
+    if pipeline_config is not None and not pipeline_config.get("local_diversification_enabled", True):
+        local_options["per_node_instantiation_count"] = 1
+    resolved_local_config = {
+        **local_options,
+        "per_node_instantiation_count": int(local_options.get("per_node_instantiation_count", 3)),
+        "overlap_rejection_threshold": float(
+            local_options.get("overlap_rejection_threshold", 0.8)
+        ),
+    }
+
+    complex_cfg = dict(complexification_config or {})
+    if pipeline_config is not None and not pipeline_config.get("complexification_enabled", True):
+        complex_cfg["complexify_fraction"] = 0.0
+    resolved_complexification_config = {
+        **complex_cfg,
+        "complexify_fraction": float(complex_cfg.get("complexify_fraction", 0.75)),
+        "semantic_overlap_threshold": float(
+            complex_cfg.get("semantic_overlap_threshold", 0.55)
+        ),
+        "strategy": str(complex_cfg.get("strategy", "append_reasoning")),
+    }
+
+    dual_cfg = dict(dual_critic_config or {})
+    if pipeline_config is not None and not pipeline_config.get("dual_critic_enabled", True):
+        dual_cfg["single_critic_mode"] = str(pipeline_config.get("single_critic_mode", "critic_a"))
+    resolved_dual_critic_config = {
+        "disagreement_policy": str(dual_cfg.get("disagreement_policy", "reject")),
+        "max_regenerations_per_sample": int(
+            dual_cfg.get("max_regenerations_per_sample", 1)
+        ),
+        "single_critic_mode": dual_cfg.get("single_critic_mode"),
+    }
+    resolved_dual_critic_config.update(
+        {
+            key: value
+            for key, value in dual_cfg.items()
+            if key not in resolved_dual_critic_config
+        }
+    )
+
+    resolved_run_config = {
+        "pipeline_config": dict(manifest_pipeline),
+        "taxonomy_config": resolved_taxonomy_config,
+        "local_diversification_config": resolved_local_config,
+        "complexification_config": resolved_complexification_config,
+        "dual_critic_config": resolved_dual_critic_config,
+    }
 
     manifest: dict[str, Any] = {
         **dict(manifest_metadata or {}),
@@ -87,6 +147,7 @@ def run_pipeline(
         "protocol_version": PROTOCOL_VERSION,
         "artifact_schema_version": ARTIFACT_SCHEMA_VERSION,
         "pipeline_config": manifest_pipeline,
+        "run_config": resolved_run_config,
     }
     if provider_runtime:
         manifest["provider_runtime"] = dict(provider_runtime)
@@ -96,16 +157,12 @@ def run_pipeline(
         stage_name: {"status": "placeholder", "run_id": run_id} for stage_name in STAGE_NAMES
     }
 
-    taxonomy_cfg = dict(taxonomy_config or {})
-    if pipeline_config is not None and not pipeline_config.get("global_diversification_enabled", True):
-        taxonomy_cfg = {"max_depth": 0, "branching_factor": 1}
-
     taxonomy_fn = taxonomy_provider or default_taxonomy_provider
     taxonomy = taxonomy_fn(
         domain_objective,
         TaxonomyConfig(
-            max_depth=int(taxonomy_cfg.get("max_depth", 2)),
-            branching_factor=int(taxonomy_cfg.get("branching_factor", 2)),
+            max_depth=resolved_taxonomy_config["max_depth"],
+            branching_factor=resolved_taxonomy_config["branching_factor"],
         ),
     )
 
@@ -122,30 +179,18 @@ def run_pipeline(
     }
     artifacts = store.persist_taxonomy(taxonomy)
 
-    local_options = dict(local_diversification_config or {})
-    if pipeline_config is not None and not pipeline_config.get("local_diversification_enabled", True):
-        local_options["per_node_instantiation_count"] = 1
-
     local_fn = local_diversification_provider or default_local_diversification_provider
     local_diversification = local_fn(taxonomy, options=local_options or None)
     local_artifacts = store.persist_local_diversification(local_diversification)
 
-    complex_cfg = dict(complexification_config or {})
-    if pipeline_config is not None and not pipeline_config.get("complexification_enabled", True):
-        complex_cfg["complexify_fraction"] = 0.0
-
     complex_fn = complexification_provider or default_complexification_provider
     complexification = complex_fn(
         local_diversification["instantiations"],
-        complexify_fraction=float(complex_cfg.get("complexify_fraction", 0.75)),
-        semantic_overlap_threshold=float(complex_cfg.get("semantic_overlap_threshold", 0.55)),
-        strategy=str(complex_cfg.get("strategy", "append_reasoning")),
+        complexify_fraction=resolved_complexification_config["complexify_fraction"],
+        semantic_overlap_threshold=resolved_complexification_config["semantic_overlap_threshold"],
+        strategy=resolved_complexification_config["strategy"],
     )
     complex_artifacts = store.persist_complexification(complexification)
-
-    dual_cfg = dict(dual_critic_config or {})
-    if pipeline_config is not None and not pipeline_config.get("dual_critic_enabled", True):
-        dual_cfg["single_critic_mode"] = str(pipeline_config.get("single_critic_mode", "critic_a"))
 
     adjudication = adjudicate_samples(
         samples=complexification["samples"],

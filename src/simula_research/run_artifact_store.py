@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -43,6 +44,7 @@ class FileSystemRunArtifactStore:
         manifest_path = spec_dir / "manifest.json"
         run_config_path = spec_dir / "run_config.json"
         stage_outputs_path = spec_dir / "stage_outputs.json"
+        integrity_path = spec_dir / "artifact_integrity.json"
 
         run_config: dict[str, Any] = {
             "run_id": manifest["run_id"],
@@ -51,6 +53,9 @@ class FileSystemRunArtifactStore:
             "model_ids": manifest["model_ids"],
             "pipeline_config": manifest.get("pipeline_config", {}),
         }
+        resolved_run_config = manifest.get("run_config")
+        if isinstance(resolved_run_config, dict):
+            run_config.update(resolved_run_config)
         if "provider_runtime" in manifest:
             run_config["provider_runtime"] = manifest["provider_runtime"]
 
@@ -63,7 +68,33 @@ class FileSystemRunArtifactStore:
         if stage_outputs is not None:
             stage_outputs_path.write_text(_dump_json(stage_outputs), encoding="utf-8")
             artifacts["stage_outputs"] = str(stage_outputs_path)
+        integrity = {
+            "schema_version": "0.1.0",
+            "run_id": manifest["run_id"],
+            "algorithm": "sha256",
+            "files": self._build_integrity_records(integrity_path),
+        }
+        integrity_path.write_text(_dump_json(integrity), encoding="utf-8")
+        artifacts["artifact_integrity"] = str(integrity_path)
         return artifacts
+
+    def _build_integrity_records(self, integrity_path: Path) -> dict[str, dict[str, int | str]]:
+        records: dict[str, dict[str, int | str]] = {}
+        for path in sorted(self._run_root.rglob("*")):
+            if not path.is_file() or path == integrity_path:
+                continue
+            relative_path = path.relative_to(self._run_root).as_posix()
+            digest = sha256()
+            size_bytes = 0
+            with path.open("rb") as file_handle:
+                for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+                    size_bytes += len(chunk)
+            records[relative_path] = {
+                "sha256": digest.hexdigest(),
+                "size_bytes": size_bytes,
+            }
+        return records
 
     def persist_taxonomy(self, taxonomy: dict[str, Any]) -> dict[str, str]:
         taxonomy_dir = self._run_root / "10_taxonomy"

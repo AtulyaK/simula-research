@@ -40,6 +40,14 @@ Required for persisted `00_spec/manifest.json` under `artifacts/runs/<run_id>/` 
 
 `model_ids` values must be non-empty strings in full mode (boot only requires a non-empty object).
 
+`00_spec/run_config.json` stores the resolved configuration used by the
+pipeline, including `pipeline_config`, `taxonomy_config`,
+`local_diversification_config`, `complexification_config`, and
+`dual_critic_config`, alongside the run identity and provider runtime metadata.
+`00_spec/artifact_integrity.json` records SHA-256 digests and byte sizes for
+every other file in the run root; artifact-tree validation checks for tampered,
+missing, and untracked files.
+
 ### Operator guidance
 
 1. **Local pipeline / smoke runs** — `run_pipeline` boot validation is sufficient; returned manifest may fail full schema until you add Issue #9 metadata before archival.
@@ -71,7 +79,7 @@ Use a stable, timestamped structure:
 
 Recommended subdirectories:
 
-- `00_spec/` - frozen run config and manifest
+- `00_spec/` - frozen resolved run config, manifest, and stage outputs
 - `10_taxonomy/` - taxonomy graph and node metadata
 - `20_local_diversification/` - meta-prompts and instantiations
 - `30_complexification/` - transformed samples and tags
@@ -86,7 +94,8 @@ Recommended subdirectories:
 
 ### Artifact tree validation contract
 
-`validate_artifact_tree` validates the run root, full `00_spec/manifest.json`, required stage directories, and canonical JSON artifacts:
+`validate_artifact_tree` validates the run root, full `00_spec/manifest.json`, resolved
+configuration, artifact integrity metadata, required stage directories, and canonical JSON artifacts:
 
 - `10_taxonomy/taxonomy_graph.json`, `10_taxonomy/taxonomy_nodes.json`
 - `20_local_diversification/instantiations.json`, `20_local_diversification/rejections.json`
