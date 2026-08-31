@@ -88,6 +88,13 @@ score, complexity shift, and complexification precision are `not_evaluable`.
 Stage 3 `is_complexified` tags may be reported only as proxy metadata, not as
 evidence that a sample is harder than its source.
 
+The execution layer accepts an injectable pairwise judgment provider. It must
+return validated comparisons containing a winner and normalized scores for the
+complexified sample and its source counterpart. Comparisons are persisted in
+`30_complexification/pairwise_judgments.json`; reports remain
+`not_evaluable` until every complexified sample meets the protocol's minimum
+comparison count.
+
 ## Quality metrics
 
 ### 1) Dual-critic acceptance rate

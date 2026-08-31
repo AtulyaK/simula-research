@@ -10,6 +10,20 @@ from simula_research.issue7_execution_reporting import execute_issue7_matrix
 
 
 class Issue7ExecutionReportingTests(unittest.TestCase):
+    @staticmethod
+    def _complexity_judgment_provider(
+        complexified_sample: dict[str, object],
+        baseline_sample: dict[str, object],
+    ) -> list[dict[str, object]]:
+        return [
+            {
+                "winner": "complexified",
+                "complexified_score": 0.8,
+                "baseline_score": 0.4,
+            }
+            for _ in range(5)
+        ]
+
     def test_execute_matrix_persists_run_reports_gate_reports_and_comparison_tables(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
@@ -135,6 +149,39 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             self.assertIsNone(complexity["complexity_shift"])
             self.assertIsNone(complexity["calibrated_score_distribution"]["p50"])
             self.assertGreater(complexity["proxy_metrics"]["complexified_sample_count"], 0)
+
+    def test_injected_complexity_judgments_enable_evaluation_and_persist_pairs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="feature/complexity-judgment-seam",
+                commit_hash="deadbeef",
+                complexity_judgment_provider=self._complexity_judgment_provider,
+            )
+
+            b0 = output["run_reports"]["B0"]
+            complexity = b0["complexity"]
+            run_id = b0["run_identity"]["run_id"]
+            pairwise_path = (
+                Path(tmp_dir)
+                / str(run_id)
+                / "30_complexification"
+                / "pairwise_judgments.json"
+            )
+            pairwise_judgments = json.loads(pairwise_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(complexity["evaluation_status"], "evaluated")
+        self.assertEqual(complexity["complexification_pairs_evaluated"], len(pairwise_judgments))
+        self.assertGreater(complexity["complexification_pairs_evaluated"], 0)
+        self.assertAlmostEqual(complexity["complexification_precision"], 1.0)
+        self.assertAlmostEqual(complexity["complexity_shift"], 0.4)
+        self.assertEqual(b0["protocol"]["complexity_judgment_protocol"]["evidence_status"], "evaluated")
+        self.assertNotIn("not_evaluable_reason", b0["protocol"]["complexity_judgment_protocol"])
+        self.assertEqual(
+            b0["gate_report"]["gate_decision"]["complexity.complexification_precision"]["status"],
+            "pass",
+        )
 
     def test_missing_stage3_taxonomy_nodes_stay_in_coverage_denominator(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

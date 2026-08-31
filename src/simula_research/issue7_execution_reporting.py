@@ -8,6 +8,7 @@ from typing import Any
 
 from simula_research.evaluation_metrics import (
     build_gate_report,
+    compute_complexity_metrics,
     compute_coverage_metrics,
     compute_quality_metrics,
 )
@@ -16,6 +17,7 @@ from simula_research.critic_provider_adapter import (
     provider_runtime_from_env,
 )
 from simula_research.pipeline import run_pipeline
+from simula_research.provider_protocols import ComplexityJudgmentProviderFn
 from simula_research.run_config_presets import PRESET_IDS, build_run_request, validate_all_presets
 
 _TAXONOMY_ELIGIBILITY_POLICY = "all-taxonomy-nodes-from-run-policy"
@@ -57,7 +59,12 @@ def _safe_ratio(numerator: int, denominator: int) -> float | None:
     return numerator / denominator
 
 
-def _compute_not_evaluable_complexity_metrics(samples: list[dict[str, Any]]) -> dict[str, Any]:
+def _compute_not_evaluable_complexity_metrics(
+    samples: list[dict[str, Any]],
+    *,
+    reason: str = _COMPLEXITY_NOT_EVALUABLE_REASON,
+    pairwise_count: int = 0,
+) -> dict[str, Any]:
     complexified_count = sum(1 for sample in samples if bool(sample.get("is_complexified")))
     fallback_count = sum(
         1
@@ -69,9 +76,9 @@ def _compute_not_evaluable_complexity_metrics(samples: list[dict[str, Any]]) -> 
         "calibrated_score_distribution": {"p25": None, "p50": None, "p75": None},
         "complexity_shift": None,
         "complexification_precision": None,
-        "complexification_pairs_evaluated": 0,
+        "complexification_pairs_evaluated": pairwise_count,
         "evaluation_status": "not_evaluable",
-        "not_evaluable_reason": _COMPLEXITY_NOT_EVALUABLE_REASON,
+        "not_evaluable_reason": reason,
         "proxy_metrics": {
             "sample_count": sample_count,
             "complexified_sample_count": complexified_count,
@@ -80,6 +87,57 @@ def _compute_not_evaluable_complexity_metrics(samples: list[dict[str, Any]]) -> 
             "semantic_preservation_fallback_count": fallback_count,
         },
     }
+
+
+def _compute_complexity_metrics_from_judgments(
+    samples: list[dict[str, Any]],
+    pairwise_judgments: list[dict[str, Any]],
+    minimum_comparisons_per_sample: int,
+) -> dict[str, Any]:
+    complexified_samples = [
+        sample for sample in samples if bool(sample.get("is_complexified"))
+    ]
+    if not pairwise_judgments:
+        return _compute_not_evaluable_complexity_metrics(samples)
+
+    judgments_by_sample: dict[str, list[dict[str, Any]]] = {}
+    for judgment in pairwise_judgments:
+        if not isinstance(judgment, dict):
+            raise ValueError("persisted complexity judgments must contain objects")
+        sample_id = str(judgment.get("instantiation_id", ""))
+        judgments_by_sample.setdefault(sample_id, []).append(judgment)
+
+    insufficient_sample_ids = [
+        str(sample.get("instantiation_id", ""))
+        for sample in complexified_samples
+        if len(judgments_by_sample.get(str(sample.get("instantiation_id", "")), []))
+        < minimum_comparisons_per_sample
+    ]
+    if insufficient_sample_ids:
+        return _compute_not_evaluable_complexity_metrics(
+            samples,
+            reason="insufficient_pairwise_complexity_judgments",
+            pairwise_count=len(pairwise_judgments),
+        )
+
+    run_scores = [
+        sum(float(judgment["complexified_score"]) for judgment in judgments)
+        / len(judgments)
+        for judgments in judgments_by_sample.values()
+    ]
+    baseline_scores = [
+        sum(float(judgment["baseline_score"]) for judgment in judgments)
+        / len(judgments)
+        for judgments in judgments_by_sample.values()
+    ]
+    complexity = compute_complexity_metrics(
+        run_complexity_scores=run_scores,
+        baseline_complexity_scores=baseline_scores,
+        complexification_pairs=pairwise_judgments,
+    )
+    complexity["proxy_metrics"] = _compute_not_evaluable_complexity_metrics(samples)["proxy_metrics"]
+    complexity["judgment_sample_count"] = len(judgments_by_sample)
+    return complexity
 
 
 def _overall_gate_status(gates: dict[str, Any]) -> str:
@@ -131,6 +189,8 @@ def execute_issue7_matrix(
     branch_name: str = "unknown",
     commit_hash: str = "unknown",
     per_node_instantiation_count: int | None = None,
+    complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
+    complexity_judgment_config: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     if per_node_instantiation_count is not None and (
         isinstance(per_node_instantiation_count, bool)
@@ -179,6 +239,8 @@ def execute_issue7_matrix(
             "provider_runtime": provider_runtime,
             "provider_event_log": provider_event_log,
             "critic_sample_evaluator": critic_sample_evaluator,
+            "complexity_judgment_provider": complexity_judgment_provider,
+            "complexity_judgment_config": complexity_judgment_config,
         }
         local_diversification_config = request.get("local_diversification_config")
         if per_node_instantiation_count is not None:
@@ -219,21 +281,47 @@ def execute_issue7_matrix(
             }
             for sample in stage3_samples
         ]
-        complexity = _compute_not_evaluable_complexity_metrics(complexity_samples)
+        pairwise_judgments_path = stage3["complexification_artifacts"].get("pairwise_judgments")
+        pairwise_judgments = (
+            _read_json(pairwise_judgments_path)
+            if pairwise_judgments_path
+            else []
+        )
+        if not isinstance(pairwise_judgments, list):
+            raise ValueError("persisted pairwise complexity judgments must be a list")
+        run_config = pipeline_result["manifest"].get("run_config", {})
+        judgment_config = (
+            run_config.get("complexity_judgment_config", {})
+            if isinstance(run_config, dict)
+            else {}
+        )
+        minimum_comparisons = int(
+            judgment_config.get("minimum_comparisons_per_sample", 5)
+        )
+        complexity = _compute_complexity_metrics_from_judgments(
+            samples=complexity_samples,
+            pairwise_judgments=pairwise_judgments,
+            minimum_comparisons_per_sample=minimum_comparisons,
+        )
 
         quality = compute_quality_metrics(issue5_outputs=stage4)
 
+        complexity_judgment_protocol = {
+            "version": "milestone-1",
+            "k_factor": int(judgment_config.get("k_factor", 32)),
+            "initial_rating": int(judgment_config.get("initial_rating", 1000)),
+            "minimum_comparisons_per_sample": minimum_comparisons,
+            "evidence_status": complexity["evaluation_status"],
+        }
+        if complexity["evaluation_status"] != "evaluated":
+            complexity_judgment_protocol["not_evaluable_reason"] = complexity.get(
+                "not_evaluable_reason",
+                _COMPLEXITY_NOT_EVALUABLE_REASON,
+            )
         protocol = {
             "domain_objective": request["domain_objective"],
             "taxonomy_eligibility_policy": _TAXONOMY_ELIGIBILITY_POLICY,
-            "complexity_judgment_protocol": {
-                "version": "milestone-1",
-                "k_factor": 32,
-                "initial_rating": 1000,
-                "minimum_comparisons_per_sample": 5,
-                "evidence_status": "not_evaluable",
-                "not_evaluable_reason": _COMPLEXITY_NOT_EVALUABLE_REASON,
-            },
+            "complexity_judgment_protocol": complexity_judgment_protocol,
             "critic_adjudication_config": {
                 "mode": "dual_critic" if request["pipeline_config"]["dual_critic_enabled"] else "single_critic",
                 "policy": "reject_on_disagreement",
@@ -263,10 +351,14 @@ def execute_issue7_matrix(
             notes=[],
         )
         gate_report["complexity"] = complexity
-        _mark_complexity_gate_not_evaluable(
-            gate_report,
-            reason=_COMPLEXITY_NOT_EVALUABLE_REASON,
-        )
+        if complexity["evaluation_status"] != "evaluated":
+            _mark_complexity_gate_not_evaluable(
+                gate_report,
+                reason=complexity.get(
+                    "not_evaluable_reason",
+                    _COMPLEXITY_NOT_EVALUABLE_REASON,
+                ),
+            )
         failure_analysis = _build_failure_analysis(gate_report["gate_decision"])
         gate_report["notes"] = failure_analysis
 

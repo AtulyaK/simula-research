@@ -6,9 +6,14 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from simula_research.complexity_judgments import (
+    COMPLEXITY_JUDGMENT_DEFAULTS,
+    collect_pairwise_complexity_judgments,
+)
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.manifest import validate_manifest
 from simula_research.provider_protocols import (
+    ComplexityJudgmentProviderFn,
     ComplexificationProviderFn,
     CriticSampleEvaluatorFn,
     CriticVerdictFn,
@@ -68,6 +73,8 @@ def run_pipeline(
     complexification_provider: ComplexificationProviderFn | None = None,
     critic_verdict: CriticVerdictFn | None = None,
     critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
+    complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
+    complexity_judgment_config: dict[str, int] | None = None,
 ) -> dict[str, object]:
     if critic_verdict is not None and critic_sample_evaluator is not None:
         raise ValueError("critic_verdict and critic_sample_evaluator are mutually exclusive")
@@ -128,6 +135,10 @@ def run_pipeline(
             if key not in resolved_dual_critic_config
         }
     )
+    resolved_complexity_judgment_config = {
+        **COMPLEXITY_JUDGMENT_DEFAULTS,
+        **dict(complexity_judgment_config or {}),
+    }
 
     resolved_run_config = {
         "pipeline_config": dict(manifest_pipeline),
@@ -135,6 +146,7 @@ def run_pipeline(
         "local_diversification_config": resolved_local_config,
         "complexification_config": resolved_complexification_config,
         "dual_critic_config": resolved_dual_critic_config,
+        "complexity_judgment_config": resolved_complexity_judgment_config,
     }
 
     manifest: dict[str, Any] = {
@@ -190,7 +202,19 @@ def run_pipeline(
         semantic_overlap_threshold=resolved_complexification_config["semantic_overlap_threshold"],
         strategy=resolved_complexification_config["strategy"],
     )
-    complex_artifacts = store.persist_complexification(complexification)
+    pairwise_complexity_judgments = (
+        collect_pairwise_complexity_judgments(
+            samples=complexification["samples"],
+            provider=complexity_judgment_provider,
+        )
+        if complexity_judgment_provider is not None
+        else []
+    )
+    complexification_artifact_payload = dict(complexification)
+    if complexity_judgment_provider is not None:
+        complexification["pairwise_judgments"] = pairwise_complexity_judgments
+        complexification_artifact_payload["pairwise_judgments"] = pairwise_complexity_judgments
+    complex_artifacts = store.persist_complexification(complexification_artifact_payload)
 
     adjudication = adjudicate_samples(
         samples=complexification["samples"],

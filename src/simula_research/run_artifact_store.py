@@ -148,16 +148,22 @@ class FileSystemRunArtifactStore:
 
         samples_path = complex_dir / "samples.json"
         failures_path = complex_dir / "semantic_preservation_failures.json"
+        judgments_path = complex_dir / "pairwise_judgments.json"
 
         samples_path.write_text(_dump_json(complexification["samples"]), encoding="utf-8")
         failures_path.write_text(
             _dump_json(complexification["semantic_preservation_failures"]),
             encoding="utf-8",
         )
+        judgments_path.write_text(
+            _dump_json(complexification.get("pairwise_judgments", [])),
+            encoding="utf-8",
+        )
 
         return {
             "samples": str(samples_path),
             "semantic_preservation_failures": str(failures_path),
+            "pairwise_judgments": str(judgments_path),
         }
 
     def persist_dual_critic(self, adjudication: dict[str, Any]) -> dict[str, str]:

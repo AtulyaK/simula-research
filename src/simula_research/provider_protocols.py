@@ -48,6 +48,16 @@ class ComplexificationProviderFn(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class ComplexityJudgmentProviderFn(Protocol):
+    """Injectable pairwise complexity judge for a complexified/source sample pair."""
+
+    def __call__(
+        self,
+        complexified_sample: dict[str, Any],
+        baseline_sample: dict[str, Any],
+    ) -> list[dict[str, Any]]: ...
+
+
 def default_taxonomy_provider(domain_objective: str, config: TaxonomyConfig | None = None) -> dict[str, Any]:
     return build_taxonomy(domain_objective, config)
 

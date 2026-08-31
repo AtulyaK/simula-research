@@ -232,7 +232,13 @@ def validate_artifact_tree(run_root: str | Path) -> dict[str, Any]:
         for filename in ("run_config.json", "stage_outputs.json", "artifact_integrity.json"):
             key = f"00_spec/{filename}"
             loaded[key] = _read_json_file(root_path / key, issues, key)
-    for stage_dir, filenames in REQUIRED_ARTIFACT_FILES.items():
+    required_artifact_files = dict(REQUIRED_ARTIFACT_FILES)
+    if canonical_spec:
+        required_artifact_files["30_complexification"] = (
+            *required_artifact_files["30_complexification"],
+            "pairwise_judgments.json",
+        )
+    for stage_dir, filenames in required_artifact_files.items():
         for filename in filenames:
             key = f"{stage_dir}/{filename}"
             path = root_path / stage_dir / filename
