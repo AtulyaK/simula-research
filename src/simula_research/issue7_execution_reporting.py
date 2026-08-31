@@ -19,6 +19,7 @@ from simula_research.critic_provider_adapter import (
 from simula_research.pipeline import run_pipeline
 from simula_research.provider_protocols import ComplexityJudgmentProviderFn
 from simula_research.run_config_presets import PRESET_IDS, build_run_request, validate_all_presets
+from simula_research.validators import validate_artifact_tree
 
 _TAXONOMY_ELIGIBILITY_POLICY = "all-taxonomy-nodes-from-run-policy"
 _COMPLEXITY_NOT_EVALUABLE_REASON = "missing_pairwise_complexity_judgments"
@@ -183,6 +184,68 @@ def _build_failure_analysis(gate_decision: dict[str, Any]) -> list[str]:
     return notes
 
 
+def _load_persisted_run_inputs(
+    artifact_root: str | Path,
+    pipeline_result: dict[str, Any],
+) -> dict[str, Any]:
+    manifest = pipeline_result["manifest"]
+    run_id = str(manifest["run_id"])
+    run_root = Path(artifact_root) / run_id
+    canonical_manifest_path = run_root / "00_spec" / "manifest.json"
+    if not canonical_manifest_path.is_file():
+        stage_outputs = pipeline_result["stage_outputs"]
+        stage3 = stage_outputs["stage_3_complexification"]
+        stage4 = stage_outputs["stage_4_dual_critic_quality_verification"]
+        stage3_artifacts = stage3["complexification_artifacts"]
+        stage4_artifacts = stage4["stage4_artifacts"]
+        stage4_decisions = _read_json(stage4_artifacts["critic_decisions"])
+        pairwise_path = stage3_artifacts.get("pairwise_judgments")
+        return {
+            "manifest": manifest,
+            "stage_outputs": stage_outputs,
+            "taxonomy_nodes": list(pipeline_result["taxonomy"]["nodes"]),
+            "stage3_samples": _read_json(stage3_artifacts["samples"]),
+            "stage4_decisions": stage4_decisions,
+            "accepted_samples": [
+                decision
+                for decision in stage4_decisions
+                if decision.get("quality_status") == "accepted"
+            ],
+            "regenerations": (
+                _read_json(stage4_artifacts["regenerations"])
+                if stage4_artifacts.get("regenerations")
+                else []
+            ),
+            "pairwise_judgments": _read_json(pairwise_path) if pairwise_path else [],
+            "manifest_path": str(canonical_manifest_path),
+            "artifact_validation": None,
+        }
+
+    artifact_validation = validate_artifact_tree(run_root)
+    if not artifact_validation["ok"]:
+        raise ValueError(
+            f"Persisted artifact validation failed for {run_id}: "
+            f"{artifact_validation['issues']}"
+        )
+
+    persisted_manifest = _read_json(canonical_manifest_path)
+    stage_outputs_path = run_root / "00_spec" / "stage_outputs.json"
+    stage_outputs = _read_json(stage_outputs_path)
+    stage4_decisions = _read_json(run_root / "40_dual_critic_quality" / "critic_decisions.json")
+    return {
+        "manifest": persisted_manifest,
+        "stage_outputs": stage_outputs,
+        "taxonomy_nodes": _read_json(run_root / "10_taxonomy" / "taxonomy_nodes.json"),
+        "stage3_samples": _read_json(run_root / "30_complexification" / "samples.json"),
+        "stage4_decisions": stage4_decisions,
+        "accepted_samples": _read_json(run_root / "50_curated_dataset" / "accepted_samples.json"),
+        "regenerations": _read_json(run_root / "40_dual_critic_quality" / "regenerations.json"),
+        "pairwise_judgments": _read_json(run_root / "30_complexification" / "pairwise_judgments.json"),
+        "manifest_path": str(canonical_manifest_path),
+        "artifact_validation": artifact_validation,
+    }
+
+
 def execute_issue7_matrix(
     artifact_root: str | Path = "artifacts/runs",
     report_root: str | Path = "artifacts/reports",
@@ -254,12 +317,30 @@ def execute_issue7_matrix(
             pipeline_kwargs["complexification_config"] = dict(request["complexification_config"])
         pipeline_result = run_pipeline(**pipeline_kwargs)
 
-        stage4 = pipeline_result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
-        stage3 = pipeline_result["stage_outputs"]["stage_3_complexification"]
-        stage3_samples = _read_json(stage3["complexification_artifacts"]["samples"])
-        stage4_decisions = _read_json(stage4["stage4_artifacts"]["critic_decisions"])
-        accepted_samples = [entry for entry in stage4_decisions if entry["quality_status"] == "accepted"]
-        taxonomy_nodes = list(pipeline_result["taxonomy"]["nodes"])
+        persisted = _load_persisted_run_inputs(artifact_root, pipeline_result)
+        persisted_manifest = persisted["manifest"]
+        stage3_samples = persisted["stage3_samples"]
+        stage4_decisions = persisted["stage4_decisions"]
+        accepted_samples = persisted["accepted_samples"]
+        taxonomy_nodes = persisted["taxonomy_nodes"]
+        agreement_evaluable_samples = sum(
+            1 for decision in stage4_decisions if bool(decision.get("agreement_evaluable", True))
+        )
+        agreements = sum(
+            1 for decision in stage4_decisions if decision.get("agreement_status") == "agree"
+        )
+        disagreements = sum(
+            1 for decision in stage4_decisions if decision.get("agreement_status") == "disagree"
+        )
+        stage4 = {
+            "reviewed_samples": len(stage4_decisions),
+            "accepted_samples": len(accepted_samples),
+            "agreements": agreements,
+            "disagreements": disagreements,
+            "agreement_evaluable_samples": agreement_evaluable_samples,
+            "agreement_non_evaluable_samples": len(stage4_decisions) - agreement_evaluable_samples,
+            "regenerated_samples": len(persisted["regenerations"]),
+        }
         coverage = _augment_coverage_with_stage3_visibility(
             compute_coverage_metrics(
                 eligible_nodes=taxonomy_nodes,
@@ -281,15 +362,10 @@ def execute_issue7_matrix(
             }
             for sample in stage3_samples
         ]
-        pairwise_judgments_path = stage3["complexification_artifacts"].get("pairwise_judgments")
-        pairwise_judgments = (
-            _read_json(pairwise_judgments_path)
-            if pairwise_judgments_path
-            else []
-        )
+        pairwise_judgments = persisted["pairwise_judgments"]
         if not isinstance(pairwise_judgments, list):
             raise ValueError("persisted pairwise complexity judgments must be a list")
-        run_config = pipeline_result["manifest"].get("run_config", {})
+        run_config = persisted_manifest.get("run_config", {})
         judgment_config = (
             run_config.get("complexity_judgment_config", {})
             if isinstance(run_config, dict)
@@ -326,7 +402,7 @@ def execute_issue7_matrix(
                 "mode": "dual_critic" if request["pipeline_config"]["dual_critic_enabled"] else "single_critic",
                 "policy": "reject_on_disagreement",
             },
-            "artifact_schema_version": pipeline_result["manifest"]["artifact_schema_version"],
+            "artifact_schema_version": persisted_manifest["artifact_schema_version"],
             **request["manifest_metadata"],
         }
         if provider_runtime:
@@ -336,8 +412,8 @@ def execute_issue7_matrix(
                 "per_node_instantiation_count": per_node_instantiation_count,
             }
         run_identity = {
-            "run_id": pipeline_result["manifest"]["run_id"],
-            "seed": pipeline_result["manifest"]["seed"],
+            "run_id": persisted_manifest["run_id"],
+            "seed": persisted_manifest["seed"],
             "branch": branch_name,
             "commit_hash": commit_hash,
             "timestamp_utc": datetime.now(UTC).isoformat(),
@@ -366,11 +442,7 @@ def execute_issue7_matrix(
         run_dir.mkdir(parents=True, exist_ok=True)
         run_report_path = run_dir / "run_report.json"
         gate_report_path = run_dir / "gate_report.json"
-        stage0_outputs = pipeline_result["stage_outputs"].get("stage_0_domain_run_spec", {})
-        spec_artifacts = stage0_outputs.get("spec_artifacts", {})
-        manifest_path = spec_artifacts.get("manifest") or str(
-            Path(artifact_root) / str(pipeline_result["manifest"]["run_id"]) / "00_spec" / "manifest.json"
-        )
+        manifest_path = persisted["manifest_path"]
         run_report_payload = {
             "run_identity": run_identity,
             "protocol": protocol,
