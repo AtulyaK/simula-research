@@ -91,9 +91,19 @@ def compute_complexity_metrics(
     baseline_complexity_scores: list[float],
     complexification_pairs: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    if not complexification_pairs:
+        return {
+            "calibrated_score_distribution": {"p25": None, "p50": None, "p75": None},
+            "complexity_shift": None,
+            "complexification_precision": None,
+            "complexification_pairs_evaluated": 0,
+            "evaluation_status": "not_evaluable",
+            "not_evaluable_reason": "missing_pairwise_complexity_judgments",
+        }
+
     run_scores = sorted(float(score) for score in run_complexity_scores)
     baseline_scores = [float(score) for score in baseline_complexity_scores]
-    pair_results = complexification_pairs or []
+    pair_results = complexification_pairs
     successful_pairs = sum(1 for pair in pair_results if bool(pair.get("is_successful")))
 
     return {
@@ -107,6 +117,7 @@ def compute_complexity_metrics(
         else 0.0,
         "complexification_precision": _safe_ratio(successful_pairs, len(pair_results)),
         "complexification_pairs_evaluated": len(pair_results),
+        "evaluation_status": "evaluated",
     }
 
 
@@ -129,12 +140,19 @@ def compute_quality_metrics(issue5_outputs: dict[str, Any] | None) -> dict[str, 
     accepted_samples = int(issue5_outputs.get("accepted_samples", 0))
     agreements = int(issue5_outputs.get("agreements", 0))
     disagreements = int(issue5_outputs.get("disagreements", 0))
+    agreement_evaluable_samples = int(issue5_outputs.get("agreement_evaluable_samples", reviewed_samples))
     regenerated_samples = int(issue5_outputs.get("regenerated_samples", 0))
+    critic_agreement = (
+        None if agreement_evaluable_samples == 0 else _safe_ratio(agreements, agreement_evaluable_samples)
+    )
+    disagreement_rate = (
+        None if agreement_evaluable_samples == 0 else _safe_ratio(disagreements, agreement_evaluable_samples)
+    )
 
     return {
         "acceptance_rate": _safe_ratio(accepted_samples, reviewed_samples),
-        "critic_agreement": _safe_ratio(agreements, reviewed_samples),
-        "disagreement_rate": _safe_ratio(disagreements, reviewed_samples),
+        "critic_agreement": critic_agreement,
+        "disagreement_rate": disagreement_rate,
         "regen_burden": _safe_ratio(regenerated_samples, max(accepted_samples, 1)),
         "requires_issue_5_outputs": False,
         "todo_after_issue_5": [],
@@ -164,6 +182,10 @@ def build_gate_report(
     depth_profile = coverage_metrics.get("depth_coverage_profile", {})
     min_depth_coverage = min(depth_profile.values()) if depth_profile else 0.0
 
+    complexity_precision = complexity_metrics.get("complexification_precision")
+    if complexity_precision is not None:
+        complexity_precision = float(complexity_precision)
+
     gates = {
         "coverage.node_coverage_ratio": _threshold_status(
             float(coverage_metrics.get("node_coverage_ratio", 0.0)),
@@ -176,7 +198,7 @@ def build_gate_report(
             ">=",
         ),
         "complexity.complexification_precision": _threshold_status(
-            float(complexity_metrics.get("complexification_precision", 0.0)),
+            complexity_precision,
             DEFAULT_THRESHOLDS["complexification_precision"],
             ">=",
         ),

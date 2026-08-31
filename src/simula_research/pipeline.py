@@ -42,6 +42,13 @@ STAGE_NAMES = [
 ]
 
 
+def _persist_optional(store: RunArtifactStore, method_name: str, *args: Any, **kwargs: Any) -> dict[str, str]:
+    persist = getattr(store, method_name, None)
+    if not callable(persist):
+        return {}
+    return dict(persist(*args, **kwargs))
+
+
 def run_pipeline(
     seed: int,
     model_ids: dict[str, str],
@@ -52,7 +59,9 @@ def run_pipeline(
     dual_critic_config: dict[str, Any] | None = None,
     local_diversification_config: dict[str, Any] | None = None,
     pipeline_config: dict[str, Any] | None = None,
+    manifest_metadata: dict[str, Any] | None = None,
     provider_runtime: dict[str, Any] | None = None,
+    provider_event_log: list[dict[str, Any]] | None = None,
     artifact_store_factory: Callable[[Path], RunArtifactStore] | None = None,
     taxonomy_provider: TaxonomyProviderFn | None = None,
     local_diversification_provider: LocalDiversificationProviderFn | None = None,
@@ -69,6 +78,7 @@ def run_pipeline(
     manifest_pipeline = dict(pipeline_config) if pipeline_config is not None else dict(DEFAULT_PIPELINE_CONFIG)
 
     manifest: dict[str, Any] = {
+        **dict(manifest_metadata or {}),
         "run_id": run_id,
         "created_at_utc": created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "seed": seed,
@@ -102,6 +112,14 @@ def run_pipeline(
     run_root = Path(artifact_root) / run_id
     store_factory = artifact_store_factory or (lambda root: FileSystemRunArtifactStore(root))
     store = store_factory(run_root)
+    stage_outputs["stage_0_domain_run_spec"] = {
+        "status": "completed",
+        "run_id": run_id,
+        "domain_objective": domain_objective,
+        "seed": seed,
+        "model_ids": dict(model_ids),
+        "pipeline_config": dict(manifest_pipeline),
+    }
     artifacts = store.persist_taxonomy(taxonomy)
 
     local_options = dict(local_diversification_config or {})
@@ -144,6 +162,8 @@ def run_pipeline(
     adjudication_artifact_payload = dict(adjudication)
     if provider_runtime:
         adjudication_artifact_payload["provider_runtime"] = dict(provider_runtime)
+    if provider_event_log is not None:
+        adjudication_artifact_payload["nim_event_log"] = list(provider_event_log)
     dual_critic_artifacts = store.persist_dual_critic(adjudication_artifact_payload)
 
     stage_outputs["stage_1_global_diversification"] = {
@@ -185,20 +205,27 @@ def run_pipeline(
         "complexification_policy": complexification["complexification_policy"],
         "complexification_artifacts": complex_artifacts,
     }
-    agreements = sum(
+    reviewed_samples = len(adjudication["decisions"])
+    accepted_samples = len(adjudication["accepted_samples"])
+    fallback_agreements = sum(
         1
         for decision in adjudication["decisions"]
         if decision["critic_a_decision"] == decision["critic_b_decision"]
     )
-    reviewed_samples = len(adjudication["decisions"])
-    accepted_samples = len(adjudication["accepted_samples"])
+    agreement_summary = adjudication.get("agreement_summary", {})
+    agreement_evaluable_samples = int(agreement_summary.get("evaluable_samples", reviewed_samples))
+    agreement_non_evaluable_samples = int(agreement_summary.get("non_evaluable_samples", 0))
+    agreements = int(agreement_summary.get("agreements", fallback_agreements))
+    disagreements = int(agreement_summary.get("disagreements", reviewed_samples - fallback_agreements))
     stage4_payload: dict[str, Any] = {
         "status": "completed",
         "run_id": run_id,
         "reviewed_samples": reviewed_samples,
         "accepted_samples": accepted_samples,
         "agreements": agreements,
-        "disagreements": reviewed_samples - agreements,
+        "disagreements": disagreements,
+        "agreement_evaluable_samples": agreement_evaluable_samples,
+        "agreement_non_evaluable_samples": agreement_non_evaluable_samples,
         "regenerated_samples": len(adjudication["regeneration_log"]),
         "adjudication_policy": adjudication["policy"],
         "stage4_artifacts": dual_critic_artifacts,
@@ -206,5 +233,58 @@ def run_pipeline(
     if provider_runtime:
         stage4_payload["provider_runtime"] = dict(provider_runtime)
     stage_outputs["stage_4_dual_critic_quality_verification"] = stage4_payload
+
+    curated_dataset = {
+        "run_id": run_id,
+        "source_stage": "stage_4_dual_critic_quality_verification",
+        "accepted_sample_count": accepted_samples,
+        "accepted_samples": adjudication["accepted_samples"],
+    }
+    curated_artifacts = _persist_optional(store, "persist_curated_dataset", curated_dataset)
+
+    diagnostics = {
+        "run_id": run_id,
+        "status": "completed",
+        "semantic_preservation_failure_count": len(complexification["semantic_preservation_failures"]),
+        "stage2_rejection_count": len(local_diversification["rejections"]),
+        "stage4_rejection_count": len(adjudication["rejection_log"]),
+        "regeneration_count": len(adjudication["regeneration_log"]),
+        "diagnostic_sources": {
+            "stage2_rejections": local_artifacts["rejections"],
+            "semantic_preservation_failures": complex_artifacts["semantic_preservation_failures"],
+            "stage4_rejections": dual_critic_artifacts["rejections"],
+            "stage4_regenerations": dual_critic_artifacts["regenerations"],
+        },
+    }
+    diagnostics_artifacts = _persist_optional(store, "persist_diagnostics", diagnostics)
+
+    evaluation_handoff = {
+        "run_id": run_id,
+        "status": "ready_for_evaluation",
+        "metrics_status": "not_computed_by_pipeline",
+        "note": "run_pipeline persists evaluation inputs; gate metrics are computed by the evaluation/reporting layer.",
+        "inputs": {
+            "manifest": str(run_root / "00_spec" / "manifest.json"),
+            "taxonomy_nodes": artifacts["taxonomy_nodes"],
+            "complexification_samples": complex_artifacts["samples"],
+            "critic_decisions": dual_critic_artifacts["critic_decisions"],
+            "accepted_samples": curated_artifacts.get("accepted_samples"),
+        },
+    }
+    evaluation_artifacts = _persist_optional(store, "persist_evaluation_handoff", evaluation_handoff)
+
+    stage_outputs["stage_5_evaluation_handoff"] = {
+        "status": "ready_for_evaluation",
+        "run_id": run_id,
+        "metrics_status": "not_computed_by_pipeline",
+        "curated_dataset_artifacts": curated_artifacts,
+        "evaluation_artifacts": evaluation_artifacts,
+        "diagnostics_artifacts": diagnostics_artifacts,
+    }
+
+    spec_artifacts = _persist_optional(store, "persist_run_spec", manifest, stage_outputs=stage_outputs)
+    if spec_artifacts:
+        stage_outputs["stage_0_domain_run_spec"]["spec_artifacts"] = spec_artifacts
+        _persist_optional(store, "persist_run_spec", manifest, stage_outputs=stage_outputs)
 
     return {"manifest": manifest, "stage_outputs": stage_outputs, "taxonomy": taxonomy}

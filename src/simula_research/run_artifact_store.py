@@ -31,6 +31,40 @@ class FileSystemRunArtifactStore:
     def __init__(self, run_root: Path) -> None:
         self._run_root = run_root
 
+    def persist_run_spec(
+        self,
+        manifest: dict[str, Any],
+        *,
+        stage_outputs: dict[str, Any] | None = None,
+    ) -> dict[str, str]:
+        spec_dir = self._run_root / "00_spec"
+        spec_dir.mkdir(parents=True, exist_ok=True)
+
+        manifest_path = spec_dir / "manifest.json"
+        run_config_path = spec_dir / "run_config.json"
+        stage_outputs_path = spec_dir / "stage_outputs.json"
+
+        run_config: dict[str, Any] = {
+            "run_id": manifest["run_id"],
+            "seed": manifest["seed"],
+            "domain_objective": manifest["domain_objective"],
+            "model_ids": manifest["model_ids"],
+            "pipeline_config": manifest.get("pipeline_config", {}),
+        }
+        if "provider_runtime" in manifest:
+            run_config["provider_runtime"] = manifest["provider_runtime"]
+
+        manifest_path.write_text(_dump_json(manifest), encoding="utf-8")
+        run_config_path.write_text(_dump_json(run_config), encoding="utf-8")
+        artifacts = {
+            "manifest": str(manifest_path),
+            "run_config": str(run_config_path),
+        }
+        if stage_outputs is not None:
+            stage_outputs_path.write_text(_dump_json(stage_outputs), encoding="utf-8")
+            artifacts["stage_outputs"] = str(stage_outputs_path)
+        return artifacts
+
     def persist_taxonomy(self, taxonomy: dict[str, Any]) -> dict[str, str]:
         taxonomy_dir = self._run_root / "10_taxonomy"
         taxonomy_dir.mkdir(parents=True, exist_ok=True)
@@ -121,3 +155,39 @@ class FileSystemRunArtifactStore:
             nim_event_log_path.write_text(_dump_json(adjudication["nim_event_log"]), encoding="utf-8")
             artifacts["nim_event_log"] = str(nim_event_log_path)
         return artifacts
+
+    def persist_curated_dataset(self, curated_dataset: dict[str, Any]) -> dict[str, str]:
+        curated_dir = self._run_root / "50_curated_dataset"
+        curated_dir.mkdir(parents=True, exist_ok=True)
+
+        accepted_samples_path = curated_dir / "accepted_samples.json"
+        manifest_path = curated_dir / "dataset_manifest.json"
+
+        accepted_samples_path.write_text(
+            _dump_json(curated_dataset["accepted_samples"]),
+            encoding="utf-8",
+        )
+        manifest_path.write_text(_dump_json(curated_dataset), encoding="utf-8")
+
+        return {
+            "accepted_samples": str(accepted_samples_path),
+            "dataset_manifest": str(manifest_path),
+        }
+
+    def persist_evaluation_handoff(self, evaluation_handoff: dict[str, Any]) -> dict[str, str]:
+        evaluation_dir = self._run_root / "60_evaluation"
+        evaluation_dir.mkdir(parents=True, exist_ok=True)
+
+        handoff_path = evaluation_dir / "evaluation_handoff.json"
+        handoff_path.write_text(_dump_json(evaluation_handoff), encoding="utf-8")
+
+        return {"evaluation_handoff": str(handoff_path)}
+
+    def persist_diagnostics(self, diagnostics: dict[str, Any]) -> dict[str, str]:
+        diagnostics_dir = self._run_root / "70_diagnostics"
+        diagnostics_dir.mkdir(parents=True, exist_ok=True)
+
+        summary_path = diagnostics_dir / "diagnostics_summary.json"
+        summary_path.write_text(_dump_json(diagnostics), encoding="utf-8")
+
+        return {"diagnostics_summary": str(summary_path)}

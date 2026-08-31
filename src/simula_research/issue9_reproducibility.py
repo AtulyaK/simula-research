@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any
 
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
-from simula_research.run_config_presets import get_config_preset
 from simula_research.validators import validate_manifest_schema
 
 # Must match keys emitted by evaluation_metrics.build_gate_report (issue7 gate_report.json).
@@ -24,33 +23,21 @@ def _write_json(path: str | Path, payload: dict[str, Any]) -> None:
     Path(path).write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def _build_manifest_candidate(run_report: dict[str, Any]) -> dict[str, Any]:
-    run_identity = run_report["run_identity"]
-    protocol = run_report["protocol"]
-    preset = get_config_preset(protocol["baseline_or_ablation_tag"])
-    return {
-        "run_id": run_identity["run_id"],
-        "created_at_utc": run_identity.get("timestamp_utc", "unknown"),
-        "owner": "issue9-reproducibility-check",
-        "branch": run_identity.get("branch", "unknown"),
-        "commit_hash": run_identity.get("commit_hash", "unknown"),
-        "artifact_schema_version": protocol["artifact_schema_version"],
-        "domain_objective": protocol["domain_objective"],
-        "seed": run_identity["seed"],
-        "model_ids": preset["model_ids"],
-        "pipeline_config": preset["pipeline_config"],
-        "protocol_version": protocol["protocol_version"],
-        "baseline_or_ablation_tag": protocol["baseline_or_ablation_tag"],
-    }
-
-
 def _collect_manifest_validation(gate_report_paths: list[str]) -> dict[str, dict[str, Any]]:
     validation_by_tag: dict[str, dict[str, Any]] = {}
     for gate_report_path in gate_report_paths:
         gate_path = Path(gate_report_path)
         run_report = _read_json(gate_path.with_name("run_report.json"))
         tag = run_report["protocol"]["baseline_or_ablation_tag"]
-        manifest_candidate = _build_manifest_candidate(run_report)
+        manifest_path = Path(run_report.get("artifacts", {}).get("manifest", ""))
+        if not manifest_path.is_file():
+            validation_by_tag[tag] = {
+                "ok": False,
+                "issues": ["run_report artifacts.manifest must point to a persisted manifest file"],
+                "manifest": None,
+            }
+            continue
+        manifest_candidate = _read_json(manifest_path)
         validation = validate_manifest_schema(manifest_candidate)
         validation_by_tag[tag] = {
             "ok": validation["ok"],

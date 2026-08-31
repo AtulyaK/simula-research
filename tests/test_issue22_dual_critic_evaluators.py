@@ -10,6 +10,7 @@ from simula_research.dual_critic import adjudicate_samples
 from simula_research.evaluation_metrics import build_gate_report, compute_quality_metrics
 from simula_research.pipeline import run_pipeline
 from simula_research.provider_protocols import (
+    hash_based_critic_sample_evaluator,
     hash_based_critic_verdict,
     recorded_sample_evaluator,
     sample_evaluator_from_text_fn,
@@ -17,7 +18,7 @@ from simula_research.provider_protocols import (
 
 
 class Issue22DualCriticEvaluatorsTests(unittest.TestCase):
-    def test_sample_evaluator_wrapped_hash_matches_default_adjudication(self) -> None:
+    def test_hash_sample_evaluator_matches_default_adjudication(self) -> None:
         samples = [
             {
                 "instantiation_id": "a",
@@ -35,14 +36,14 @@ class Issue22DualCriticEvaluatorsTests(unittest.TestCase):
             },
         ]
         default_adj = adjudicate_samples(samples=samples, policy={"disagreement_policy": "reject"})
-        wrapped_adj = adjudicate_samples(
+        explicit_adj = adjudicate_samples(
             samples=samples,
             policy={"disagreement_policy": "reject"},
-            critic_sample_evaluator=sample_evaluator_from_text_fn(hash_based_critic_verdict),
+            critic_sample_evaluator=hash_based_critic_sample_evaluator,
         )
-        self.assertEqual(default_adj["decisions"], wrapped_adj["decisions"])
-        self.assertEqual(default_adj["accepted_samples"], wrapped_adj["accepted_samples"])
-        self.assertEqual(default_adj["rejection_log"], wrapped_adj["rejection_log"])
+        self.assertEqual(default_adj["decisions"], explicit_adj["decisions"])
+        self.assertEqual(default_adj["accepted_samples"], explicit_adj["accepted_samples"])
+        self.assertEqual(default_adj["rejection_log"], explicit_adj["rejection_log"])
 
     def test_recorded_sample_evaluator_is_stable_replay(self) -> None:
         sample = {

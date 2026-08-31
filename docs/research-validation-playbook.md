@@ -128,7 +128,7 @@ export SIMULA_HTTP_BACKOFF_BASE_SECONDS=0.5
 
 # Optional endpoint/model overrides
 # export SIMULA_NIM_BASE_URL='https://integrate.api.nvidia.com/v1/chat/completions'
-# export SIMULA_NIM_MODEL='llama-4-maverick-17b-128e-instruct'
+# export SIMULA_NIM_MODEL='moonshotai/kimi-k3'
 # export SIMULA_CRITIC_MODEL_A='...'
 # export SIMULA_CRITIC_MODEL_B='...'
 
@@ -146,7 +146,7 @@ with tempfile.TemporaryDirectory() as tmp:
         domain_objective="pilot-domain",
         artifact_root=tmp,
         taxonomy_config={"max_depth": 1, "branching_factor": 1},
-        local_diversification_config={"instantiations_per_prompt": 1},
+        local_diversification_config={"per_node_instantiation_count": 1},
         provider_runtime=runtime,
         critic_sample_evaluator=evaluator,
     )

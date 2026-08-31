@@ -29,14 +29,24 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
 
     def test_provider_runtime_from_env_reads_transport_numbers(self) -> None:
         env = os.environ
-        old = {k: env.get(k) for k in ("SIMULA_HTTP_TIMEOUT_SECONDS", "SIMULA_HTTP_MAX_RETRIES", "SIMULA_CRITIC_BACKEND")}
+        old = {
+            k: env.get(k)
+            for k in (
+                "SIMULA_HTTP_TIMEOUT_SECONDS",
+                "SIMULA_HTTP_MAX_RETRIES",
+                "SIMULA_HTTP_MIN_INTERVAL_SECONDS",
+                "SIMULA_CRITIC_BACKEND",
+            )
+        }
         try:
             env["SIMULA_HTTP_TIMEOUT_SECONDS"] = "30"
             env["SIMULA_HTTP_MAX_RETRIES"] = "4"
+            env["SIMULA_HTTP_MIN_INTERVAL_SECONDS"] = "0.25"
             env["SIMULA_CRITIC_BACKEND"] = "stub"
             meta = provider_runtime_from_env()
             self.assertEqual(meta["http_transport"]["timeout_s"], 30.0)
             self.assertEqual(meta["http_transport"]["max_retries"], 4)
+            self.assertEqual(meta["http_transport"]["min_interval_s"], 0.25)
             self.assertEqual(meta["critic_backend"], "stub")
         finally:
             for key, val in old.items():
@@ -51,6 +61,8 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
             "SIMULA_CRITIC_BACKEND": env.get("SIMULA_CRITIC_BACKEND"),
             "SIMULA_NVIDIA_BASE_URL": env.get("SIMULA_NVIDIA_BASE_URL"),
             "SIMULA_NVIDIA_MODEL": env.get("SIMULA_NVIDIA_MODEL"),
+            "SIMULA_CRITIC_MODEL_A": env.get("SIMULA_CRITIC_MODEL_A"),
+            "SIMULA_CRITIC_MODEL_B": env.get("SIMULA_CRITIC_MODEL_B"),
             "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
             "NVAPI_KEY": env.get("NVAPI_KEY"),
         }
@@ -58,12 +70,20 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
             env["SIMULA_CRITIC_BACKEND"] = "nim"
             env["SIMULA_NVIDIA_BASE_URL"] = "https://example.com/v1/chat/completions"
             env["SIMULA_NVIDIA_MODEL"] = "some-model"
+            env["SIMULA_CRITIC_MODEL_A"] = "critic-a-model"
+            env.pop("SIMULA_CRITIC_MODEL_B", None)
             env["NVIDIA_API_KEY"] = "test-key"
             env.pop("NVAPI_KEY", None)
             meta = provider_runtime_from_env()
             self.assertEqual(meta["critic_backend"], "nim")
             self.assertEqual(meta["nim_critic"]["base_url"], "https://example.com/v1/chat/completions")
             self.assertEqual(meta["nim_critic"]["default_model"], "some-model")
+            self.assertEqual(meta["nim_critic"]["max_tokens"], 16384)
+            self.assertEqual(meta["nim_critic"]["reasoning_effort"], "max")
+            self.assertEqual(
+                meta["nim_critic"]["critic_models"],
+                {"critic_a": "critic-a-model", "critic_b": "some-model"},
+            )
             self.assertEqual(meta["nim_critic"]["api_key_env"], "NVIDIA_API_KEY")
         finally:
             for k, v in old.items():

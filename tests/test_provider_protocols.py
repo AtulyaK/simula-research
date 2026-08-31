@@ -15,20 +15,29 @@ from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
 
 
 class ProviderProtocolsTests(unittest.TestCase):
-    def test_hash_based_critic_verdict_agrees_across_critics_for_same_text(self) -> None:
-        for text in ("alpha case", "beta case", "gamma case"):
-            self.assertEqual(
-                hash_based_critic_verdict(text, "critic_a"),
-                hash_based_critic_verdict(text, "critic_b"),
-            )
+    def test_hash_based_critic_verdict_is_critic_id_sensitive_and_deterministic(self) -> None:
+        text = "alpha case"
+        self.assertEqual(
+            hash_based_critic_verdict(text, "critic_a"),
+            hash_based_critic_verdict(text, "critic_a"),
+        )
+        outcomes = {
+            hash_based_critic_verdict(candidate, "critic_a") != hash_based_critic_verdict(candidate, "critic_b")
+            for candidate in ("alpha case", "beta case", "gamma case")
+        }
+        self.assertIn(True, outcomes)
 
-    def test_hash_based_sample_evaluator_agrees_across_critics(self) -> None:
+    def test_hash_based_sample_evaluator_is_critic_id_sensitive_and_deterministic(self) -> None:
         sample = {
             "instantiation_id": "inst-abc",
             "taxonomy_node_id": "tax-xyz",
-            "text": "sample body",
+            "text": "alpha body",
         }
         self.assertEqual(
+            hash_based_critic_sample_evaluator(sample, "critic_a"),
+            hash_based_critic_sample_evaluator(sample, "critic_a"),
+        )
+        self.assertNotEqual(
             hash_based_critic_sample_evaluator(sample, "critic_a"),
             hash_based_critic_sample_evaluator(sample, "critic_b"),
         )

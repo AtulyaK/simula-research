@@ -12,6 +12,7 @@ from simula_research.local_diversification import build_local_diversification
 from simula_research.pipeline import run_pipeline
 from simula_research.run_artifact_store import FileSystemRunArtifactStore
 from simula_research.taxonomy import TaxonomyConfig, build_taxonomy
+from simula_research.validators import validate_artifact_tree
 
 
 class FileSystemRunArtifactStoreTests(unittest.TestCase):
@@ -44,6 +45,85 @@ class FileSystemRunArtifactStoreTests(unittest.TestCase):
 
 
 class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
+    def test_run_pipeline_persists_documented_artifact_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 1, "branching_factor": 1},
+            )
+
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            for stage_dir in (
+                "00_spec",
+                "10_taxonomy",
+                "20_local_diversification",
+                "30_complexification",
+                "40_dual_critic_quality",
+                "50_curated_dataset",
+                "60_evaluation",
+                "70_diagnostics",
+            ):
+                self.assertTrue((run_root / stage_dir).is_dir(), msg=stage_dir)
+
+            persisted_manifest = json.loads(
+                (run_root / "00_spec" / "manifest.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(persisted_manifest, result["manifest"])
+
+            persisted_stage_outputs = json.loads(
+                (run_root / "00_spec" / "stage_outputs.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(persisted_stage_outputs["stage_0_domain_run_spec"]["status"], "completed")
+            self.assertEqual(
+                persisted_stage_outputs["stage_5_evaluation_handoff"]["status"],
+                "ready_for_evaluation",
+            )
+
+            stage4 = result["stage_outputs"]["stage_4_dual_critic_quality_verification"]
+            accepted_samples = json.loads(
+                (run_root / "50_curated_dataset" / "accepted_samples.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(len(accepted_samples), stage4["accepted_samples"])
+
+            evaluation_handoff = json.loads(
+                (run_root / "60_evaluation" / "evaluation_handoff.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(evaluation_handoff["status"], "ready_for_evaluation")
+            self.assertEqual(evaluation_handoff["metrics_status"], "not_computed_by_pipeline")
+
+            diagnostics = json.loads(
+                (run_root / "70_diagnostics" / "diagnostics_summary.json").read_text(encoding="utf-8")
+            )
+            stage4_rejections = json.loads(
+                Path(stage4["stage4_artifacts"]["rejections"]).read_text(encoding="utf-8")
+            )
+            self.assertEqual(diagnostics["stage4_rejection_count"], len(stage4_rejections))
+            self.assertEqual(diagnostics["semantic_preservation_failure_count"], 0)
+
+    def test_pipeline_artifacts_validate_with_full_manifest_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 1, "branching_factor": 1},
+                manifest_metadata={
+                    "owner": "test",
+                    "branch": "main",
+                    "commit_hash": "abc123",
+                    "baseline_or_ablation_tag": "B0",
+                },
+            )
+
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            validation = validate_artifact_tree(run_root)
+
+        self.assertTrue(validation["ok"], validation["issues"])
+
     def test_custom_factory_receives_run_root_and_can_noop_disk(self) -> None:
         seen: list[Path] = []
 

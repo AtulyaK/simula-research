@@ -70,6 +70,12 @@ Stage-4 critic integration is selected via `SIMULA_CRITIC_BACKEND` in `src/simul
 - `SIMULA_CRITIC_BACKEND=replay`: non-network deterministic replay (requires `SIMULA_CRITIC_REPLAY_JSON`).
 - `SIMULA_CRITIC_BACKEND=nim` (alias `nvidia`): **live** NVIDIA NIM backend (OpenAI-compatible chat completions).
 
+For local runs, the adapter also loads an ignored repository-root `.env` file
+when present. Existing process environment variables take precedence. The
+template includes `NVIDIA_API_KEY`; a populated key automatically selects the
+NIM backend unless `SIMULA_CRITIC_BACKEND` is explicitly set. Fill it in
+locally without committing the file.
+
 NIM backend env vars:
 
 - Required (one of):
@@ -79,10 +85,24 @@ NIM backend env vars:
   - `SIMULA_NIM_BASE_URL` (or `SIMULA_NVIDIA_BASE_URL`)
   - `SIMULA_NIM_MODEL` (or `SIMULA_NVIDIA_MODEL`)
   - `SIMULA_CRITIC_MODEL_A`, `SIMULA_CRITIC_MODEL_B` (per-critic override)
+  - `SIMULA_NIM_MAX_TOKENS` (or `SIMULA_NVIDIA_MAX_TOKENS`)
+  - `SIMULA_NIM_REASONING_EFFORT` (or `SIMULA_NVIDIA_REASONING_EFFORT`)
+
+The default NIM critic model is `moonshotai/kimi-k3`, with
+`reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does
+not consume the entire response budget before its binary verdict. The critic
+request is a non-streaming text classification call; the multimodal image
+payload shown in the NVIDIA API examples is not used by this pipeline.
 - Optional transport knobs (also recorded into `provider_runtime` metadata; **never** store the key itself):
   - `SIMULA_HTTP_TIMEOUT_SECONDS`
   - `SIMULA_HTTP_MAX_RETRIES`
   - `SIMULA_HTTP_BACKOFF_BASE_SECONDS`
+  - `SIMULA_HTTP_MIN_INTERVAL_SECONDS`
+
+  HTTP 429 responses honor `Retry-After` when supplied; otherwise rate-limit
+  retries use a five-second minimum delay. For live NIM matrix runs, structured provider failure events are persisted in
+  `40_dual_critic_quality/nim_event_log.json`; prompts, responses, and API keys
+  are not written to that log.
 
 ## 3) Data and compliance controls
 
@@ -105,7 +125,16 @@ NIM backend env vars:
 Run and pass:
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests -v
+SIMULA_CRITIC_BACKEND=hash_default PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
+
+When `.env` contains a live NVIDIA key, explicitly selecting `hash_default`
+keeps baseline tests offline. On Windows PowerShell, use:
+
+```powershell
+$env:PYTHONPATH = "src"
+$env:SIMULA_CRITIC_BACKEND = "hash_default"
+py -3 -m unittest discover -s tests -v
 ```
 
 Do not start provider-backed validation until this baseline gate is green.

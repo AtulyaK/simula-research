@@ -50,6 +50,17 @@ class Issue6MetricsSkeletonTests(unittest.TestCase):
         )
         self.assertGreater(result["complexity_shift"], 0.0)
         self.assertAlmostEqual(result["complexification_precision"], 2 / 3)
+        self.assertEqual(result["evaluation_status"], "evaluated")
+
+    def test_complexity_metrics_are_not_evaluable_without_pairwise_judgments(self) -> None:
+        result = compute_complexity_metrics(
+            run_complexity_scores=[0.6, 0.8],
+            baseline_complexity_scores=[0.3, 0.4],
+        )
+
+        self.assertEqual(result["evaluation_status"], "not_evaluable")
+        self.assertIsNone(result["complexity_shift"])
+        self.assertIsNone(result["complexification_precision"])
 
     def test_quality_metrics_return_explicit_issue5_stubs_when_missing(self) -> None:
         result = compute_quality_metrics(issue5_outputs=None)

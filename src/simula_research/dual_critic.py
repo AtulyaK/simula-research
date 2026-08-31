@@ -54,14 +54,23 @@ def adjudicate_samples(
             return sample_evaluator(sample_row, critic_id)
         return text_decide(str(sample_row.get("text", "")), critic_id)
 
-    def _dual_verdicts(sample_row: dict[str, Any]) -> tuple[CriticVerdict, CriticVerdict]:
+    def _dual_verdicts(sample_row: dict[str, Any]) -> tuple[CriticVerdict, CriticVerdict, bool]:
         if single_critic_mode == "critic_a":
             a = _verdict_for_sample(sample_row, "critic_a")
-            return a, a
+            return a, a, False
         if single_critic_mode == "critic_b":
             b = _verdict_for_sample(sample_row, "critic_b")
-            return b, b
-        return _verdict_for_sample(sample_row, "critic_a"), _verdict_for_sample(sample_row, "critic_b")
+            return b, b, False
+        return _verdict_for_sample(sample_row, "critic_a"), _verdict_for_sample(sample_row, "critic_b"), True
+
+    def _agreement_status(
+        critic_a_decision: CriticVerdict,
+        critic_b_decision: CriticVerdict,
+        agreement_evaluable: bool,
+    ) -> str:
+        if not agreement_evaluable:
+            return "not_evaluable_single_critic"
+        return "agree" if critic_a_decision == critic_b_decision else "disagree"
 
     decisions: list[dict[str, Any]] = []
     rejections: list[dict[str, Any]] = []
@@ -74,12 +83,15 @@ def adjudicate_samples(
         meta_prompt_id = str(sample.get("meta_prompt_id", "unknown-meta"))
         source_text = str(sample.get("text", ""))
         regen_count = 0
-        critic_a_decision, critic_b_decision = _dual_verdicts(sample)
+        critic_a_decision, critic_b_decision, agreement_evaluable = _dual_verdicts(sample)
         final_text = source_text
         final_critic_a_decision = critic_a_decision
         final_critic_b_decision = critic_b_decision
 
-        if critic_a_decision == critic_b_decision:
+        if not agreement_evaluable:
+            final_status = "accepted" if critic_a_decision == "accept" else "rejected"
+            final_reason = "single_critic_accept" if final_status == "accepted" else "single_critic_reject"
+        elif critic_a_decision == critic_b_decision:
             final_status = "accepted" if critic_a_decision == "accept" else "rejected"
             final_reason = "both_accept" if final_status == "accepted" else "both_reject"
         elif disagreement_policy == "accept":
@@ -96,7 +108,7 @@ def adjudicate_samples(
                 regen_count += 1
                 regen_text = f"{regen_text} [regen-{regeneration_index + 1}]"
                 regen_row = {**sample, "text": regen_text}
-                regen_a_decision, regen_b_decision = _dual_verdicts(regen_row)
+                regen_a_decision, regen_b_decision, regen_agreement_evaluable = _dual_verdicts(regen_row)
                 regenerations.append(
                     {
                         "instantiation_id": sample_id,
@@ -106,6 +118,12 @@ def adjudicate_samples(
                         "regenerated_text": regen_text,
                         "critic_a_decision": regen_a_decision,
                         "critic_b_decision": regen_b_decision,
+                        "agreement_evaluable": regen_agreement_evaluable,
+                        "agreement_status": _agreement_status(
+                            regen_a_decision,
+                            regen_b_decision,
+                            regen_agreement_evaluable,
+                        ),
                     }
                 )
                 if regen_a_decision == "accept" and regen_b_decision == "accept":
@@ -124,6 +142,12 @@ def adjudicate_samples(
                 "critic_a_decision": critic_a_decision,
                 "critic_b_decision": critic_b_decision,
                 "disagreement": critic_a_decision != critic_b_decision,
+                "agreement_evaluable": agreement_evaluable,
+                "agreement_status": _agreement_status(
+                    critic_a_decision,
+                    critic_b_decision,
+                    agreement_evaluable,
+                ),
                 "adjudication_policy": disagreement_policy,
                 "quality_status": final_status,
                 "final_reason": final_reason,
@@ -139,6 +163,12 @@ def adjudicate_samples(
                     "text": final_text,
                     "critic_a_decision": final_critic_a_decision,
                     "critic_b_decision": final_critic_b_decision,
+                    "agreement_evaluable": agreement_evaluable,
+                    "agreement_status": _agreement_status(
+                        final_critic_a_decision,
+                        final_critic_b_decision,
+                        agreement_evaluable,
+                    ),
                     "quality_status": "accepted",
                     "regeneration_count": regen_count,
                 }
@@ -152,14 +182,34 @@ def adjudicate_samples(
                     "reason": final_reason,
                     "critic_a_decision": critic_a_decision,
                     "critic_b_decision": critic_b_decision,
+                    "agreement_evaluable": agreement_evaluable,
+                    "agreement_status": _agreement_status(
+                        critic_a_decision,
+                        critic_b_decision,
+                        agreement_evaluable,
+                    ),
                     "regeneration_count": regen_count,
                 }
             )
+
+    evaluable_decisions = [decision for decision in decisions if bool(decision["agreement_evaluable"])]
+    agreements = sum(
+        1
+        for decision in evaluable_decisions
+        if decision["critic_a_decision"] == decision["critic_b_decision"]
+    )
+    disagreements = len(evaluable_decisions) - agreements
 
     return {
         "decisions": decisions,
         "accepted_samples": accepted_samples,
         "rejection_log": rejections,
         "regeneration_log": regenerations,
+        "agreement_summary": {
+            "evaluable_samples": len(evaluable_decisions),
+            "non_evaluable_samples": len(decisions) - len(evaluable_decisions),
+            "agreements": agreements,
+            "disagreements": disagreements,
+        },
         "policy": adjudication_policy,
     }

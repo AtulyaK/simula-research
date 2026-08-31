@@ -42,10 +42,12 @@ class Issue7ProviderMatrixTests(unittest.TestCase):
         env = os.environ
         old = {
             "SIMULA_CRITIC_BACKEND": env.get("SIMULA_CRITIC_BACKEND"),
+            "SIMULA_NIM_MODEL": env.get("SIMULA_NIM_MODEL"),
             "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
         }
         try:
             env["SIMULA_CRITIC_BACKEND"] = "nim"
+            env["SIMULA_NIM_MODEL"] = "some-kimi-model"
             env["NVIDIA_API_KEY"] = "test-key"
 
             def fake_post_json(*, url: str, headers: dict[str, str], payload: dict[str, object], timeout_s: float) -> dict[str, object]:
@@ -66,6 +68,11 @@ class Issue7ProviderMatrixTests(unittest.TestCase):
                     protocol = output["run_reports"]["A4"]["protocol"]
                     self.assertEqual(protocol["provider_runtime"]["critic_backend"], "nim")
                     self.assertIn("nim_critic", protocol["provider_runtime"])
+                    manifest_path = Path(output["run_reports"]["B0"]["artifacts"]["manifest"])
+                    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                    self.assertEqual(manifest["model_ids"]["generator"], "gpt-4.1-mini")
+                    self.assertEqual(manifest["model_ids"]["critic_a"], "some-kimi-model")
+                    self.assertEqual(manifest["model_ids"]["critic_b"], "some-kimi-model")
 
                     gate_path = Path(output["run_reports"]["B0"]["artifacts"]["gate_report"])
                     gate = json.loads(gate_path.read_text(encoding="utf-8"))

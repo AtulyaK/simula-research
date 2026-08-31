@@ -21,13 +21,74 @@ from simula_research.provider_protocols import (
 T = TypeVar("T")
 
 _NIM_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
-_NIM_DEFAULT_MODEL = "llama-4-maverick-17b-128e-instruct"
+_NIM_DEFAULT_MODEL = "moonshotai/kimi-k3"
+_NIM_RATE_LIMIT_FALLBACK_DELAY_S = 5.0
+
+
+class _RetryAfterError(RuntimeError):
+    def __init__(self, message: str, retry_after_s: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after_s = retry_after_s
+
+
+class _NvidiaRateLimitError(_RetryAfterError):
+    status_code = 429
+
+
+def _retry_after_seconds(raw: str | None) -> float | None:
+    if not raw:
+        return None
+    try:
+        return max(0.0, float(raw.strip()))
+    except ValueError:
+        return None
+
+
+def _load_dotenv() -> None:
+    dotenv_path = Path(os.environ.get("SIMULA_DOTENV_PATH", ".env"))
+    if not dotenv_path.exists():
+        return
+    try:
+        lines = dotenv_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise RuntimeError(f"Unable to read dotenv file {dotenv_path}") from exc
+
+    for line_number, raw_line in enumerate(lines, start=1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        name, separator, value = line.partition("=")
+        name = name.strip()
+        if not separator or not name.isidentifier():
+            raise ValueError(f"Invalid dotenv entry on line {line_number}")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ.setdefault(name, value)
+
+
+def _critic_backend_from_env() -> str:
+    configured = (os.environ.get("SIMULA_CRITIC_BACKEND") or "").strip()
+    if configured:
+        return configured
+    if (os.environ.get("NVIDIA_API_KEY") or "").strip() or (os.environ.get("NVAPI_KEY") or "").strip():
+        return "nim"
+    return "hash_default"
 
 
 def _parse_positive_float(name: str, raw: str) -> float:
     value = float(raw)
     if value <= 0:
         raise ValueError(f"{name} must be positive, got {value!r}")
+    return value
+
+
+def _parse_non_negative_float(name: str, raw: str) -> float:
+    value = float(raw)
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative, got {value!r}")
     return value
 
 
@@ -47,7 +108,8 @@ def _parse_positive_int(name: str, raw: str) -> int:
 
 def provider_runtime_from_env() -> dict[str, Any]:
     """Structured provider/runtime metadata for manifests (no secrets; env names only as strings)."""
-    backend = (os.environ.get("SIMULA_CRITIC_BACKEND") or "").strip() or "hash_default"
+    _load_dotenv()
+    backend = _critic_backend_from_env()
     payload: dict[str, Any] = {
         "source": "environment",
         "critic_backend": backend,
@@ -59,6 +121,8 @@ def provider_runtime_from_env() -> dict[str, Any]:
         transport["max_retries"] = _parse_non_negative_int("SIMULA_HTTP_MAX_RETRIES", raw)
     if raw := os.environ.get("SIMULA_HTTP_BACKOFF_BASE_SECONDS"):
         transport["backoff_base_s"] = _parse_positive_float("SIMULA_HTTP_BACKOFF_BASE_SECONDS", raw)
+    if raw := os.environ.get("SIMULA_HTTP_MIN_INTERVAL_SECONDS"):
+        transport["min_interval_s"] = _parse_non_negative_float("SIMULA_HTTP_MIN_INTERVAL_SECONDS", raw)
     if transport:
         payload["http_transport"] = transport
     for key in ("SIMULA_CRITIC_MODEL_A", "SIMULA_CRITIC_MODEL_B"):
@@ -78,6 +142,12 @@ def provider_runtime_from_env() -> dict[str, Any]:
         payload["nim_critic"] = {
             "base_url": base_url,
             "default_model": default_model,
+            "max_tokens": _nvidia_max_tokens_from_env(),
+            "reasoning_effort": _nvidia_reasoning_effort_from_env(),
+            "critic_models": {
+                "critic_a": _nvidia_model_for_critic("critic_a"),
+                "critic_b": _nvidia_model_for_critic("critic_b"),
+            },
             "api_key_env": (
                 "NVIDIA_API_KEY"
                 if os.environ.get("NVIDIA_API_KEY")
@@ -108,7 +178,12 @@ def retry_with_backoff(
             if attempt >= max_retries:
                 break
             delay = backoff_base_s * (attempt + 1)
-            jitter = rng.uniform(0, backoff_base_s * 0.25)
+            retry_after_s = exc.retry_after_s if isinstance(exc, _RetryAfterError) else None
+            if isinstance(exc, _NvidiaRateLimitError):
+                delay = max(delay, retry_after_s or _NIM_RATE_LIMIT_FALLBACK_DELAY_S)
+            elif retry_after_s is not None:
+                delay = max(delay, retry_after_s)
+            jitter = 0.0 if retry_after_s is not None else rng.uniform(0, backoff_base_s * 0.25)
             sleep_fn(delay + jitter)
     assert last_exc is not None
     raise last_exc
@@ -137,6 +212,7 @@ def logging_critic_sample_evaluator(
 
 
 def _nvidia_api_key_from_env() -> str:
+    _load_dotenv()
     key = (os.environ.get("NVIDIA_API_KEY") or "").strip()
     if key:
         return key
@@ -160,6 +236,22 @@ def _nvidia_model_for_critic(critic_id: str) -> str:
     return _NIM_DEFAULT_MODEL
 
 
+def _nvidia_max_tokens_from_env() -> int:
+    raw = os.environ.get("SIMULA_NIM_MAX_TOKENS") or os.environ.get("SIMULA_NVIDIA_MAX_TOKENS")
+    if raw:
+        return _parse_positive_int("SIMULA_NIM_MAX_TOKENS", raw)
+    return 16384
+
+
+def _nvidia_reasoning_effort_from_env() -> str:
+    value = (
+        (os.environ.get("SIMULA_NIM_REASONING_EFFORT") or "").strip()
+        or (os.environ.get("SIMULA_NVIDIA_REASONING_EFFORT") or "").strip()
+        or "max"
+    )
+    return value
+
+
 def _http_post_json(
     *,
     url: str,
@@ -171,8 +263,16 @@ def _http_post_json(
     req = urllib.request.Request(url=url, data=body, method="POST")
     for k, v in headers.items():
         req.add_header(k, v)
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310 - url from env; used for API calls
-        raw = resp.read().decode("utf-8", errors="replace")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310 - url from env; used for API calls
+            raw = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 429:
+            raise _NvidiaRateLimitError(
+                "nvidia_critic_rate_limited",
+                _retry_after_seconds(exc.headers.get("Retry-After")),
+            ) from exc
+        raise
     parsed = json.loads(raw)
     if not isinstance(parsed, dict):
         raise ValueError("nvidia_critic_invalid_response")
@@ -181,18 +281,9 @@ def _http_post_json(
 
 def _verdict_from_model_text(raw: str) -> CriticVerdict:
     text = (raw or "").strip().lower()
-    if not text:
-        raise ValueError("nvidia_critic_invalid_response")
-    first = text.split()[0]
-    if first.startswith("accept"):
+    if text == "accept":
         return "accept"
-    if first.startswith("reject"):
-        return "reject"
-    has_accept = "accept" in text
-    has_reject = "reject" in text
-    if has_accept and not has_reject:
-        return "accept"
-    if has_reject and not has_accept:
+    if text == "reject":
         return "reject"
     raise ValueError("nvidia_critic_invalid_response")
 
@@ -204,6 +295,9 @@ def nvidia_critic_sample_evaluator(
     max_retries: int | None = None,
     backoff_base_s: float | None = None,
     max_tokens: int | None = None,
+    min_interval_s: float | None = None,
+    reasoning_effort: str | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
     http_post_json: Callable[..., dict[str, Any]] = _http_post_json,
     event_log: list[dict[str, Any]] | None = None,
 ) -> CriticSampleEvaluatorFn:
@@ -214,6 +308,7 @@ def nvidia_critic_sample_evaluator(
     to prevent accidental leakage of sensitive content into operator logs.
     """
 
+    _load_dotenv()
     resolved_base_url = (
         (base_url or "").strip()
         or (os.environ.get("SIMULA_NIM_BASE_URL") or "").strip()
@@ -244,17 +339,38 @@ def nvidia_critic_sample_evaluator(
     else:
         resolved_backoff_base_s = 0.5
 
+    resolved_min_interval_s: float
+    if min_interval_s is not None:
+        if min_interval_s < 0:
+            raise ValueError("min_interval_s must be non-negative")
+        resolved_min_interval_s = min_interval_s
+    elif raw := os.environ.get("SIMULA_HTTP_MIN_INTERVAL_SECONDS"):
+        resolved_min_interval_s = _parse_non_negative_float(
+            "SIMULA_HTTP_MIN_INTERVAL_SECONDS",
+            raw,
+        )
+    else:
+        resolved_min_interval_s = 0.0
+
     resolved_max_tokens: int
     if max_tokens is not None:
         resolved_max_tokens = max_tokens
-    elif raw := os.environ.get("SIMULA_NVIDIA_MAX_TOKENS"):
-        resolved_max_tokens = _parse_positive_int("SIMULA_NVIDIA_MAX_TOKENS", raw)
     else:
-        resolved_max_tokens = 16
+        resolved_max_tokens = _nvidia_max_tokens_from_env()
+
+    resolved_reasoning_effort = (
+        reasoning_effort.strip()
+        if reasoning_effort is not None
+        else _nvidia_reasoning_effort_from_env()
+    )
+    if not resolved_reasoning_effort:
+        raise ValueError("reasoning_effort must not be empty")
 
     api_key = _nvidia_api_key_from_env()
+    last_request_at: float | None = None
 
     def _eval(sample: dict[str, Any], critic_id: str) -> CriticVerdict:
+        nonlocal last_request_at
         model = _nvidia_model_for_critic(critic_id)
         text = str(sample.get("text", ""))
         instantiation_id = str(sample.get("instantiation_id", ""))
@@ -273,6 +389,7 @@ def nvidia_critic_sample_evaluator(
             ],
             "temperature": 0,
             "max_tokens": resolved_max_tokens,
+            "reasoning_effort": resolved_reasoning_effort,
         }
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -281,7 +398,13 @@ def nvidia_critic_sample_evaluator(
         }
 
         def _op() -> CriticVerdict:
+            nonlocal last_request_at
             try:
+                if last_request_at is not None and resolved_min_interval_s > 0:
+                    wait_s = resolved_min_interval_s - (time.monotonic() - last_request_at)
+                    if wait_s > 0:
+                        sleep_fn(wait_s)
+                last_request_at = time.monotonic()
                 resp = http_post_json(
                     url=resolved_base_url,
                     headers=headers,
@@ -294,6 +417,13 @@ def nvidia_critic_sample_evaluator(
                 msg = choices[0].get("message") if isinstance(choices[0], dict) else None
                 content = msg.get("content") if isinstance(msg, dict) else None
                 return _verdict_from_model_text(str(content or ""))
+            except urllib.error.HTTPError as exc:
+                if exc.code == 429:
+                    raise _NvidiaRateLimitError(
+                        "nvidia_critic_rate_limited",
+                        _retry_after_seconds(exc.headers.get("Retry-After")),
+                    ) from exc
+                raise RuntimeError(f"nvidia_critic_request_failed:{type(exc).__name__}") from exc
             except (urllib.error.URLError, TimeoutError, ValueError) as exc:
                 raise RuntimeError(f"nvidia_critic_request_failed:{type(exc).__name__}") from exc
 
@@ -302,6 +432,7 @@ def nvidia_critic_sample_evaluator(
                 _op,
                 max_retries=resolved_max_retries,
                 backoff_base_s=resolved_backoff_base_s,
+                sleep_fn=sleep_fn,
             )
         except Exception as exc:  # noqa: BLE001 - provider boundary must not fail open
             # Fail-closed: any inability to produce a clear verdict yields "reject".
@@ -318,9 +449,21 @@ def nvidia_critic_sample_evaluator(
                         "max_retries": resolved_max_retries,
                         "error_type": type(exc).__name__,
                         "error_code": (
-                            str(exc).split(":", 1)[0]
+                            "nvidia_critic_rate_limited"
+                            if isinstance(exc, _NvidiaRateLimitError)
+                            else str(exc).split(":", 1)[0]
                             if isinstance(exc, RuntimeError)
                             else "nvidia_critic_error"
+                        ),
+                        "http_status": (
+                            exc.status_code
+                            if isinstance(exc, _NvidiaRateLimitError)
+                            else None
+                        ),
+                        "retry_after_s": (
+                            exc.retry_after_s
+                            if isinstance(exc, _NvidiaRateLimitError)
+                            else None
                         ),
                         "verdict": "reject",
                     }
@@ -330,15 +473,19 @@ def nvidia_critic_sample_evaluator(
     return _eval
 
 
-def critic_sample_evaluator_from_env() -> CriticSampleEvaluatorFn | None:
+def critic_sample_evaluator_from_env(
+    *,
+    event_log: list[dict[str, Any]] | None = None,
+) -> CriticSampleEvaluatorFn | None:
     """Return None to keep hash-based default; otherwise a non-network evaluator for smoke wiring."""
-    mode = (os.environ.get("SIMULA_CRITIC_BACKEND") or "").strip().lower()
-    if mode in {"", "hash", "default"}:
+    _load_dotenv()
+    mode = _critic_backend_from_env().lower()
+    if mode in {"", "hash", "default", "hash_default"}:
         return None
     if mode == "stub":
         return sample_evaluator_from_text_fn(hash_based_critic_verdict)
     if mode in {"nim", "nvidia"}:
-        return nvidia_critic_sample_evaluator()
+        return nvidia_critic_sample_evaluator(event_log=event_log)
     if mode == "replay":
         path = os.environ.get("SIMULA_CRITIC_REPLAY_JSON")
         if not path:

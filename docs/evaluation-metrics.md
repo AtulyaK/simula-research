@@ -30,6 +30,10 @@ Measures how much of the designed taxonomy is represented.
 - `eligible_nodes`: nodes selected by run policy.
 - `covered_nodes`: eligible nodes with at least one accepted sample.
 
+For Issue 7 matrix reports, the denominator is the taxonomy nodes selected by
+the run policy, not only nodes that produced Stage 3 samples. Nodes with zero
+Stage 3 samples remain visible in the report as missing sample evidence.
+
 ### 2) Depth coverage profile
 
 Coverage distribution by taxonomy depth.
@@ -78,6 +82,11 @@ Use with stratification by taxonomy depth to ensure shifts are not due only to c
 How often complexified samples are actually scored harder than their non-complexified analogs.
 
 `complexification_precision = successful_complexification_pairs / total_evaluated_pairs`
+
+If pairwise or batch judging outcomes are unavailable, calibrated complexity
+score, complexity shift, and complexification precision are `not_evaluable`.
+Stage 3 `is_complexified` tags may be reported only as proxy metadata, not as
+evidence that a sample is harder than its source.
 
 ## Quality metrics
 

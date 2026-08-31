@@ -34,9 +34,13 @@ class Issue47NimBackendSmokeTests(unittest.TestCase):
                     taxonomy_config={"max_depth": 1, "branching_factor": 2},
                     critic_sample_evaluator=evaluator,
                     provider_runtime={"critic_backend": "nim", "source": "test"},
+                    provider_event_log=events,
+                )
+                stage4 = out["stage_outputs"]["stage_4_dual_critic_quality_verification"]
+                self.assertTrue(
+                    os.path.exists(stage4["stage4_artifacts"]["nim_event_log"])
                 )
 
-            stage4 = out["stage_outputs"]["stage_4_dual_critic_quality_verification"]
             self.assertIn("stage4_artifacts", stage4)
             self.assertEqual(out["manifest"]["provider_runtime"]["critic_backend"], "nim")
             self.assertEqual(events, [])

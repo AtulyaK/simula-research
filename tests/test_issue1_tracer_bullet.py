@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 
 from simula_research.pipeline import run_pipeline
@@ -5,10 +6,12 @@ from simula_research.pipeline import run_pipeline
 
 class Issue1TracerBulletTest(unittest.TestCase):
     def test_pipeline_shell_emits_manifest_and_stage_contracts(self) -> None:
-        result = run_pipeline(
-            seed=7,
-            model_ids={"generator": "gpt-4.1-mini", "critic_a": "gpt-4.1", "critic_b": "gpt-4.1"},
-        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            result = run_pipeline(
+                seed=7,
+                model_ids={"generator": "gpt-4.1-mini", "critic_a": "gpt-4.1", "critic_b": "gpt-4.1"},
+                artifact_root=tmp_dir,
+            )
 
         self.assertIn("manifest", result)
         self.assertIn("stage_outputs", result)
@@ -45,7 +48,10 @@ class Issue1TracerBulletTest(unittest.TestCase):
 
         for stage_name, stage_output in stage_outputs.items():
             self.assertEqual(stage_output["run_id"], manifest["run_id"], msg=stage_name)
-            if stage_name == "stage_1_global_diversification":
+            if stage_name == "stage_0_domain_run_spec":
+                self.assertEqual(stage_output["status"], "completed")
+                self.assertIn("spec_artifacts", stage_output)
+            elif stage_name == "stage_1_global_diversification":
                 self.assertEqual(stage_output["status"], "completed")
                 self.assertIn("taxonomy_root_node_id", stage_output)
             elif stage_name == "stage_2_local_diversification":
@@ -57,6 +63,9 @@ class Issue1TracerBulletTest(unittest.TestCase):
             elif stage_name == "stage_4_dual_critic_quality_verification":
                 self.assertEqual(stage_output["status"], "completed")
                 self.assertIn("adjudication_policy", stage_output)
+            elif stage_name == "stage_5_evaluation_handoff":
+                self.assertEqual(stage_output["status"], "ready_for_evaluation")
+                self.assertIn("evaluation_artifacts", stage_output)
             else:
                 self.assertEqual(stage_output["status"], "placeholder")
 

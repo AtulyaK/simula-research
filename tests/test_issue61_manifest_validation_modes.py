@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
 
 from simula_research.manifest import BOOT_REQUIRED_MANIFEST_FIELDS, validate_manifest
@@ -86,11 +87,12 @@ class Issue61ManifestValidationModesTests(unittest.TestCase):
         self.assertFalse(boot_only["ok"])
 
     def test_run_pipeline_still_uses_boot_validation_only(self) -> None:
-        result = run_pipeline(
-            seed=1,
-            model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
-            artifact_root="artifacts/runs",
-        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            result = run_pipeline(
+                seed=1,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                artifact_root=tmp_dir,
+            )
         manifest = result["manifest"]
         validate_manifest(manifest)
         full_check = validate_manifest_schema(manifest)

@@ -33,6 +33,51 @@ class Issue5DualCriticAdjudicationTests(unittest.TestCase):
             self.assertIn(decision["critic_b_decision"], {"accept", "reject"})
             self.assertEqual(decision["review_status"], "reviewed")
 
+    def test_dual_critic_records_evaluable_agreement_summary(self) -> None:
+        samples = [
+            {
+                "instantiation_id": "inst-1",
+                "taxonomy_node_id": "tax-1",
+                "meta_prompt_id": "mp-1",
+                "text": "sample one",
+            },
+            {
+                "instantiation_id": "inst-2",
+                "taxonomy_node_id": "tax-2",
+                "meta_prompt_id": "mp-2",
+                "text": "sample two",
+            },
+        ]
+        result = adjudicate_samples(samples=samples, policy={"disagreement_policy": "reject"})
+        summary = result["agreement_summary"]
+        self.assertEqual(summary["evaluable_samples"], 2)
+        self.assertEqual(summary["non_evaluable_samples"], 0)
+        self.assertEqual(summary["agreements"] + summary["disagreements"], 2)
+        for decision in result["decisions"]:
+            self.assertTrue(decision["agreement_evaluable"])
+            self.assertIn(decision["agreement_status"], {"agree", "disagree"})
+
+    def test_single_critic_marks_agreement_not_evaluable_without_changing_mirrored_decisions(self) -> None:
+        sample = {
+            "instantiation_id": "single-1",
+            "taxonomy_node_id": "tax-1",
+            "meta_prompt_id": "mp-1",
+            "text": "sample one",
+        }
+        result = adjudicate_samples(
+            samples=[sample],
+            policy={"disagreement_policy": "reject", "single_critic_mode": "critic_a"},
+        )
+        decision = result["decisions"][0]
+        self.assertEqual(decision["critic_a_decision"], decision["critic_b_decision"])
+        self.assertFalse(decision["agreement_evaluable"])
+        self.assertEqual(decision["agreement_status"], "not_evaluable_single_critic")
+        self.assertIn(decision["final_reason"], {"single_critic_accept", "single_critic_reject"})
+        self.assertEqual(result["agreement_summary"]["evaluable_samples"], 0)
+        self.assertEqual(result["agreement_summary"]["non_evaluable_samples"], 1)
+        self.assertEqual(result["agreement_summary"]["agreements"], 0)
+        self.assertEqual(result["agreement_summary"]["disagreements"], 0)
+
     def test_disagreement_policy_regenerate_is_deterministic(self) -> None:
         sample = {
             "instantiation_id": "inst-disagree",

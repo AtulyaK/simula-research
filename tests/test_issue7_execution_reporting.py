@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
 
@@ -34,8 +35,10 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
 
                 run_report_path = Path(per_run["artifacts"]["run_report"])
                 gate_report_path = Path(per_run["artifacts"]["gate_report"])
+                manifest_path = Path(per_run["artifacts"]["manifest"])
                 self.assertTrue(run_report_path.exists())
                 self.assertTrue(gate_report_path.exists())
+                self.assertTrue(manifest_path.exists())
 
                 persisted_gate_report = json.loads(gate_report_path.read_text(encoding="utf-8"))
                 self.assertIn("gate_decision", persisted_gate_report)
@@ -50,7 +53,7 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             )
             self.assertEqual(len(comparison_tables["coverage_comparison"]), 3)
 
-    def test_track_d_remediation_improves_critic_agreement_gate(self) -> None:
+    def test_dual_critic_agreement_is_reported_and_single_critic_is_not_evaluable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
                 artifact_root=tmp_dir,
@@ -59,15 +62,16 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                 commit_hash="deadbeef",
             )
 
-            for preset_id in ("B0", "A1", "A4"):
+            for preset_id in ("B0", "A1"):
                 gates = output["run_reports"][preset_id]["gate_report"]["gate_decision"]
-                self.assertEqual(gates["quality.critic_agreement"]["status"], "pass")
-                self.assertGreaterEqual(
-                    float(gates["quality.critic_agreement"]["actual"]),
-                    0.75,
-                )
+                self.assertIn(gates["quality.critic_agreement"]["status"], {"pass", "fail"})
+                self.assertIsNotNone(gates["quality.critic_agreement"]["actual"])
 
-    def test_milestone1_a1_gate_passes_complexification_precision(self) -> None:
+            single_critic_gates = output["run_reports"]["A4"]["gate_report"]["gate_decision"]
+            self.assertEqual(single_critic_gates["quality.critic_agreement"]["status"], "todo")
+            self.assertIsNone(single_critic_gates["quality.critic_agreement"]["actual"])
+
+    def test_milestone1_a1_complexification_precision_is_not_evaluable_without_pairwise_judgments(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
                 artifact_root=tmp_dir,
@@ -76,13 +80,15 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                 commit_hash="deadbeef",
             )
             gates = output["run_reports"]["A1"]["gate_report"]["gate_decision"]
-            self.assertEqual(gates["complexity.complexification_precision"]["status"], "pass")
-            self.assertGreaterEqual(
-                float(gates["complexity.complexification_precision"]["actual"]),
-                0.70,
+            complexity_gate = gates["complexity.complexification_precision"]
+            self.assertEqual(complexity_gate["status"], "not_evaluable")
+            self.assertIsNone(complexity_gate["actual"])
+            self.assertEqual(
+                complexity_gate["not_evaluable_reason"],
+                "missing_pairwise_complexity_judgments",
             )
 
-    def test_milestone1_matrix_all_presets_pass_overall_gate(self) -> None:
+    def test_milestone1_matrix_marks_presets_not_evaluable_without_pairwise_judgments(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
                 artifact_root=tmp_dir,
@@ -91,10 +97,12 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                 commit_hash="deadbeef",
             )
             for preset_id in ("B0", "A1", "A4"):
-                self.assertEqual(
-                    output["run_reports"][preset_id]["gate_report"]["gate_decision"]["overall_status"],
-                    "pass",
-                    msg=f"{preset_id} gate failed",
+                expected_statuses = {"not_evaluable"} if preset_id == "A4" else {"fail", "not_evaluable"}
+                overall_status = output["run_reports"][preset_id]["gate_report"]["gate_decision"]["overall_status"]
+                self.assertIn(
+                    overall_status,
+                    expected_statuses,
+                    msg=f"{preset_id} gate status was {overall_status!r}",
                 )
 
     def test_milestone1_b0_gate_passes_coverage_and_acceptance(self) -> None:
@@ -109,9 +117,9 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             self.assertEqual(gates["coverage.node_coverage_ratio"]["status"], "pass")
             self.assertEqual(gates["coverage.min_depth_coverage"]["status"], "pass")
             self.assertEqual(gates["quality.acceptance_rate"]["status"], "pass")
-            self.assertEqual(gates["overall_status"], "pass")
+            self.assertIn(gates["overall_status"], {"fail", "not_evaluable"})
 
-    def test_complexity_metrics_use_complexification_stage_evidence(self) -> None:
+    def test_complexity_metrics_report_proxy_tags_without_treating_them_as_judgments(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             output = execute_issue7_matrix(
                 artifact_root=tmp_dir,
@@ -122,8 +130,99 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
 
             complexity = output["run_reports"]["B0"]["complexity"]
 
-            self.assertGreater(complexity["complexification_precision"], 0.0)
-            self.assertGreater(complexity["calibrated_score_distribution"]["p50"], 0.45)
+            self.assertEqual(complexity["evaluation_status"], "not_evaluable")
+            self.assertIsNone(complexity["complexification_precision"])
+            self.assertIsNone(complexity["complexity_shift"])
+            self.assertIsNone(complexity["calibrated_score_distribution"]["p50"])
+            self.assertGreater(complexity["proxy_metrics"]["complexified_sample_count"], 0)
+
+    def test_missing_stage3_taxonomy_nodes_stay_in_coverage_denominator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            samples_path = Path(tmp_dir) / "samples.json"
+            decisions_path = Path(tmp_dir) / "decisions.json"
+            samples_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "instantiation_id": "i-root",
+                            "taxonomy_node_id": "tax-root",
+                            "meta_prompt_id": "mp-root",
+                            "text": "root sample",
+                            "is_complexified": True,
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            decisions_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "instantiation_id": "i-root",
+                            "taxonomy_node_id": "tax-root",
+                            "quality_status": "accepted",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            pipeline_result = {
+                "manifest": {"run_id": "run-fake", "seed": 7, "artifact_schema_version": "v1"},
+                "taxonomy": {
+                    "nodes": [
+                        {"taxonomy_node_id": "tax-root", "parent_taxonomy_node_id": None, "label": "Root", "depth": 0},
+                        {"taxonomy_node_id": "tax-missing", "parent_taxonomy_node_id": "tax-root", "label": "Missing", "depth": 1},
+                    ]
+                },
+                "stage_outputs": {
+                    "stage_3_complexification": {
+                        "complexification_artifacts": {"samples": str(samples_path)},
+                    },
+                    "stage_4_dual_critic_quality_verification": {
+                        "reviewed_samples": 1,
+                        "accepted_samples": 1,
+                        "agreements": 1,
+                        "disagreements": 0,
+                        "regenerated_samples": 0,
+                        "stage4_artifacts": {"critic_decisions": str(decisions_path)},
+                    },
+                },
+            }
+
+            with (
+                patch("simula_research.issue7_execution_reporting.PRESET_IDS", ("B0",)),
+                patch("simula_research.issue7_execution_reporting.validate_all_presets", return_value={"ok": True}),
+                patch(
+                    "simula_research.issue7_execution_reporting.build_run_request",
+                    return_value={
+                        "seed": 7,
+                        "model_ids": {"generator": "g", "critic_a": "a", "critic_b": "b"},
+                        "domain_objective": "pilot-domain",
+                        "pipeline_config": {
+                            "global_diversification_enabled": True,
+                            "local_diversification_enabled": True,
+                            "complexification_enabled": True,
+                            "dual_critic_enabled": True,
+                        },
+                        "manifest_metadata": {
+                            "baseline_or_ablation_tag": "B0",
+                            "run_label": "baseline",
+                            "hypothesis_focus": ["H1"],
+                            "protocol_version": "0.1.0",
+                            "artifact_schema_version": "v1",
+                            "evaluation_protocol_version": "milestone-1",
+                        },
+                    },
+                ),
+                patch("simula_research.issue7_execution_reporting.run_pipeline", return_value=pipeline_result),
+            ):
+                output = execute_issue7_matrix(artifact_root=tmp_dir, report_root=tmp_dir)
+
+            coverage = output["run_reports"]["B0"]["coverage"]
+            self.assertEqual(coverage["eligible_nodes"], 2)
+            self.assertEqual(coverage["covered_nodes"], 1)
+            self.assertEqual(coverage["nodes_without_stage3_samples"], ["tax-missing"])
+            self.assertEqual(coverage["node_coverage_ratio"], 0.5)
 
 
 if __name__ == "__main__":

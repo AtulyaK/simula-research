@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import urllib.error
 import unittest
 from pathlib import Path
 
@@ -107,7 +108,7 @@ class CriticProviderAdapterTests(unittest.TestCase):
 
             def fake_post_json(*, url: str, headers: dict[str, str], payload: dict[str, object], timeout_s: float) -> dict[str, object]:
                 self.assertIn("Authorization", headers)
-                self.assertTrue(headers["Authorization"].startswith("Bearer "))
+                self.assertEqual(headers["Authorization"], "Bearer test-key")
                 self.assertEqual(payload["model"], "critic-a-model")
                 return {"choices": [{"message": {"content": "accept"}}]}
 
@@ -120,6 +121,74 @@ class CriticProviderAdapterTests(unittest.TestCase):
                     env.pop(k, None)
                 else:
                     env[k] = v
+
+    def test_nvidia_evaluator_defaults_to_kimi_k3(self) -> None:
+        env = os.environ
+        old = {
+            "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
+            "SIMULA_NIM_MODEL": env.get("SIMULA_NIM_MODEL"),
+            "SIMULA_NVIDIA_MODEL": env.get("SIMULA_NVIDIA_MODEL"),
+            "SIMULA_CRITIC_MODEL_A": env.get("SIMULA_CRITIC_MODEL_A"),
+        }
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            env.pop("SIMULA_NIM_MODEL", None)
+            env.pop("SIMULA_NVIDIA_MODEL", None)
+            env.pop("SIMULA_CRITIC_MODEL_A", None)
+            captured: dict[str, object] = {}
+
+            def fake_post_json(*, url: str, headers: dict[str, str], payload: dict[str, object], timeout_s: float) -> dict[str, object]:
+                captured.update(payload)
+                return {"choices": [{"message": {"content": "reject"}}]}
+
+            verdict = nvidia_critic_sample_evaluator(
+                http_post_json=fake_post_json,
+                max_retries=0,
+            )({"instantiation_id": "i1", "text": "hello world"}, "critic_a")
+            self.assertEqual(verdict, "reject")
+            self.assertEqual(captured["model"], "moonshotai/kimi-k3")
+            self.assertEqual(captured["max_tokens"], 16384)
+            self.assertEqual(captured["reasoning_effort"], "max")
+        finally:
+            for k, v in old.items():
+                if v is None:
+                    env.pop(k, None)
+                else:
+                    env[k] = v
+
+    def test_nvidia_evaluator_reads_dotenv_key_without_persisting_it(self) -> None:
+        env = os.environ
+        old = {
+            "SIMULA_DOTENV_PATH": env.get("SIMULA_DOTENV_PATH"),
+            "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
+            "NVAPI_KEY": env.get("NVAPI_KEY"),
+            "SIMULA_NIM_MODEL": env.get("SIMULA_NIM_MODEL"),
+        }
+        with tempfile.NamedTemporaryFile("w", suffix=".env", delete=False, encoding="utf-8") as f:
+            f.write("NVIDIA_API_KEY=dotenv-key\nSIMULA_NIM_MODEL=dotenv-model\n")
+            dotenv_path = f.name
+        try:
+            env["SIMULA_DOTENV_PATH"] = dotenv_path
+            for key in ("NVIDIA_API_KEY", "NVAPI_KEY", "SIMULA_NIM_MODEL"):
+                env.pop(key, None)
+
+            def fake_post_json(*, url: str, headers: dict[str, str], payload: dict[str, object], timeout_s: float) -> dict[str, object]:
+                self.assertEqual(headers["Authorization"], "Bearer dotenv-key")
+                self.assertEqual(payload["model"], "dotenv-model")
+                return {"choices": [{"message": {"content": "accept"}}]}
+
+            verdict = nvidia_critic_sample_evaluator(
+                http_post_json=fake_post_json,
+                max_retries=0,
+            )({"instantiation_id": "i1", "text": "sample"}, "critic_a")
+            self.assertEqual(verdict, "accept")
+        finally:
+            Path(dotenv_path).unlink(missing_ok=True)
+            for key, value in old.items():
+                if value is None:
+                    env.pop(key, None)
+                else:
+                    env[key] = value
 
     def test_nvidia_evaluator_retries_on_timeout_then_succeeds(self) -> None:
         import simula_research.critic_provider_adapter as adapter
@@ -156,20 +225,140 @@ class CriticProviderAdapterTests(unittest.TestCase):
                 else:
                     env[k] = v
 
+    def test_nvidia_evaluator_honors_retry_after_on_rate_limit(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            calls = {"n": 0}
+            sleeps: list[float] = []
+
+            def fake_post_json(
+                *,
+                url: str,
+                headers: dict[str, str],
+                payload: dict[str, object],
+                timeout_s: float,
+            ) -> dict[str, object]:
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise urllib.error.HTTPError(
+                        url,
+                        429,
+                        "Too Many Requests",
+                        {"Retry-After": "7"},
+                        None,
+                    )
+                return {"choices": [{"message": {"content": "accept"}}]}
+
+            ev = nvidia_critic_sample_evaluator(
+                http_post_json=fake_post_json,
+                max_retries=1,
+                sleep_fn=sleeps.append,
+            )
+            verdict = ev({"instantiation_id": "i1", "text": "sample"}, "critic_a")
+
+            self.assertEqual(verdict, "accept")
+            self.assertEqual(calls["n"], 2)
+            self.assertEqual(sleeps, [7.0])
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
+
+    def test_nvidia_evaluator_records_exhausted_rate_limit(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            events: list[dict[str, object]] = []
+
+            def fake_post_json(
+                *,
+                url: str,
+                headers: dict[str, str],
+                payload: dict[str, object],
+                timeout_s: float,
+            ) -> dict[str, object]:
+                raise urllib.error.HTTPError(
+                    url,
+                    429,
+                    "Too Many Requests",
+                    {"Retry-After": "11"},
+                    None,
+                )
+
+            ev = nvidia_critic_sample_evaluator(
+                http_post_json=fake_post_json,
+                max_retries=0,
+                event_log=events,
+            )
+            verdict = ev({"instantiation_id": "i1", "text": "sample"}, "critic_a")
+
+            self.assertEqual(verdict, "reject")
+            self.assertEqual(events[0]["error_code"], "nvidia_critic_rate_limited")
+            self.assertEqual(events[0]["http_status"], 429)
+            self.assertEqual(events[0]["retry_after_s"], 11.0)
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
+
+    def test_nvidia_evaluator_enforces_minimum_request_interval(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            sleeps: list[float] = []
+
+            def fake_post_json(
+                *,
+                url: str,
+                headers: dict[str, str],
+                payload: dict[str, object],
+                timeout_s: float,
+            ) -> dict[str, object]:
+                return {"choices": [{"message": {"content": "accept"}}]}
+
+            ev = nvidia_critic_sample_evaluator(
+                http_post_json=fake_post_json,
+                min_interval_s=0.1,
+                max_retries=0,
+                sleep_fn=sleeps.append,
+            )
+            self.assertEqual(ev({"instantiation_id": "i1", "text": "sample"}, "critic_a"), "accept")
+            self.assertEqual(ev({"instantiation_id": "i2", "text": "sample"}, "critic_a"), "accept")
+
+            self.assertEqual(len(sleeps), 1)
+            self.assertGreaterEqual(sleeps[0], 0.09)
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
+
     def test_nvidia_evaluator_missing_api_key_raises(self) -> None:
         env = os.environ
-        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"), "NVAPI_KEY": env.get("NVAPI_KEY")}
-        try:
-            env.pop("NVIDIA_API_KEY", None)
-            env.pop("NVAPI_KEY", None)
-            with self.assertRaises(ValueError):
-                nvidia_critic_sample_evaluator()({"text": "x", "instantiation_id": "i"}, "critic_a")
-        finally:
-            for k, v in old.items():
-                if v is None:
-                    env.pop(k, None)
-                else:
-                    env[k] = v
+        old = {
+            "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
+            "NVAPI_KEY": env.get("NVAPI_KEY"),
+            "SIMULA_DOTENV_PATH": env.get("SIMULA_DOTENV_PATH"),
+        }
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            try:
+                env.pop("NVIDIA_API_KEY", None)
+                env.pop("NVAPI_KEY", None)
+                env["SIMULA_DOTENV_PATH"] = str(Path(tmp_dir) / "missing.env")
+                with self.assertRaises(ValueError):
+                    nvidia_critic_sample_evaluator()({"text": "x", "instantiation_id": "i"}, "critic_a")
+            finally:
+                for k, v in old.items():
+                    if v is None:
+                        env.pop(k, None)
+                    else:
+                        env[k] = v
 
     def test_nvidia_evaluator_invalid_model_output_is_sanitized(self) -> None:
         env = os.environ
@@ -197,6 +386,33 @@ class CriticProviderAdapterTests(unittest.TestCase):
                     env.pop(k, None)
                 else:
                     env[k] = v
+
+    def test_nvidia_evaluator_rejects_non_token_output(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            for content in ("accept because it is valid", "accept.", "unacceptable"):
+                def fake_post_json(
+                    *,
+                    url: str,
+                    headers: dict[str, str],
+                    payload: dict[str, object],
+                    timeout_s: float,
+                    content: str = content,
+                ) -> dict[str, object]:
+                    return {"choices": [{"message": {"content": content}}]}
+
+                verdict = nvidia_critic_sample_evaluator(
+                    http_post_json=fake_post_json,
+                    max_retries=0,
+                )({"instantiation_id": "i1", "text": "sample"}, "critic_a")
+                self.assertEqual(verdict, "reject")
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
 
 
 if __name__ == "__main__":

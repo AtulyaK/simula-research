@@ -7,10 +7,16 @@ __pycache__/
 venv/
 env/
 
+# Local provider credentials and overrides
+.env
+
 # Build and packaging outputs
 build/
 dist/
 *.egg-info/
+
+# Local live-provider evidence
+artifacts/live-nim/
 
 # Test and coverage artifacts
 .pytest_cache/

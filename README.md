@@ -46,7 +46,17 @@ Domain language anchors:
 
 ## First validation quickstart
 
-The exact scripts and commands will be added as code lands. Use this staged flow for the first end-to-end validation cycle:
+From the repository root, run the Issue 7 B0/A1/A4 matrix with the native
+Python runner:
+
+```powershell
+$env:PYTHONPATH = "src"
+$env:SIMULA_CRITIC_BACKEND = "stub"  # use "nim" for live critics
+py -3 -m simula_research.cli matrix
+```
+
+The existing `scripts/run_issue7_matrix.sh` wrapper is equivalent for Bash
+environments. The staged flow for the first end-to-end validation cycle is:
 
 1. Define target domain and taxonomy depth/branching policy.
 2. Generate taxonomy and inspect node coverage map.

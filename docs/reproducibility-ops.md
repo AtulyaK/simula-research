@@ -32,7 +32,7 @@ Used by the default pipeline only. Required keys:
 
 ### Full reproducibility fields (`validators.validate_manifest_schema`)
 
-Required for persisted `manifest.json` under `artifacts/runs/<run_id>/` when running Issue #9 checks or the operational checklist in this guide. Includes all boot fields **plus**:
+Required for persisted `00_spec/manifest.json` under `artifacts/runs/<run_id>/` when running Issue #9 checks or the operational checklist in this guide. Includes all boot fields **plus**:
 
 - `owner`, `branch`, `commit_hash`
 - `pipeline_config` (non-empty object)
@@ -84,6 +84,20 @@ Recommended subdirectories:
 
 `validate_artifact_tree` requires the same directory names the default pipeline persists via `FileSystemRunArtifactStore`. Stage 4 uses **`40_dual_critic_quality/`** (not `40_dual_critic/`). Older docs or out-of-tree layouts that used `40_dual_critic/` should rename to `40_dual_critic_quality/` or add a symlink so reproducibility checks match the default store.
 
+### Artifact tree validation contract
+
+`validate_artifact_tree` validates the run root, full `00_spec/manifest.json`, required stage directories, and canonical JSON artifacts:
+
+- `10_taxonomy/taxonomy_graph.json`, `10_taxonomy/taxonomy_nodes.json`
+- `20_local_diversification/instantiations.json`, `20_local_diversification/rejections.json`
+- `30_complexification/samples.json`, `30_complexification/semantic_preservation_failures.json`
+- `40_dual_critic_quality/critic_decisions.json`, `40_dual_critic_quality/rejections.json`, `40_dual_critic_quality/regenerations.json`
+- `50_curated_dataset/accepted_samples.json`, `50_curated_dataset/dataset_manifest.json`
+- `60_evaluation/evaluation_handoff.json`
+- `70_diagnostics/diagnostics_summary.json`
+
+It also checks taxonomy graph acyclicity, node/edge parent consistency, unique IDs, lineage references, Stage 2→3→4 completeness, and accepted/rejected decision consistency. The public result shape remains `{"ok", "kind", "issues", "assumptions"}`.
+
 ## Run manifest schema (minimum)
 
 ```json
@@ -96,7 +110,7 @@ Recommended subdirectories:
     "critic_a": "string",
     "critic_b": "string"
   },
-  "pipeline_config": {},
+  "pipeline_config": {"dual_critic_enabled": true},
   "protocol_version": "string",
   "artifact_schema_version": "v1",
   "baseline_or_ablation_tag": "B0"

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simula-research"
+version = "0.1.0"
+description = "Research validation pipeline for Simula-style synthetic data controls."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+simula-issue7-matrix = "simula_research.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
