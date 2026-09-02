@@ -199,6 +199,8 @@ class FileSystemRunArtifactStore:
 
         accepted_samples_path = curated_dir / "accepted_samples.json"
         manifest_path = curated_dir / "dataset_manifest.json"
+        decontamination_report_path = curated_dir / "decontamination_report.json"
+        decontamination_rejections_path = curated_dir / "decontamination_rejections.json"
 
         accepted_samples_path.write_text(
             _dump_json(curated_dataset["accepted_samples"]),
@@ -206,10 +208,23 @@ class FileSystemRunArtifactStore:
         )
         manifest_path.write_text(_dump_json(curated_dataset), encoding="utf-8")
 
-        return {
+        artifacts = {
             "accepted_samples": str(accepted_samples_path),
             "dataset_manifest": str(manifest_path),
         }
+        if "decontamination_report" in curated_dataset:
+            decontamination_report_path.write_text(
+                _dump_json(curated_dataset["decontamination_report"]),
+                encoding="utf-8",
+            )
+            artifacts["decontamination_report"] = str(decontamination_report_path)
+        if "decontamination_rejections" in curated_dataset:
+            decontamination_rejections_path.write_text(
+                _dump_json(curated_dataset["decontamination_rejections"]),
+                encoding="utf-8",
+            )
+            artifacts["decontamination_rejections"] = str(decontamination_rejections_path)
+        return artifacts
 
     def persist_evaluation_handoff(self, evaluation_handoff: dict[str, Any]) -> dict[str, str]:
         evaluation_dir = self._run_root / "60_evaluation"

@@ -30,13 +30,16 @@ The active claim-to-evidence inventory is
 Current execution priority:
 
 1. complete batch-wise Elo complexity calibration;
-2. add persisted intrinsic embedding-compatible diversity metrics;
-3. add one paper-dataset adapter and 13-gram decontamination;
+2. replace deterministic diversity embeddings with a paper-compatible model
+   embedding provider;
+3. add adapters and fixed split manifests for the remaining paper datasets;
 4. add a downstream training/evaluation seam;
 5. replace deterministic Stage 1-3 stand-ins with provider-backed
    implementations while retaining replayable fixtures.
 
-The full executable ablation matrix is B0/A1/A2/A3/A4/A5. The additional
+The executable ablation matrix is B0/A1/A2/A3/A4/A5. Persisted deterministic
+diversity and opt-in decontamination diagnostics now supplement the original
+coverage, complexity, and quality evidence. The additional
 cells extend the original B0/A1/A4 validation playbook and must not be
 reported as exact replicas of the paper's Table 1 system labels.
 

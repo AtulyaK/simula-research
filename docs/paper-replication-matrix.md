@@ -20,8 +20,8 @@ Primary reference: [`research_paper.pdf`](./research_paper.pdf), titled
 | Taxonomy expansion alternates best-of-N proposals, critic refinement, and optional per-level planning (Sec. 2.1, App. B.4). | Missing | Current taxonomy generation is deterministic and handcrafted; no proposal pool, critic refinement, or planning provider is wired. |
 | Agentic synthesis samples compatible node mixes, generates multiple scenarios, complexifies a fraction, then performs generation and critic refinement (Sec. 2.2, App. C). | Approximated | Stages and lineage exist, but local diversification and complexification are deterministic text transforms and Stage 4 does not regenerate through an LLM refinement loop. |
 | Paper system versions compare Baseline, Local, Global, Local + Global, and Full System (Table 1). | Approximated | The executable matrix now includes B0 plus A1-A5. B0 is the full reference; A1/A2 approximate removal of global/local controls; A3/A4/A5 are validation ablations and are not a one-to-one reproduction of Table 1. |
-| Paper datasets include CTI-MCQ, CTI-RCM, LEXam, GSM8k, and selected Global MMLU subsets (Sec. 3.2). | Missing | The repository currently runs one `pilot-domain` objective with synthetic fixture data. Dataset adapters, licenses, downloads, and fixed task schemas are not present. |
-| Generated data is deduplicated and decontaminated against test sets using 13-gram Jaccard threshold 0.8 (Sec. 3.2). | Missing | No persisted n-gram decontamination stage or report exists. |
+| Paper datasets include CTI-MCQ, CTI-RCM, LEXam, GSM8k, and selected Global MMLU subsets (Sec. 3.2). | Approximated | A local JSONL adapter and fixed task schema now support GSM8k records. Dataset downloads, licenses, the other four datasets, and benchmark-specific schemas remain incomplete. |
+| Generated data is deduplicated and decontaminated against test sets using 13-gram Jaccard threshold 0.8 (Sec. 3.2). | Approximated | Deterministic duplicate removal and 13-gram Jaccard filtering are available as an opt-in pipeline step with persisted reports; full paper dataset splits and benchmark execution remain incomplete. |
 | Intrinsic diversity uses embedding cosine distance globally and over k=10 nearest-neighbor groups; taxonomy assignment reports coverage (Sec. 3.3). | Approximated | Taxonomy coverage plus persisted global pairwise and local k-nearest-neighbor distance reports are implemented. Offline reports use deterministic `hash_sha256_v1` embeddings; paper-scale model embeddings and assignment-backed evaluation remain incomplete. |
 | Complexity uses repeated batch-wise judgments and Elo calibration; BS=N=5 is the reported practical setting (Sec. 2.3, App. E). | Approximated | Pairwise judgments are injectable, validated, persisted, and gated by minimum comparisons. Reports now compute deterministic Elo ratings, but the provider seam does not yet schedule cross-item batches or reproduce the paper's BS=N=5 scoring loop. |
 | Double-critic rejection sampling improves correctness and tracks rejection/accuracy effects (Sec. 3.1, App. D). | Approximated | Dual-critic decisions, agreement, rejection, and regeneration artifacts exist. Controlled corruption, benchmark correctness, and empirical accuracy lift are not implemented. |
@@ -52,8 +52,8 @@ system-version reproduction is required.
 1. Implement fixed-protocol Elo calibration from persisted batch judgments.
 2. Replace the deterministic embedding fallback with a paper-compatible model
    embedding provider and preserve the existing taxonomy coverage output.
-3. Add dataset/task adapters and decontamination artifacts for one paper
-   dataset before attempting all five.
+3. Add adapters and fixed split manifests for the remaining paper datasets
+   before attempting all five end-to-end.
 4. Add a downstream evaluation seam with persisted split, training, seed, and
    benchmark-result metadata; execute real training only when compute and model
    access are available.
@@ -65,4 +65,4 @@ system-version reproduction is required.
 - **Traceability/Auditability:** every current matrix run persists resolved configuration, lineage, stage artifacts, and integrity hashes; this matrix records the remaining evidence gaps explicitly.
 - **Protocol/Comparability:** frozen comparability fields and ADR 0003 metric semantics remain unchanged. A2, A3, and A5 are documented ablations; they must not be interpreted as the paper's exact Table 1 labels.
 - **Control-Axis Impact:** A1 targets coverage, A2 local diversity, A3 complexity, and A4/A5 quality policy independently; reporting continues to expose all three axes.
-- **Deviation Log:** actual LLM-driven taxonomy/synthesis, paper datasets, paper-compatible embedding models, batch Elo scheduling, decontamination, and downstream training remain incomplete; deterministic diversity and pairwise Elo diagnostics are now persisted.
+- **Deviation Log:** actual LLM-driven taxonomy/synthesis, complete paper datasets, paper-compatible embedding models, batch Elo scheduling, benchmark split manifests, and downstream training remain incomplete; deterministic diversity, pairwise Elo, and opt-in decontamination diagnostics are now persisted.

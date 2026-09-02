@@ -43,8 +43,60 @@ class FileSystemRunArtifactStoreTests(unittest.TestCase):
             loaded = json.loads(Path(t_paths["taxonomy_nodes"]).read_text(encoding="utf-8"))
             self.assertEqual(len(loaded), len(taxonomy["nodes"]))
 
+    def test_persists_optional_decontamination_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "run-test"
+            paths = FileSystemRunArtifactStore(root).persist_curated_dataset(
+                {
+                    "accepted_samples": [{"task_id": "kept"}],
+                    "decontamination_report": {
+                        "protocol_version": "13gram_jaccard_v1",
+                        "accepted_sample_count": 1,
+                    },
+                    "decontamination_rejections": [
+                        {"sample_id": "removed", "reason": "test_set_contamination"}
+                    ],
+                }
+            )
+
+            self.assertTrue(Path(paths["decontamination_report"]).is_file())
+            self.assertTrue(Path(paths["decontamination_rejections"]).is_file())
+            self.assertEqual(
+                json.loads(Path(paths["decontamination_report"]).read_text(encoding="utf-8"))[
+                    "protocol_version"
+                ],
+                "13gram_jaccard_v1",
+            )
+
 
 class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
+    def test_pipeline_can_persist_opt_in_decontamination_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 0, "branching_factor": 1},
+                local_diversification_config={"per_node_instantiation_count": 1},
+                critic_sample_evaluator=lambda sample, critic_id: "accept",
+                decontamination_reference_samples=[{"text": "held out reference"}],
+            )
+
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            curated_dir = run_root / "50_curated_dataset"
+            report = json.loads(
+                (curated_dir / "decontamination_report.json").read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(report["protocol_version"], "13gram_jaccard_v1")
+        self.assertEqual(
+            result["stage_outputs"]["stage_5_evaluation_handoff"]["decontamination"][
+                "reference_sample_count"
+            ],
+            1,
+        )
+
     def test_run_pipeline_persists_documented_artifact_lifecycle(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_pipeline(

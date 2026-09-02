@@ -102,6 +102,8 @@ configuration, artifact integrity metadata, required stage directories, and cano
 - `30_complexification/samples.json`, `30_complexification/semantic_preservation_failures.json`
 - `40_dual_critic_quality/critic_decisions.json`, `40_dual_critic_quality/rejections.json`, `40_dual_critic_quality/regenerations.json`
 - `50_curated_dataset/accepted_samples.json`, `50_curated_dataset/dataset_manifest.json`
+- Optional `50_curated_dataset/decontamination_report.json` and
+  `decontamination_rejections.json` when a held-out reference set is supplied.
 - `60_evaluation/evaluation_handoff.json`
 - `70_diagnostics/diagnostics_summary.json`
 

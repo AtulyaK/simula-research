@@ -10,6 +10,9 @@ from simula_research.complexity_judgments import (
     COMPLEXITY_JUDGMENT_DEFAULTS,
     collect_pairwise_complexity_judgments,
 )
+from simula_research.decontamination import (
+    deduplicate_and_decontaminate,
+)
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.manifest import validate_manifest
 from simula_research.provider_protocols import (
@@ -75,6 +78,8 @@ def run_pipeline(
     critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
     complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
     complexity_judgment_config: dict[str, int] | None = None,
+    dataset_protocol_config: dict[str, Any] | None = None,
+    decontamination_reference_samples: list[dict[str, Any]] | None = None,
 ) -> dict[str, object]:
     if critic_verdict is not None and critic_sample_evaluator is not None:
         raise ValueError("critic_verdict and critic_sample_evaluator are mutually exclusive")
@@ -139,6 +144,11 @@ def run_pipeline(
         **COMPLEXITY_JUDGMENT_DEFAULTS,
         **dict(complexity_judgment_config or {}),
     }
+    resolved_dataset_protocol_config = dict(dataset_protocol_config or {})
+    if decontamination_reference_samples is not None:
+        resolved_dataset_protocol_config.setdefault(
+            "decontamination_protocol", "13gram_jaccard_v1"
+        )
 
     resolved_run_config = {
         "pipeline_config": dict(manifest_pipeline),
@@ -147,6 +157,7 @@ def run_pipeline(
         "complexification_config": resolved_complexification_config,
         "dual_critic_config": resolved_dual_critic_config,
         "complexity_judgment_config": resolved_complexity_judgment_config,
+        "dataset_protocol_config": resolved_dataset_protocol_config,
     }
 
     manifest: dict[str, Any] = {
@@ -303,12 +314,27 @@ def run_pipeline(
         stage4_payload["provider_runtime"] = dict(provider_runtime)
     stage_outputs["stage_4_dual_critic_quality_verification"] = stage4_payload
 
-    curated_dataset = {
+    accepted_samples = list(adjudication["accepted_samples"])
+    decontamination_result: dict[str, Any] | None = None
+    if decontamination_reference_samples is not None:
+        decontamination_result = deduplicate_and_decontaminate(
+            accepted_samples,
+            decontamination_reference_samples,
+        )
+        accepted_samples = decontamination_result["accepted_samples"]
+
+    curated_dataset: dict[str, Any] = {
         "run_id": run_id,
         "source_stage": "stage_4_dual_critic_quality_verification",
-        "accepted_sample_count": accepted_samples,
-        "accepted_samples": adjudication["accepted_samples"],
+        "accepted_sample_count": len(accepted_samples),
+        "accepted_samples": accepted_samples,
     }
+    if decontamination_result is not None:
+        curated_dataset["pre_decontamination_accepted_sample_count"] = len(
+            adjudication["accepted_samples"]
+        )
+        curated_dataset["decontamination_report"] = decontamination_result["report"]
+        curated_dataset["decontamination_rejections"] = decontamination_result["rejection_log"]
     curated_artifacts = _persist_optional(store, "persist_curated_dataset", curated_dataset)
 
     diagnostics = {
@@ -347,6 +373,9 @@ def run_pipeline(
         "run_id": run_id,
         "metrics_status": "not_computed_by_pipeline",
         "curated_dataset_artifacts": curated_artifacts,
+        "decontamination": (
+            decontamination_result["report"] if decontamination_result is not None else None
+        ),
         "evaluation_artifacts": evaluation_artifacts,
         "diagnostics_artifacts": diagnostics_artifacts,
     }
@@ -356,4 +385,9 @@ def run_pipeline(
         stage_outputs["stage_0_domain_run_spec"]["spec_artifacts"] = spec_artifacts
         _persist_optional(store, "persist_run_spec", manifest, stage_outputs=stage_outputs)
 
-    return {"manifest": manifest, "stage_outputs": stage_outputs, "taxonomy": taxonomy}
+    return {
+        "manifest": manifest,
+        "stage_outputs": stage_outputs,
+        "taxonomy": taxonomy,
+        "decontamination": decontamination_result,
+    }

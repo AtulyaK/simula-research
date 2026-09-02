@@ -116,6 +116,11 @@ runs use the deterministic `hash_sha256_v1` provider and must be labeled with
 that protocol metadata; these values are replay-compatible diagnostics, not
 paper-scale embedding evidence.
 
+Generated samples can also be passed through the opt-in dataset protocol before
+the curated dataset is persisted. The current protocol removes normalized
+duplicates and rejects held-out overlap at a 13-gram Jaccard threshold of `0.8`;
+its report and rejection log are stored with the curated dataset artifacts.
+
 ## Quality metrics
 
 ### 1) Dual-critic acceptance rate
