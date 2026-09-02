@@ -12,6 +12,7 @@ from simula_research.complexity_judgments import (
     collect_pairwise_complexity_judgments,
 )
 from simula_research.dataset_adapters import validate_split_manifest
+from simula_research.dataset_verification import validate_local_dataset_manifest
 from simula_research.downstream_evaluation import validate_downstream_evaluation_plan
 from simula_research.decontamination import (
     deduplicate_and_decontaminate,
@@ -154,6 +155,9 @@ def run_pipeline(
     benchmark_split_manifest = resolved_dataset_protocol_config.get("benchmark_split_manifest")
     if benchmark_split_manifest is not None:
         validate_split_manifest(benchmark_split_manifest)
+    local_dataset_manifest = resolved_dataset_protocol_config.get("local_dataset_manifest")
+    if local_dataset_manifest is not None:
+        validate_local_dataset_manifest(local_dataset_manifest)
     if decontamination_reference_samples is not None:
         resolved_dataset_protocol_config.setdefault(
             "decontamination_protocol", "13gram_jaccard_v1"

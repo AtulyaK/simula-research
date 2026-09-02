@@ -44,6 +44,11 @@ from simula_research.generation_provider_adapter import (
     nvidia_local_diversification_provider,
     nvidia_taxonomy_provider,
 )
+from simula_research.dataset_verification import (
+    build_local_dataset_manifest,
+    validate_local_dataset_manifest,
+    verify_local_split,
+)
 
 __all__ = [
     "run_pipeline",
@@ -73,6 +78,9 @@ __all__ = [
     "nvidia_local_diversification_provider",
     "nvidia_complexification_provider",
     "generation_providers_from_env",
+    "verify_local_split",
+    "build_local_dataset_manifest",
+    "validate_local_dataset_manifest",
     "ngram_jaccard_similarity",
     "deduplicate_and_decontaminate",
     "prepare_complexity_batch_schedule",
