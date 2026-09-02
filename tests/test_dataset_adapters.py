@@ -16,6 +16,7 @@ from simula_research.dataset_adapters import (
     load_global_mmlu_jsonl,
     load_global_mmlu_selection,
     load_gsm8k_jsonl,
+    load_lexam_jsonl,
     load_split_manifest,
     validate_split_manifest,
     validate_task_record,
@@ -195,6 +196,33 @@ class DatasetAdapterTests(unittest.TestCase):
         self.assertEqual([task["task_id"] for task in tasks], ["selected"])
         self.assertEqual(tasks[0]["metadata"]["source_index"], 1)
         self.assertEqual(tasks[0]["metadata"]["subject"], "elementary_mathematics")
+
+    def test_load_lexam_jsonl_adapts_multiple_choice_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "lexam.jsonl"
+            path.write_text(
+                json.dumps(
+                    {
+                        "id": "lexam-1",
+                        "question": "Which choice?",
+                        "choices": ["first", "second"],
+                        "gold": 1,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            tasks = load_lexam_jsonl(
+                path,
+                config="mcq_4_choices",
+                split="test",
+            )
+
+        self.assertEqual(tasks[0]["task_id"], "lexam-1")
+        self.assertEqual(tasks[0]["answer"], "1")
+        self.assertEqual(tasks[0]["metadata"]["config"], "mcq_4_choices")
+        validate_task_record(tasks[0])
 
     def test_adapt_gsm8k_record_preserves_rationale_and_extracts_final_answer(self) -> None:
         task = adapt_gsm8k_record(

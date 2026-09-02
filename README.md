@@ -119,8 +119,9 @@ py -3 -m simula_research.cli score-benchmark `
 ```
 
 Prediction JSON may be either a task-ID mapping or a list of
-`{"task_id": "...", "prediction": "..."}` objects. The scorer currently supports CTI-MCQ, CTI-RCM, GSM8k, and Global-MMLU JSONL;
-parquet-backed benchmarks still require an optional reader.
+`{"task_id": "...", "prediction": "..."}` objects. The scorer currently supports CTI-MCQ, CTI-RCM, GSM8k, LEXam JSONL, and
+Global-MMLU JSONL; pass `--lexam-config mcq_4_choices` for LEXam. Parquet-backed
+benchmarks still require an optional reader.
 
 With `NVIDIA_API_KEY` or `NVAPI_KEY` in the ignored local `.env`, generate a
 bounded prediction artifact through the configured NVIDIA NIM model:

@@ -418,6 +418,36 @@ def load_global_mmlu_jsonl(
     return tasks
 
 
+def load_lexam_jsonl(
+    path: str | Path,
+    *,
+    config: str,
+    split: str,
+) -> list[dict[str, Any]]:
+    """Load LEXam JSONL records without requiring an optional parquet reader."""
+    config = _require_non_empty_text(config, field="config")
+    split = _require_non_empty_text(split, field="split")
+    source_path = Path(path)
+    tasks: list[dict[str, Any]] = []
+    with source_path.open(encoding="utf-8") as file_handle:
+        for line_number, line in enumerate(file_handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid LEXam JSON on line {line_number}") from error
+            tasks.append(
+                adapt_lexam_record(
+                    record,
+                    config=config,
+                    split=split,
+                    source_index=len(tasks),
+                )
+            )
+    return tasks
+
+
 def adapt_lexam_record(
     record: dict[str, Any],
     *,

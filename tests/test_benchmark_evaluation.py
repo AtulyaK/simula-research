@@ -182,6 +182,39 @@ class BenchmarkEvaluationTests(unittest.TestCase):
         self.assertEqual(result["accuracy"], 1.0)
         self.assertEqual(result["missing_prediction_count"], 0)
 
+    def test_score_local_lexam_jsonl(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_path = root / "lexam.jsonl"
+            predictions_path = root / "predictions.json"
+            dataset_path.write_text(
+                json.dumps(
+                    {
+                        "id": "lexam-1",
+                        "question": "Which choice?",
+                        "choices": ["first", "second"],
+                        "gold": 1,
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            predictions_path.write_text(json.dumps({"lexam-1": "B"}), encoding="utf-8")
+
+            result = score_local_benchmark(
+                dataset_id="LEXam",
+                path=dataset_path,
+                predictions_path=predictions_path,
+                split="test",
+                dataset_size=1,
+                seed=0,
+                lexam_config="mcq_4_choices",
+            )
+
+        self.assertEqual(result["task_type"], "multiple_choice")
+        self.assertEqual(result["accuracy"], 1.0)
+        self.assertEqual(result["missing_prediction_count"], 0)
+
     def test_score_local_benchmark_can_require_verified_manifest(self) -> None:
         split_manifest = {
             "schema_version": "0.1.0",

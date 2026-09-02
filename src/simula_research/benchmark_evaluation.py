@@ -10,6 +10,7 @@ from simula_research.dataset_adapters import (
     load_cti_bench_tsv,
     load_global_mmlu_jsonl,
     load_gsm8k_jsonl,
+    load_lexam_jsonl,
 )
 from simula_research.dataset_verification import verify_local_dataset_file
 from simula_research.downstream_evaluation import (
@@ -27,6 +28,7 @@ def _load_local_tasks(
     local_dataset_manifest: dict[str, Any] | None,
     global_mmlu_config: str | None,
     global_mmlu_selection: dict[str, Any] | None,
+    lexam_config: str | None,
 ) -> tuple[list[dict[str, Any]], str]:
     normalized_id = dataset_id.strip()
     if local_dataset_manifest is not None:
@@ -53,6 +55,11 @@ def _load_local_tasks(
             ),
             "multiple_choice",
         )
+    if normalized_id.casefold() == "lexam":
+        config = (lexam_config or "").strip()
+        if not config:
+            raise ValueError("LEXam local loading requires --lexam-config")
+        return load_lexam_jsonl(path, config=config, split=split), "multiple_choice"
     raise ValueError(
         f"unsupported local benchmark {normalized_id!r}; "
         "parquet-backed benchmarks require an optional reader"
@@ -143,6 +150,7 @@ def score_local_benchmark(
     local_dataset_manifest: dict[str, Any] | None = None,
     global_mmlu_config: str | None = None,
     global_mmlu_selection: dict[str, Any] | None = None,
+    lexam_config: str | None = None,
 ) -> dict[str, Any]:
     """Load a supported local benchmark and emit a persisted result record."""
     if not isinstance(dataset_id, str) or not dataset_id.strip():
@@ -160,6 +168,7 @@ def score_local_benchmark(
         local_dataset_manifest=local_dataset_manifest,
         global_mmlu_config=global_mmlu_config,
         global_mmlu_selection=global_mmlu_selection,
+        lexam_config=lexam_config,
     )
 
     predictions = load_prediction_artifact(predictions_path)
@@ -201,6 +210,7 @@ def predict_local_benchmark(
     local_dataset_manifest: dict[str, Any] | None = None,
     global_mmlu_config: str | None = None,
     global_mmlu_selection: dict[str, Any] | None = None,
+    lexam_config: str | None = None,
     completion: Callable[..., Any] = nvidia_json_completion,
 ) -> dict[str, Any]:
     """Generate a model-labeled prediction artifact for a supported local benchmark."""
@@ -216,6 +226,7 @@ def predict_local_benchmark(
         local_dataset_manifest=local_dataset_manifest,
         global_mmlu_config=global_mmlu_config,
         global_mmlu_selection=global_mmlu_selection,
+        lexam_config=lexam_config,
     )
     event_log: list[dict[str, Any]] = []
     resolved_model = (

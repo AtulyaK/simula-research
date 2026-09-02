@@ -121,6 +121,7 @@ def _run_score_benchmark(args: argparse.Namespace) -> int:
         local_dataset_manifest=local_dataset_manifest,
         global_mmlu_config=args.global_mmlu_config,
         global_mmlu_selection=global_mmlu_selection,
+        lexam_config=args.lexam_config,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -157,6 +158,7 @@ def _run_predict_benchmark(args: argparse.Namespace) -> int:
         local_dataset_manifest=local_dataset_manifest,
         global_mmlu_config=args.global_mmlu_config,
         global_mmlu_selection=global_mmlu_selection,
+        lexam_config=args.lexam_config,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -249,6 +251,10 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional paper Global-MMLU selection manifest.",
     )
     score_benchmark.add_argument(
+        "--lexam-config",
+        help="LEXam configuration name, such as mcq_4_choices.",
+    )
+    score_benchmark.add_argument(
         "--local-manifest",
         help="Optional verified local dataset manifest to recheck before scoring.",
     )
@@ -275,6 +281,10 @@ def _build_parser() -> argparse.ArgumentParser:
     predict_benchmark.add_argument(
         "--selection-manifest",
         help="Optional paper Global-MMLU selection manifest.",
+    )
+    predict_benchmark.add_argument(
+        "--lexam-config",
+        help="LEXam configuration name, such as mcq_4_choices.",
     )
     predict_benchmark.add_argument(
         "--local-manifest",
