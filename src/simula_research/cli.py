@@ -8,7 +8,10 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from simula_research.benchmark_evaluation import score_local_benchmark
+from simula_research.benchmark_evaluation import (
+    predict_local_benchmark,
+    score_local_benchmark,
+)
 from simula_research.dataset_adapters import load_split_manifest
 from simula_research.dataset_verification import build_local_dataset_manifest
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
@@ -123,6 +126,35 @@ def _run_score_benchmark(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_predict_benchmark(args: argparse.Namespace) -> int:
+    local_dataset_manifest = None
+    if args.local_manifest:
+        try:
+            local_dataset_manifest = json.loads(
+                Path(args.local_manifest).read_text(encoding="utf-8")
+            )
+        except json.JSONDecodeError as error:
+            raise ValueError(f"invalid local dataset manifest JSON: {args.local_manifest}") from error
+    artifact = predict_local_benchmark(
+        dataset_id=args.dataset_id,
+        path=args.dataset_path,
+        split=args.split,
+        dataset_size=args.dataset_size,
+        seed=args.seed,
+        model=args.model,
+        local_dataset_manifest=local_dataset_manifest,
+    )
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print("prediction_artifact", output_path)
+    print("prediction_count", len(artifact["predictions"]))
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Simula research validation workflows.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -203,6 +235,26 @@ def _build_parser() -> argparse.ArgumentParser:
         default="artifacts/datasets/benchmark_result.json",
     )
     score_benchmark.set_defaults(handler=_run_score_benchmark)
+
+    predict_benchmark = commands.add_parser(
+        "predict-benchmark",
+        help="Generate task-id predictions for a local benchmark through NVIDIA NIM.",
+    )
+    predict_benchmark.add_argument("--dataset-id", required=True)
+    predict_benchmark.add_argument("--dataset-path", required=True)
+    predict_benchmark.add_argument("--split", default="test")
+    predict_benchmark.add_argument("--dataset-size", type=int, required=True)
+    predict_benchmark.add_argument("--seed", type=int, required=True)
+    predict_benchmark.add_argument("--model")
+    predict_benchmark.add_argument(
+        "--local-manifest",
+        help="Optional verified local dataset manifest to recheck before prediction.",
+    )
+    predict_benchmark.add_argument(
+        "--output",
+        default="artifacts/datasets/benchmark_predictions.json",
+    )
+    predict_benchmark.set_defaults(handler=_run_predict_benchmark)
     return parser
 
 

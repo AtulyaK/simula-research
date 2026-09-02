@@ -133,6 +133,42 @@ class CliTests(unittest.TestCase):
             scored = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(scored["accuracy"], 1.0)
 
+    def test_predict_benchmark_writes_prediction_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            output_path = root / "predictions.json"
+            expected = {
+                "schema_version": "0.1.0",
+                "dataset_id": "CTI-MCQ",
+                "predictions": {"task-1": "B"},
+            }
+            with mock.patch(
+                "simula_research.cli.predict_local_benchmark",
+                return_value=expected,
+            ) as predict:
+                result = main(
+                    [
+                        "predict-benchmark",
+                        "--dataset-id",
+                        "CTI-MCQ",
+                        "--dataset-path",
+                        str(root / "cti.tsv"),
+                        "--dataset-size",
+                        "1",
+                        "--seed",
+                        "0",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            predict.assert_called_once()
+            self.assertEqual(
+                json.loads(output_path.read_text(encoding="utf-8")),
+                expected,
+            )
+
     def test_matrix_command_runs_with_explicit_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

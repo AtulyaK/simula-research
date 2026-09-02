@@ -52,6 +52,7 @@ from simula_research.dataset_verification import (
     verify_local_split,
 )
 from simula_research.benchmark_evaluation import (
+    predict_local_benchmark,
     load_prediction_artifact,
     score_local_benchmark,
 )
@@ -91,6 +92,7 @@ __all__ = [
     "verify_local_dataset_file",
     "load_prediction_artifact",
     "score_local_benchmark",
+    "predict_local_benchmark",
     "ngram_jaccard_similarity",
     "deduplicate_and_decontaminate",
     "prepare_complexity_batch_schedule",

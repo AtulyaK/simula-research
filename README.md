@@ -103,6 +103,22 @@ Prediction JSON may be either a task-ID mapping or a list of
 supports CTI-MCQ, CTI-RCM, and GSM8k; parquet-backed benchmarks still require
 an optional reader.
 
+With `NVIDIA_API_KEY` or `NVAPI_KEY` in the ignored local `.env`, generate a
+bounded prediction artifact through the configured NVIDIA NIM model:
+
+```powershell
+py -3 -m simula_research.cli predict-benchmark `
+  --dataset-id CTI-MCQ `
+  --dataset-path C:\data\cti-mcq.tsv `
+  --local-manifest artifacts\datasets\local_manifest.json `
+  --dataset-size 2500 `
+  --seed 0 `
+  --output artifacts\datasets\cti-mcq-predictions.json
+```
+
+This is a real remote-model smoke/evaluation path, but Kimi/NIM predictions
+are not paper-equivalent Gemma 3 student results and must be labeled as such.
+
 The existing `scripts/run_issue7_matrix.sh` wrapper is equivalent for Bash
 environments. The staged flow for the first end-to-end validation cycle is:
 
