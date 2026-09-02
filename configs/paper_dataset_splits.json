@@ -1,0 +1,62 @@
+{
+  "schema_version": "0.1.0",
+  "manifest_id": "simula-paper-benchmark-splits",
+  "purpose": "Pinned source revisions and evaluation split counts for reproducible paper-aligned benchmark preparation.",
+  "splits": [
+    {
+      "dataset_id": "CTI-MCQ",
+      "source": "https://github.com/maveryn/cti-bench",
+      "revision": "4543e5b6560d3204e1205ced4fa286adc7452d07",
+      "source_path": "data/cti-mcq.tsv",
+      "format": "tsv",
+      "split": "test",
+      "expected_records": 2500,
+      "selection_status": "paper-aligned-candidate",
+      "license_note": "Review upstream repository license and benchmark terms before redistribution."
+    },
+    {
+      "dataset_id": "CTI-RCM",
+      "source": "https://github.com/maveryn/cti-bench",
+      "revision": "4543e5b6560d3204e1205ced4fa286adc7452d07",
+      "source_path": "data/cti-rcm.tsv",
+      "format": "tsv",
+      "split": "test",
+      "expected_records": 1000,
+      "selection_status": "paper-aligned-candidate",
+      "license_note": "Review upstream repository license and benchmark terms before redistribution."
+    },
+    {
+      "dataset_id": "LEXam",
+      "source": "https://huggingface.co/datasets/LEXam-Benchmark/LEXam",
+      "revision": "31e57ae395f92ed7284a4c28d278c55da892b898",
+      "config": "mcq_4_choices",
+      "format": "parquet",
+      "split": "test",
+      "expected_records": 1655,
+      "selection_status": "paper-aligned-candidate",
+      "license_note": "Review the dataset card and constituent-source licenses before use."
+    },
+    {
+      "dataset_id": "GSM8k",
+      "source": "https://huggingface.co/datasets/openai/gsm8k",
+      "revision": "740312add88f781978c0658806c59bc2815b9866",
+      "config": "main",
+      "format": "jsonl",
+      "split": "test",
+      "expected_records": 1319,
+      "selection_status": "paper-aligned-candidate",
+      "license_note": "Review the upstream dataset card and license before redistribution."
+    },
+    {
+      "dataset_id": "Global-MMLU",
+      "source": "https://huggingface.co/datasets/CohereLabs/Global-MMLU",
+      "revision": "0e619dbeb34206cd48705a1a0ea7fb21cae09993",
+      "config": "en",
+      "format": "parquet",
+      "split": "test",
+      "expected_records": 14042,
+      "selection_status": "provisional-english-subset-requires-paper-confirmation",
+      "license_note": "Review the dataset card and constituent-source licenses before use."
+    }
+  ]
+}

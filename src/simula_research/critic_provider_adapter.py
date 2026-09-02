@@ -112,6 +112,10 @@ def provider_runtime_from_env() -> dict[str, Any]:
     """Structured provider/runtime metadata for manifests (no secrets; env names only as strings)."""
     _load_dotenv()
     backend = _critic_backend_from_env()
+    embedding_backend = (
+        (os.environ.get("SIMULA_EMBEDDING_BACKEND") or "").strip()
+        or "hash_default"
+    )
     payload: dict[str, Any] = {
         "source": "environment",
         "critic_backend": backend,
@@ -119,6 +123,7 @@ def provider_runtime_from_env() -> dict[str, Any]:
             (os.environ.get("SIMULA_COMPLEXITY_BACKEND") or "").strip()
             or backend
         ),
+        "embedding_backend": embedding_backend,
     }
     transport: dict[str, Any] = {}
     if raw := os.environ.get("SIMULA_HTTP_TIMEOUT_SECONDS"):
@@ -162,6 +167,23 @@ def provider_runtime_from_env() -> dict[str, Any]:
                 "NVIDIA_API_KEY"
                 if os.environ.get("NVIDIA_API_KEY")
                 else ("NVAPI_KEY" if os.environ.get("NVAPI_KEY") else None)
+            ),
+        }
+    if embedding_backend.lower() in {"nim", "nvidia"}:
+        payload["nim_embedding"] = {
+            "base_url": (
+                (os.environ.get("SIMULA_EMBEDDING_BASE_URL") or "").strip()
+                or (os.environ.get("SIMULA_NIM_EMBEDDING_BASE_URL") or "").strip()
+                or "https://integrate.api.nvidia.com/v1/embeddings"
+            ),
+            "model": (
+                (os.environ.get("SIMULA_EMBEDDING_MODEL") or "").strip()
+                or (os.environ.get("SIMULA_NIM_EMBEDDING_MODEL") or "").strip()
+                or "nvidia/nv-embedqa-e5-v5"
+            ),
+            "input_type": (
+                (os.environ.get("SIMULA_EMBEDDING_INPUT_TYPE") or "").strip()
+                or "passage"
             ),
         }
     return payload
