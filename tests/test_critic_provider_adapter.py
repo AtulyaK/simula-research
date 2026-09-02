@@ -129,6 +129,51 @@ class CriticProviderAdapterTests(unittest.TestCase):
             else:
                 env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
 
+    def test_nvidia_critic_sample_evaluator_parses_streaming_sse_response(self) -> None:
+        env = os.environ
+        old = {
+            "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
+            "SIMULA_NIM_STREAM": env.get("SIMULA_NIM_STREAM"),
+        }
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            env["SIMULA_NIM_STREAM"] = "true"
+
+            class _StreamingResponse:
+                def __enter__(self) -> "_StreamingResponse":
+                    return self
+
+                def __exit__(self, *_args: object) -> None:
+                    return None
+
+                def __iter__(self):
+                    return iter(
+                        [
+                            b'data: {"choices":[{"delta":{"role":"assistant"}}]}\n\n',
+                            b'data: {"choices":[{"delta":{"content":"acc"}}]}\n\n',
+                            b'data: {"choices":[{"delta":{"content":"ept"}}]}\n\n',
+                            b"data: [DONE]\n\n",
+                        ]
+                    )
+
+            with patch("urllib.request.urlopen", return_value=_StreamingResponse()) as urlopen:
+                evaluator = nvidia_critic_sample_evaluator(max_retries=0)
+                self.assertEqual(
+                    evaluator({"instantiation_id": "i1", "text": "sample"}, "critic_a"),
+                    "accept",
+                )
+
+            request = urlopen.call_args.args[0]
+            payload = json.loads(request.data.decode("utf-8"))
+            self.assertTrue(payload["stream"])
+            self.assertEqual(request.get_header("Accept"), "text/event-stream")
+        finally:
+            for key, value in old.items():
+                if value is None:
+                    env.pop(key, None)
+                else:
+                    env[key] = value
+
     def test_nvidia_batch_complexity_scorer_honors_retry_after(self) -> None:
         env = os.environ
         old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}

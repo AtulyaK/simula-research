@@ -17,6 +17,7 @@ from simula_research.critic_provider_adapter import (
     _nvidia_api_key_from_env,
     _nvidia_max_tokens_from_env,
     _nvidia_reasoning_effort_from_env,
+    _nvidia_stream_from_env,
     _parse_non_negative_float,
     _parse_non_negative_int,
     _parse_positive_float,
@@ -162,6 +163,7 @@ def _text_completion_settings(
         "max_tokens": resolved_tokens,
         "min_interval_s": resolved_interval,
         "reasoning_effort": resolved_reasoning,
+        "stream": _nvidia_stream_from_env(),
         "model": resolved_model,
     }
 
@@ -208,11 +210,12 @@ def nvidia_json_completion(
         "temperature": 0,
         "max_tokens": settings["max_tokens"],
         "reasoning_effort": settings["reasoning_effort"],
+        "stream": settings["stream"],
     }
     headers = {
         "Authorization": "******",
         "Content-Type": "application/json",
-        "Accept": "application/json",
+        "Accept": "text/event-stream" if settings["stream"] else "application/json",
     }
     if http_post_json is _http_post_json:
         headers["Authorization"] = "Bearer " + api_key

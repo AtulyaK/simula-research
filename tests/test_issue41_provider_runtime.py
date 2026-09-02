@@ -70,6 +70,7 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
             "NVAPI_KEY": env.get("NVAPI_KEY"),
             "SIMULA_GENERATION_BACKEND": env.get("SIMULA_GENERATION_BACKEND"),
             "SIMULA_GENERATION_MODEL": env.get("SIMULA_GENERATION_MODEL"),
+            "SIMULA_NIM_STREAM": env.get("SIMULA_NIM_STREAM"),
         }
         try:
             env["SIMULA_CRITIC_BACKEND"] = "nim"
@@ -81,12 +82,14 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
             env.pop("NVAPI_KEY", None)
             env["SIMULA_GENERATION_BACKEND"] = "nim"
             env["SIMULA_GENERATION_MODEL"] = "generation-model"
+            env["SIMULA_NIM_STREAM"] = "false"
             meta = provider_runtime_from_env()
             self.assertEqual(meta["critic_backend"], "nim")
             self.assertEqual(meta["nim_critic"]["base_url"], "https://example.com/v1/chat/completions")
             self.assertEqual(meta["nim_critic"]["default_model"], "some-model")
             self.assertEqual(meta["nim_critic"]["max_tokens"], 16384)
             self.assertEqual(meta["nim_critic"]["reasoning_effort"], "max")
+            self.assertFalse(meta["nim_critic"]["stream"])
             self.assertEqual(
                 meta["nim_critic"]["critic_models"],
                 {"critic_a": "critic-a-model", "critic_b": "some-model"},
@@ -94,6 +97,7 @@ class Issue41ProviderRuntimeTests(unittest.TestCase):
             self.assertEqual(meta["nim_critic"]["api_key_env"], "NVIDIA_API_KEY")
             self.assertEqual(meta["generation_backend"], "nim")
             self.assertEqual(meta["nim_generation"]["model"], "generation-model")
+            self.assertFalse(meta["nim_generation"]["stream"])
         finally:
             for k, v in old.items():
                 if v is None:

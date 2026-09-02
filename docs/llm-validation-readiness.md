@@ -110,6 +110,7 @@ NIM backend env vars:
   - `SIMULA_CRITIC_MODEL_A`, `SIMULA_CRITIC_MODEL_B` (per-critic override)
   - `SIMULA_NIM_MAX_TOKENS` (or `SIMULA_NVIDIA_MAX_TOKENS`)
   - `SIMULA_NIM_REASONING_EFFORT` (or `SIMULA_NVIDIA_REASONING_EFFORT`)
+  - `SIMULA_NIM_STREAM` (`true`/`false`; defaults to `true` for chat completions)
   - `SIMULA_COMPLEXITY_MODEL` (optional batch-complexity model override)
   - `SIMULA_COMPLEXITY_BACKEND` (`replay` for offline scores; otherwise follows
     `SIMULA_CRITIC_BACKEND`)
@@ -145,8 +146,10 @@ evidence.
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does
 not consume the entire response budget before its binary verdict. The critic
-request is a non-streaming text classification call; the multimodal image
-payload shown in the NVIDIA API examples is not used by this pipeline.
+request uses the NVIDIA-compatible streaming SSE transport by default, matching
+the supplied Kimi example; set `SIMULA_NIM_STREAM=false` to use a regular JSON
+response. The multimodal image payload shown in the NVIDIA API examples is not
+used by this pipeline.
 - Optional transport knobs (also recorded into `provider_runtime` metadata; **never** store the key itself):
   - `SIMULA_HTTP_TIMEOUT_SECONDS`
   - `SIMULA_HTTP_MAX_RETRIES`

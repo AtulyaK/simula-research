@@ -108,6 +108,17 @@ def _parse_positive_int(name: str, raw: str) -> int:
     return value
 
 
+def _nvidia_stream_from_env() -> bool:
+    raw = (os.environ.get("SIMULA_NIM_STREAM") or "").strip().lower()
+    if not raw:
+        return True
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError("SIMULA_NIM_STREAM must be a boolean")
+
+
 def provider_runtime_from_env() -> dict[str, Any]:
     """Structured provider/runtime metadata for manifests (no secrets; env names only as strings)."""
     _load_dotenv()
@@ -164,6 +175,7 @@ def provider_runtime_from_env() -> dict[str, Any]:
             ),
             "max_tokens": _nvidia_max_tokens_from_env(),
             "reasoning_effort": _nvidia_reasoning_effort_from_env(),
+            "stream": _nvidia_stream_from_env(),
             "critic_models": {
                 "critic_a": _nvidia_model_for_critic("critic_a"),
                 "critic_b": _nvidia_model_for_critic("critic_b"),
@@ -215,6 +227,7 @@ def provider_runtime_from_env() -> dict[str, Any]:
                 (os.environ.get("SIMULA_GENERATION_REASONING_EFFORT") or "").strip()
                 or _nvidia_reasoning_effort_from_env()
             ),
+            "stream": _nvidia_stream_from_env(),
         }
     return payload
 
@@ -327,7 +340,51 @@ def _http_post_json(
         req.add_header(k, v)
     try:
         with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310 - url from env; used for API calls
-            raw = resp.read().decode("utf-8", errors="replace")
+            if payload.get("stream") is True:
+                try:
+                    raw_lines = [
+                        line.decode("utf-8", errors="replace")
+                        if isinstance(line, bytes)
+                        else str(line)
+                        for line in resp
+                    ]
+                except TypeError:
+                    raw_lines = [
+                        resp.read().decode("utf-8", errors="replace")
+                    ]
+                data_lines = [
+                    line.lstrip()[5:].strip()
+                    for line in raw_lines
+                    if line.lstrip().startswith("data:")
+                ]
+                if data_lines:
+                    content_parts: list[str] = []
+                    for data in data_lines:
+                        if data == "[DONE]":
+                            continue
+                        try:
+                            chunk = json.loads(data)
+                        except json.JSONDecodeError as exc:
+                            raise ValueError("nvidia_stream_invalid_response") from exc
+                        choices = chunk.get("choices") if isinstance(chunk, dict) else None
+                        if not isinstance(choices, list) or not choices:
+                            continue
+                        choice = choices[0]
+                        if not isinstance(choice, dict):
+                            raise ValueError("nvidia_stream_invalid_response")
+                        delta = choice.get("delta")
+                        if isinstance(delta, dict) and isinstance(delta.get("content"), str):
+                            content_parts.append(delta["content"])
+                        message = choice.get("message")
+                        if isinstance(message, dict) and isinstance(message.get("content"), str):
+                            content_parts.append(message["content"])
+                    content = "".join(content_parts)
+                    if not content:
+                        raise ValueError("nvidia_stream_invalid_response")
+                    return {"choices": [{"message": {"content": content}}]}
+                raw = "".join(raw_lines)
+            else:
+                raw = resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         if exc.code == 429:
             raise _NvidiaRateLimitError(
@@ -429,6 +486,7 @@ def nvidia_critic_sample_evaluator(
         raise ValueError("reasoning_effort must not be empty")
 
     api_key = _nvidia_api_key_from_env()
+    stream_enabled = _nvidia_stream_from_env()
     last_request_at: float | None = None
 
     def _eval(sample: dict[str, Any], critic_id: str) -> CriticVerdict:
@@ -452,6 +510,7 @@ def nvidia_critic_sample_evaluator(
             "temperature": 0,
             "max_tokens": resolved_max_tokens,
             "reasoning_effort": resolved_reasoning_effort,
+            "stream": stream_enabled,
         }
         headers = {
             "Authorization": (
@@ -461,7 +520,7 @@ def nvidia_critic_sample_evaluator(
             ),
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "Accept": "application/json",
+            "Accept": "text/event-stream" if stream_enabled else "application/json",
         }
         if http_post_json is _http_post_json:
             headers["Authorization"] = "".join(("Bear", "er ")) + api_key
@@ -606,6 +665,7 @@ def nvidia_batch_complexity_scorer(
         raise ValueError("reasoning_effort must not be empty")
 
     api_key = _nvidia_api_key_from_env()
+    stream_enabled = _nvidia_stream_from_env()
     model = (
         (os.environ.get("SIMULA_COMPLEXITY_MODEL") or "").strip()
         or (os.environ.get("SIMULA_NIM_MODEL") or "").strip()
@@ -651,6 +711,7 @@ def nvidia_batch_complexity_scorer(
             "temperature": 0,
             "max_tokens": resolved_max_tokens,
             "reasoning_effort": resolved_reasoning_effort,
+            "stream": stream_enabled,
         }
         headers = {
             "Authorization": (
@@ -659,7 +720,7 @@ def nvidia_batch_complexity_scorer(
                 else "******"
             ),
             "Content-Type": "application/json",
-            "Accept": "application/json",
+            "Accept": "text/event-stream" if stream_enabled else "application/json",
         }
         if http_post_json is _http_post_json:
             headers["Authorization"] = "".join(("Bear", "er ")) + api_key
