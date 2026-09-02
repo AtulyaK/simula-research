@@ -178,6 +178,7 @@ def nvidia_json_completion(
     max_tokens: int | None = None,
     min_interval_s: float | None = None,
     reasoning_effort: str | None = None,
+    request_state: dict[str, float] | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
     http_post_json: Callable[..., dict[str, Any]] = _http_post_json,
     event_log: list[dict[str, Any]] | None = None,
@@ -194,7 +195,9 @@ def nvidia_json_completion(
         model=model,
     )
     api_key = _nvidia_api_key_from_env()
-    last_request_at: float | None = None
+    last_request_at: float | None = (
+        request_state.get("last_request_at") if request_state is not None else None
+    )
     payload = {
         "model": settings["model"],
         "messages": [
@@ -220,6 +223,8 @@ def nvidia_json_completion(
             if wait_s > 0:
                 sleep_fn(wait_s)
         last_request_at = time.monotonic()
+        if request_state is not None:
+            request_state["last_request_at"] = last_request_at
         try:
             response = http_post_json(
                 url=settings["base_url"],
@@ -290,6 +295,8 @@ def nvidia_taxonomy_provider(
     if not isinstance(refinement_enabled, bool):
         raise ValueError("refinement_enabled must be a boolean")
 
+    request_state: dict[str, float] = {}
+
     def _generate(domain_objective: str, config: TaxonomyConfig | None = None) -> dict[str, Any]:
         resolved_config = config or TaxonomyConfig()
         namespace = _normalize_label(domain_objective) or "domain"
@@ -336,6 +343,7 @@ def nvidia_taxonomy_provider(
                         else "nvidia_taxonomy_proposal"
                     ),
                     event_log=event_log,
+                    request_state=request_state,
                     **completion_options,
                 )
                 for label in _labels_from_response(
@@ -361,6 +369,7 @@ def nvidia_taxonomy_provider(
                     ),
                     operation="nvidia_taxonomy_refinement",
                     event_log=event_log,
+                    request_state=request_state,
                     **completion_options,
                 )
                 proposal_labels = _labels_from_response(
@@ -429,6 +438,8 @@ def nvidia_local_diversification_provider(
 ) -> LocalDiversificationProviderFn:
     """Generate local instantiations in ordered NIM batches over compatible node groups."""
 
+    request_state: dict[str, float] = {}
+
     def _generate(
         taxonomy: dict[str, Any],
         *,
@@ -465,6 +476,7 @@ def nvidia_local_diversification_provider(
                 ),
                 operation="nvidia_local_diversification",
                 event_log=event_log,
+                request_state=request_state,
                 **completion_options,
             )
             rows = _local_rows_from_response(response, expected_count=count)
