@@ -92,6 +92,7 @@ py -3 -m simula_research.cli score-benchmark `
   --dataset-id CTI-MCQ `
   --dataset-path C:\data\cti-mcq.tsv `
   --predictions C:\data\cti-mcq-predictions.json `
+  --local-manifest artifacts\datasets\local_manifest.json `
   --dataset-size 2500 `
   --seed 0 `
   --output artifacts\datasets\cti-mcq-result.json

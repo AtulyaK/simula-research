@@ -110,6 +110,45 @@ def build_local_dataset_manifest(
     }
 
 
+def verify_local_dataset_file(
+    manifest: dict[str, Any],
+    dataset_id: str,
+    path: str | Path,
+) -> dict[str, Any]:
+    """Recheck one local file against a previously generated local manifest."""
+    validate_local_dataset_manifest(manifest)
+    if not isinstance(dataset_id, str) or not dataset_id.strip():
+        raise ValueError("dataset_id must be a non-empty string")
+    records = [
+        record for record in manifest["splits"] if record["dataset_id"] == dataset_id
+    ]
+    if len(records) != 1:
+        raise ValueError(f"local dataset manifest must contain exactly one {dataset_id!r} entry")
+    record = records[0]
+    if not record["count_matches"]:
+        raise ValueError(f"local dataset manifest count does not match for {dataset_id!r}")
+    source_path = Path(path)
+    if Path(record["local_path"]).resolve() != source_path.resolve():
+        raise ValueError(f"local dataset path does not match manifest for {dataset_id!r}")
+    split_entries = [
+        entry
+        for entry in manifest["source_split_manifest"]["splits"]
+        if entry["dataset_id"] == dataset_id
+    ]
+    if len(split_entries) != 1:
+        raise ValueError(f"split manifest must contain exactly one {dataset_id!r} entry")
+    verified = verify_local_split(
+        split_entries[0],
+        source_path,
+        observed_records=record["observed_records"],
+    )
+    if verified["sha256"] != record["sha256"]:
+        raise ValueError(f"local dataset sha256 does not match manifest for {dataset_id!r}")
+    if verified["observed_records"] != record["observed_records"]:
+        raise ValueError(f"local dataset count does not match manifest for {dataset_id!r}")
+    return record
+
+
 def validate_local_dataset_manifest(manifest: dict[str, Any]) -> None:
     """Validate a hash/count manifest produced by ``build_local_dataset_manifest``."""
     if not isinstance(manifest, dict) or manifest.get("schema_version") != "0.1.0":

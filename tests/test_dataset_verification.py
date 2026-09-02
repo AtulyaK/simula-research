@@ -9,6 +9,7 @@ from simula_research.dataset_adapters import load_split_manifest
 from simula_research.dataset_verification import (
     build_local_dataset_manifest,
     validate_local_dataset_manifest,
+    verify_local_dataset_file,
     verify_local_split,
 )
 
@@ -99,6 +100,32 @@ class DatasetVerificationTests(unittest.TestCase):
 
         self.assertTrue(manifest["all_count_matches"])
         self.assertEqual(len(manifest["splits"]), 5)
+
+    def test_verify_local_dataset_file_rejects_changed_content(self) -> None:
+        split_manifest = {
+            "schema_version": "0.1.0",
+            "manifest_id": "test-splits",
+            "splits": [
+                {
+                    "dataset_id": "tiny",
+                    "source": "https://example.test/tiny",
+                    "revision": "abc123",
+                    "source_path": "tiny.tsv",
+                    "format": "tsv",
+                    "split": "test",
+                    "expected_records": 1,
+                    "selection_status": "test",
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "tiny.tsv"
+            path.write_text("question\tanswer\nhello\tworld\n", encoding="utf-8")
+            manifest = build_local_dataset_manifest(split_manifest, {"tiny": path})
+            path.write_text("question\tanswer\nchanged\tworld\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "sha256"):
+                verify_local_dataset_file(manifest, "tiny", path)
 
 
 if __name__ == "__main__":

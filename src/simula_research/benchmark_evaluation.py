@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from simula_research.dataset_adapters import load_cti_bench_tsv, load_gsm8k_jsonl
+from simula_research.dataset_verification import verify_local_dataset_file
 from simula_research.downstream_evaluation import (
     score_exact_match_predictions,
     score_multiple_choice_predictions,
@@ -50,6 +51,7 @@ def score_local_benchmark(
     split: str,
     dataset_size: int,
     seed: int,
+    local_dataset_manifest: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Load a supported local benchmark and emit a persisted result record."""
     if not isinstance(dataset_id, str) or not dataset_id.strip():
@@ -60,6 +62,8 @@ def score_local_benchmark(
         raise ValueError("seed must be a non-negative integer")
 
     normalized_id = dataset_id.strip()
+    if local_dataset_manifest is not None:
+        verify_local_dataset_file(local_dataset_manifest, normalized_id, path)
     if normalized_id.upper() in {"CTI-MCQ", "CTI-RCM"}:
         tasks = load_cti_bench_tsv(path, dataset_id=normalized_id, split=split)
         task_type = (

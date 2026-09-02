@@ -95,6 +95,14 @@ def _run_verify_datasets(args: argparse.Namespace) -> int:
 
 
 def _run_score_benchmark(args: argparse.Namespace) -> int:
+    local_dataset_manifest = None
+    if args.local_manifest:
+        try:
+            local_dataset_manifest = json.loads(
+                Path(args.local_manifest).read_text(encoding="utf-8")
+            )
+        except json.JSONDecodeError as error:
+            raise ValueError(f"invalid local dataset manifest JSON: {args.local_manifest}") from error
     result = score_local_benchmark(
         dataset_id=args.dataset_id,
         path=args.dataset_path,
@@ -102,6 +110,7 @@ def _run_score_benchmark(args: argparse.Namespace) -> int:
         split=args.split,
         dataset_size=args.dataset_size,
         seed=args.seed,
+        local_dataset_manifest=local_dataset_manifest,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -185,6 +194,10 @@ def _build_parser() -> argparse.ArgumentParser:
     score_benchmark.add_argument("--split", default="test")
     score_benchmark.add_argument("--dataset-size", type=int, required=True)
     score_benchmark.add_argument("--seed", type=int, required=True)
+    score_benchmark.add_argument(
+        "--local-manifest",
+        help="Optional verified local dataset manifest to recheck before scoring.",
+    )
     score_benchmark.add_argument(
         "--output",
         default="artifacts/datasets/benchmark_result.json",

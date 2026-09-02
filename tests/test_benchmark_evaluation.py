@@ -9,6 +9,7 @@ from simula_research.benchmark_evaluation import (
     load_prediction_artifact,
     score_local_benchmark,
 )
+from simula_research.dataset_verification import build_local_dataset_manifest
 
 
 class BenchmarkEvaluationTests(unittest.TestCase):
@@ -77,6 +78,53 @@ class BenchmarkEvaluationTests(unittest.TestCase):
         self.assertEqual(result["task_type"], "exact_match")
         self.assertEqual(result["accuracy"], 0.0)
         self.assertEqual(result["missing_prediction_count"], 1)
+
+    def test_score_local_benchmark_can_require_verified_manifest(self) -> None:
+        split_manifest = {
+            "schema_version": "0.1.0",
+            "manifest_id": "test-splits",
+            "splits": [
+                {
+                    "dataset_id": "CTI-MCQ",
+                    "source": "https://example.test/cti",
+                    "revision": "abc123",
+                    "source_path": "cti.tsv",
+                    "format": "tsv",
+                    "split": "test",
+                    "expected_records": 1,
+                    "selection_status": "test",
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_path = root / "cti.tsv"
+            predictions_path = root / "predictions.json"
+            dataset_path.write_text(
+                "Question\tA\tB\tC\tD\tGT\n"
+                "Which choice?\tfirst\tsecond\tthird\tfourth\tB\n",
+                encoding="utf-8",
+            )
+            predictions_path.write_text(
+                json.dumps({"cti-mcq-test-000000": "B"}),
+                encoding="utf-8",
+            )
+            local_manifest = build_local_dataset_manifest(
+                split_manifest,
+                {"CTI-MCQ": dataset_path},
+            )
+
+            result = score_local_benchmark(
+                dataset_id="CTI-MCQ",
+                path=dataset_path,
+                predictions_path=predictions_path,
+                split="test",
+                dataset_size=1,
+                seed=0,
+                local_dataset_manifest=local_manifest,
+            )
+
+        self.assertEqual(result["accuracy"], 1.0)
 
 
 if __name__ == "__main__":
