@@ -125,6 +125,7 @@ NIM backend env vars:
   - `SIMULA_GENERATION_REASONING_EFFORT` (optional generation-specific reasoning setting)
   - `SIMULA_TAXONOMY_PROPOSAL_COUNT` (optional best-of-N taxonomy proposals per node)
   - `SIMULA_TAXONOMY_REFINEMENT` (`true`/`false` to enable a refinement request over proposals)
+  - `SIMULA_TAXONOMY_LEVEL_PLANNING` (`true`/`false` to plan each taxonomy depth before expansion)
   - `SIMULA_LOCAL_NODE_MIX_SIZE` (optional same-depth taxonomy-node mix size for NIM local diversification; default `1`)
 
 For direct pipeline calls, set `local_diversification_config.node_mix_size` to a

@@ -282,18 +282,33 @@ def _labels_from_response(response: Any, *, branching_factor: int) -> list[str]:
     return normalized
 
 
+def _level_plan_from_response(response: Any) -> list[str]:
+    if not isinstance(response, dict) or set(response) != {"plan"}:
+        raise ValueError("nvidia_taxonomy_level_plan_invalid_response")
+    plan = response["plan"]
+    if not isinstance(plan, list) or not plan:
+        raise ValueError("nvidia_taxonomy_level_plan_invalid_response")
+    guidance = [item.strip() for item in plan if isinstance(item, str) and item.strip()]
+    if len(guidance) != len(plan):
+        raise ValueError("nvidia_taxonomy_level_plan_invalid_response")
+    return guidance
+
+
 def nvidia_taxonomy_provider(
     *,
     event_log: list[dict[str, Any]] | None = None,
     proposal_count: int = 1,
     refinement_enabled: bool = False,
+    level_planning_enabled: bool = False,
     **completion_options: Any,
 ) -> TaxonomyProviderFn:
-    """Generate taxonomy children with optional best-of-N and refinement requests."""
+    """Generate taxonomy children with optional planning, best-of-N, and refinement."""
     if isinstance(proposal_count, bool) or not isinstance(proposal_count, int) or proposal_count <= 0:
         raise ValueError("proposal_count must be a positive integer")
     if not isinstance(refinement_enabled, bool):
         raise ValueError("refinement_enabled must be a boolean")
+    if not isinstance(level_planning_enabled, bool):
+        raise ValueError("level_planning_enabled must be a boolean")
 
     request_state: dict[str, float] = {}
 
@@ -314,12 +329,35 @@ def nvidia_taxonomy_provider(
             }
         ]
         edges: list[dict[str, str]] = []
+        level_plans: dict[int, list[str]] = {}
         queue = [nodes[0]]
         while queue:
             parent = queue.pop(0)
             depth = int(parent["depth"])
             if depth >= resolved_config.max_depth:
                 continue
+            if level_planning_enabled and depth not in level_plans:
+                response = nvidia_json_completion(
+                    system_prompt=(
+                        "Plan a taxonomy expansion level for a domain. Return only a JSON "
+                        "object with a plan array of concise guidance strings; do not explain."
+                    ),
+                    user_content=json.dumps(
+                        {
+                            "domain": domain_objective,
+                            "depth": depth,
+                            "parent_count": sum(1 for node in nodes if int(node["depth"]) == depth),
+                            "requested_children_per_parent": resolved_config.branching_factor,
+                        },
+                        sort_keys=True,
+                    ),
+                    operation="nvidia_taxonomy_level_planning",
+                    event_log=event_log,
+                    request_state=request_state,
+                    **completion_options,
+                )
+                level_plans[depth] = _level_plan_from_response(response)
+            level_plan = level_plans.get(depth, [])
             proposal_labels: list[str] = []
             for proposal_index in range(proposal_count):
                 response = nvidia_json_completion(
@@ -334,6 +372,7 @@ def nvidia_taxonomy_provider(
                             "parent_depth": depth,
                             "requested_children": resolved_config.branching_factor,
                             "proposal_index": proposal_index,
+                            "level_plan": level_plan,
                         },
                         sort_keys=True,
                     ),
@@ -364,6 +403,7 @@ def nvidia_taxonomy_provider(
                             "parent_label": parent["label"],
                             "candidate_labels": proposal_labels,
                             "requested_children": resolved_config.branching_factor,
+                            "level_plan": level_plan,
                         },
                         sort_keys=True,
                     ),
@@ -395,7 +435,7 @@ def nvidia_taxonomy_provider(
                     }
                 )
                 queue.append(child)
-        return {
+        output = {
             "domain_namespace": namespace,
             "root_taxonomy_node_id": root_id,
             "nodes": nodes,
@@ -407,8 +447,15 @@ def nvidia_taxonomy_provider(
                 "provider": "nvidia_nim",
                 "proposal_count": proposal_count,
                 "refinement_enabled": refinement_enabled,
+                "level_planning_enabled": level_planning_enabled,
             },
         }
+        if level_plans:
+            output["level_plans"] = [
+                {"depth": depth, "guidance": guidance}
+                for depth, guidance in sorted(level_plans.items())
+            ]
+        return output
 
     return _generate
 
@@ -683,6 +730,17 @@ def _taxonomy_refinement_from_env() -> bool:
     raise ValueError("SIMULA_TAXONOMY_REFINEMENT must be a boolean")
 
 
+def _taxonomy_level_planning_from_env() -> bool:
+    raw = (os.environ.get("SIMULA_TAXONOMY_LEVEL_PLANNING") or "").strip().lower()
+    if not raw:
+        return False
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError("SIMULA_TAXONOMY_LEVEL_PLANNING must be a boolean")
+
+
 def _local_node_mix_size_from_env() -> int:
     raw = (os.environ.get("SIMULA_LOCAL_NODE_MIX_SIZE") or "").strip()
     if not raw:
@@ -709,6 +767,7 @@ def generation_providers_from_env(
             event_log=event_log,
             proposal_count=_taxonomy_proposal_count_from_env(),
             refinement_enabled=_taxonomy_refinement_from_env(),
+            level_planning_enabled=_taxonomy_level_planning_from_env(),
         ),
         "local_diversification": nvidia_local_diversification_provider(
             event_log=event_log,

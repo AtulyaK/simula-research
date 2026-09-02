@@ -88,6 +88,27 @@ class GenerationProviderAdapterTests(unittest.TestCase):
         self.assertEqual(taxonomy["generation_policy"]["proposal_count"], 2)
         self.assertTrue(taxonomy["generation_policy"]["refinement_enabled"])
 
+    def test_taxonomy_provider_supports_optional_level_planning(self) -> None:
+        provider = nvidia_taxonomy_provider(
+            level_planning_enabled=True,
+            http_post_json=self._fake_transport(
+                [
+                    '{"plan":["keep factors operational and distinct"]}',
+                    '{"labels":["access control","detection"]}',
+                ]
+            ),
+            max_retries=0,
+        )
+
+        taxonomy = provider("cyber security", TaxonomyConfig(max_depth=1, branching_factor=2))
+
+        validate_taxonomy_output(taxonomy)
+        self.assertTrue(taxonomy["generation_policy"]["level_planning_enabled"])
+        self.assertEqual(
+            taxonomy["level_plans"],
+            [{"depth": 0, "guidance": ["keep factors operational and distinct"]}],
+        )
+
     def test_local_provider_builds_lineage_and_rejects_duplicate_text(self) -> None:
         taxonomy = default_taxonomy_provider("security", TaxonomyConfig(max_depth=0, branching_factor=1))
         provider = nvidia_local_diversification_provider(
