@@ -33,8 +33,11 @@ but only B0 is the reference run and A1-A5 are documented validation
 ablations. A live NIM/Kimi batch judge is now connected to the BS/N Elo
 scheduler, with deterministic replay coverage, and a configurable remote
 embedding seam now fronts the deterministic diversity fallback. The next
-high-value slices are validating a supported embedding deployment, remaining
-dataset adapters, and a downstream evaluation seam.
+high-value slices are validating a supported embedding deployment, executing
+the pinned benchmark preparation flow, and implementing downstream training and
+inference behind the persisted evaluation plan. Opt-in NIM/Kimi providers now
+cover Stages 1-3 with strict JSON responses while deterministic defaults remain
+bit-identical.
 
 ### Research engineering + deterministic validation — **closed**
 

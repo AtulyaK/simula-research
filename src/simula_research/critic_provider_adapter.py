@@ -112,6 +112,10 @@ def provider_runtime_from_env() -> dict[str, Any]:
     """Structured provider/runtime metadata for manifests (no secrets; env names only as strings)."""
     _load_dotenv()
     backend = _critic_backend_from_env()
+    generation_backend = (
+        (os.environ.get("SIMULA_GENERATION_BACKEND") or "").strip()
+        or "hash_default"
+    )
     embedding_backend = (
         (os.environ.get("SIMULA_EMBEDDING_BACKEND") or "").strip()
         or "hash_default"
@@ -119,6 +123,7 @@ def provider_runtime_from_env() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "source": "environment",
         "critic_backend": backend,
+        "generation_backend": generation_backend,
         "complexity_backend": (
             (os.environ.get("SIMULA_COMPLEXITY_BACKEND") or "").strip()
             or backend
@@ -184,6 +189,31 @@ def provider_runtime_from_env() -> dict[str, Any]:
             "input_type": (
                 (os.environ.get("SIMULA_EMBEDDING_INPUT_TYPE") or "").strip()
                 or "passage"
+            ),
+        }
+    if generation_backend.lower() in {"nim", "nvidia"}:
+        payload["nim_generation"] = {
+            "base_url": (
+                (os.environ.get("SIMULA_GENERATION_BASE_URL") or "").strip()
+                or (os.environ.get("SIMULA_NIM_BASE_URL") or "").strip()
+                or "https://integrate.api.nvidia.com/v1/chat/completions"
+            ),
+            "model": (
+                (os.environ.get("SIMULA_GENERATION_MODEL") or "").strip()
+                or (os.environ.get("SIMULA_NIM_MODEL") or "").strip()
+                or "moonshotai/kimi-k3"
+            ),
+            "max_tokens": (
+                _parse_positive_int(
+                    "SIMULA_GENERATION_MAX_TOKENS",
+                    os.environ["SIMULA_GENERATION_MAX_TOKENS"],
+                )
+                if os.environ.get("SIMULA_GENERATION_MAX_TOKENS")
+                else _nvidia_max_tokens_from_env()
+            ),
+            "reasoning_effort": (
+                (os.environ.get("SIMULA_GENERATION_REASONING_EFFORT") or "").strip()
+                or _nvidia_reasoning_effort_from_env()
             ),
         }
     return payload

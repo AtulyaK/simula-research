@@ -15,6 +15,7 @@ from simula_research.evaluation_metrics import (
     compute_quality_metrics,
 )
 from simula_research.embedding_provider_adapter import embedding_provider_from_env
+from simula_research.generation_provider_adapter import generation_providers_from_env
 from simula_research.complexity_judgments import (
     COMPLEXITY_JUDGMENT_DEFAULTS,
     build_elo_comparisons,
@@ -326,12 +327,18 @@ def execute_issue7_matrix(
         provider_runtime = provider_runtime_from_env()
         backend = str(provider_runtime.get("critic_backend", "")).strip().lower()
         embedding_backend = str(provider_runtime.get("embedding_backend", "")).strip().lower()
+        generation_backend = str(provider_runtime.get("generation_backend", "")).strip().lower()
         provider_event_log: list[dict[str, Any]] | None = (
             []
-            if backend in {"nim", "nvidia"} or embedding_backend in {"nim", "nvidia"}
+            if (
+                backend in {"nim", "nvidia"}
+                or embedding_backend in {"nim", "nvidia"}
+                or generation_backend in {"nim", "nvidia"}
+            )
             else None
         )
         critic_sample_evaluator = critic_sample_evaluator_from_env(event_log=provider_event_log)
+        generation_providers = generation_providers_from_env(event_log=provider_event_log)
         resolved_batch_complexity_provider = (
             batch_complexity_judgment_provider
             if batch_complexity_judgment_provider is not None
@@ -365,6 +372,21 @@ def execute_issue7_matrix(
             "provider_runtime": provider_runtime,
             "provider_event_log": provider_event_log,
             "critic_sample_evaluator": critic_sample_evaluator,
+            "taxonomy_provider": (
+                generation_providers.get("taxonomy")
+                if generation_providers is not None
+                else None
+            ),
+            "local_diversification_provider": (
+                generation_providers.get("local_diversification")
+                if generation_providers is not None
+                else None
+            ),
+            "complexification_provider": (
+                generation_providers.get("complexification")
+                if generation_providers is not None
+                else None
+            ),
             "complexity_judgment_provider": complexity_judgment_provider,
             "batch_complexity_judgment_provider": resolved_batch_complexity_provider,
             "complexity_judgment_config": complexity_judgment_config,

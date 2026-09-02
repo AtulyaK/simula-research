@@ -16,9 +16,9 @@ Primary reference: [`research_paper.pdf`](./research_paper.pdf), titled
 | Paper claim or protocol | Status | Repository evidence or gap |
 | --- | --- | --- |
 | Simula treats coverage, complexity, and quality as independent axes. | Replicated | ADR 0002, explicit Stage 1-4 boundaries, and per-axis reports in `src/simula_research/evaluation_metrics.py`. |
-| Taxonomies expose factors of variation and provide actionable coverage control (Sec. 2.1). | Approximated | `taxonomy.py` persists a stable hierarchical taxonomy and coverage reports consume its eligible nodes. Factor discovery and human/LLM acceptance are not implemented. |
-| Taxonomy expansion alternates best-of-N proposals, critic refinement, and optional per-level planning (Sec. 2.1, App. B.4). | Missing | Current taxonomy generation is deterministic and handcrafted; no proposal pool, critic refinement, or planning provider is wired. |
-| Agentic synthesis samples compatible node mixes, generates multiple scenarios, complexifies a fraction, then performs generation and critic refinement (Sec. 2.2, App. C). | Approximated | Stages and lineage exist, but local diversification and complexification are deterministic text transforms and Stage 4 does not regenerate through an LLM refinement loop. |
+| Taxonomies expose factors of variation and provide actionable coverage control (Sec. 2.1). | Approximated | `taxonomy.py` persists a stable hierarchical taxonomy and coverage reports consume its eligible nodes. Opt-in `SIMULA_GENERATION_BACKEND=nim` now supports provider-generated child labels with the same lineage contract; human/LLM acceptance and paper-scale evidence remain incomplete. |
+| Taxonomy expansion alternates best-of-N proposals, critic refinement, and optional per-level planning (Sec. 2.1, App. B.4). | Approximated | Opt-in NIM taxonomy expansion is now wired one node at a time with strict JSON validation, but best-of-N proposal pools, critic refinement, and per-level planning are not yet implemented. |
+| Agentic synthesis samples compatible node mixes, generates multiple scenarios, complexifies a fraction, then performs generation and critic refinement (Sec. 2.2, App. C). | Approximated | Stages and lineage exist; opt-in NIM providers now generate local scenarios and complexified text with strict ordered responses, while compatible node mixing, regeneration refinement, and paper-scale live evidence remain incomplete. |
 | Paper system versions compare Baseline, Local, Global, Local + Global, and Full System (Table 1). | Approximated | The executable matrix now includes B0 plus A1-A5. B0 is the full reference; A1/A2 approximate removal of global/local controls; A3/A4/A5 are validation ablations and are not a one-to-one reproduction of Table 1. |
 | Paper datasets include CTI-MCQ, CTI-RCM, LEXam, GSM8k, and selected Global MMLU subsets (Sec. 3.2). | Approximated | `configs/paper_dataset_splits.json` now pins candidate source revisions, split names, formats, and expected counts for all five datasets. Standard-library adapters cover CTIBench TSV rows plus record-level LEXam and Global MMLU MCQ conversion; GSM8k JSONL remains supported. Data acquisition, license review, parquet loading, and exact paper-selected Global MMLU subset confirmation remain incomplete. |
 | Generated data is deduplicated and decontaminated against test sets using 13-gram Jaccard threshold 0.8 (Sec. 3.2). | Approximated | Deterministic duplicate removal and 13-gram Jaccard filtering are available as an opt-in pipeline step with persisted reports; full paper dataset splits and benchmark execution remain incomplete. |
@@ -59,8 +59,9 @@ system-version reproduction is required.
    MMLU subset.
 4. Implement downstream training/inference behind the persisted plan; execute
    real training only when compute and model access are available.
-5. Replace deterministic Stage 1-3 stand-ins with provider-backed protocol
-   implementations and retain deterministic replay fixtures for tests.
+5. Extend provider-backed Stage 1-3 generation toward best-of-N, planning,
+   compatible node mixing, and refinement while retaining deterministic replay
+   fixtures for tests.
 
 ## Paper Alignment Check
 

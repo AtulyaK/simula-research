@@ -38,6 +38,12 @@ from simula_research.downstream_evaluation import (
     score_multiple_choice_predictions,
     validate_downstream_evaluation_plan,
 )
+from simula_research.generation_provider_adapter import (
+    generation_providers_from_env,
+    nvidia_complexification_provider,
+    nvidia_local_diversification_provider,
+    nvidia_taxonomy_provider,
+)
 
 __all__ = [
     "run_pipeline",
@@ -63,6 +69,10 @@ __all__ = [
     "score_multiple_choice_predictions",
     "score_exact_match_predictions",
     "aggregate_seed_accuracies",
+    "nvidia_taxonomy_provider",
+    "nvidia_local_diversification_provider",
+    "nvidia_complexification_provider",
+    "generation_providers_from_env",
     "ngram_jaccard_similarity",
     "deduplicate_and_decontaminate",
     "prepare_complexity_batch_schedule",

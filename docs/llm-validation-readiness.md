@@ -39,6 +39,7 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
 - **Embedding wiring:** `embedding_provider_from_env()` is explicitly opt-in through `SIMULA_EMBEDDING_BACKEND=nim`/`nvidia`; otherwise diversity metrics retain the deterministic hash fallback. The remote adapter accepts an OpenAI-compatible embeddings response, records the configured model name in diversity metrics, and fails closed with sanitized events. Matrix execution auto-selects it only when explicitly configured.
 - **Fixed benchmark splits:** `configs/paper_dataset_splits.json` pins candidate source revisions, formats, split names, and expected record counts for CTI-MCQ, CTI-RCM, LEXam, GSM8k, and the provisional English Global MMLU subset. `dataset_adapters.py` provides standard-library CTIBench TSV loading plus record-level adapters for the multiple-choice datasets; parquet acquisition/loading remains an explicit operator concern.
 - **Downstream evaluation plan:** `build_paper_downstream_evaluation_plan()` records the pinned split manifest, Gemma 3 4B student, Gemini 2.5 Flash teacher, LoRA configuration, ten seeds, and explicit dataset-size scaling points. Passing that plan to `run_pipeline(..., downstream_evaluation_plan=...)` persists it in both the run configuration and the evaluation handoff; actual training and inference are still pending.
+- **Provider-backed Stages 1–3:** `SIMULA_GENERATION_BACKEND=nim` opt-in wires Kimi/NIM JSON generation into taxonomy expansion, local diversification, and complexification. Responses are strict, ordered JSON, stage contracts remain enforced, and deterministic providers remain the default. Generation provider failures are surfaced and recorded in the existing sanitized provider event log.
 - Stages 1–3 remain deterministic in-repo logic by default (Phase 2 of this guide).
 
 ### Issue #7 matrix
@@ -112,6 +113,11 @@ NIM backend env vars:
   - `SIMULA_EMBEDDING_BASE_URL` (or `SIMULA_NIM_EMBEDDING_BASE_URL`)
   - `SIMULA_EMBEDDING_MODEL` (default `nvidia/nv-embedqa-e5-v5`)
   - `SIMULA_EMBEDDING_INPUT_TYPE` (default `passage`)
+  - `SIMULA_GENERATION_BACKEND` (`nim`/`nvidia` to enable provider-backed Stages 1–3)
+  - `SIMULA_GENERATION_MODEL` (defaults to the configured NIM/Kimi model)
+  - `SIMULA_GENERATION_BASE_URL` (optional generation endpoint override)
+  - `SIMULA_GENERATION_MAX_TOKENS` (optional generation-specific response budget)
+  - `SIMULA_GENERATION_REASONING_EFFORT` (optional generation-specific reasoning setting)
 
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does
