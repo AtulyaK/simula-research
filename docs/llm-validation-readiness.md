@@ -115,7 +115,7 @@ NIM backend env vars:
   - `SIMULA_COMPLEXITY_REPLAY_JSON` (required for complexity replay)
   - `SIMULA_EMBEDDING_BACKEND` (`nim`/`nvidia` to enable remote embeddings)
   - `SIMULA_EMBEDDING_BASE_URL` (or `SIMULA_NIM_EMBEDDING_BASE_URL`)
-  - `SIMULA_EMBEDDING_MODEL` (default `nvidia/nv-embedqa-e5-v5`)
+  - `SIMULA_EMBEDDING_MODEL` (default `nvidia/nemotron-3-embed-1b`)
   - `SIMULA_EMBEDDING_INPUT_TYPE` (default `passage`)
   - `SIMULA_GENERATION_BACKEND` (`nim`/`nvidia` to enable provider-backed Stages 1–3)
   - `SIMULA_GENERATION_MODEL` (defaults to the configured NIM/Kimi model)
@@ -132,6 +132,13 @@ depth into compatible mixes and persist the selected node IDs in each
 instantiation's lineage. This is an executable approximation of the paper's
 compatible-node sampler, not evidence of the paper's learned compatibility
 distribution.
+
+The hosted NVIDIA model catalog currently exposes
+`nvidia/nemotron-3-embed-1b` for text embeddings; a bounded live probe returned
+2048-dimensional vectors. The older `nvidia/nv-embedqa-e5-v5` hosted route
+returned HTTP 410 in this environment, so it is no longer the default. This
+establishes remote embedding connectivity, not paper-equivalent embedding
+evidence.
 
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does

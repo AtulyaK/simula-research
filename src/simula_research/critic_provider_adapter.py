@@ -184,7 +184,7 @@ def provider_runtime_from_env() -> dict[str, Any]:
             "model": (
                 (os.environ.get("SIMULA_EMBEDDING_MODEL") or "").strip()
                 or (os.environ.get("SIMULA_NIM_EMBEDDING_MODEL") or "").strip()
-                or "nvidia/nv-embedqa-e5-v5"
+                or "nvidia/nemotron-3-embed-1b"
             ),
             "input_type": (
                 (os.environ.get("SIMULA_EMBEDDING_INPUT_TYPE") or "").strip()

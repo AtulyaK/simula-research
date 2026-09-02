@@ -23,7 +23,7 @@ from simula_research.critic_provider_adapter import (
 from simula_research.evaluation_metrics import EmbeddingProviderFn
 
 _NIM_DEFAULT_EMBEDDING_URL = _NIM_DEFAULT_BASE_URL.rsplit("/", 2)[0] + "/embeddings"
-_NIM_DEFAULT_EMBEDDING_MODEL = "nvidia/nv-embedqa-e5-v5"
+_NIM_DEFAULT_EMBEDDING_MODEL = "nvidia/nemotron-3-embed-1b"
 
 
 class _NvidiaEmbeddingHTTPError(RuntimeError):
@@ -107,6 +107,7 @@ def nvidia_embedding_provider(
             "model": resolved_model,
             "input": [str(text) for text in texts],
             "input_type": resolved_input_type,
+            "modality": "text",
         }
         headers = {
             "Authorization": "******",

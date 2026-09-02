@@ -50,6 +50,7 @@ class EmbeddingProviderAdapterTests(unittest.TestCase):
             self.assertEqual(metrics["embedding_provider"], "nim:embedding-model")
             self.assertEqual(captured["model"], "embedding-model")
             self.assertEqual(captured["input_type"], "passage")
+            self.assertEqual(captured["modality"], "text")
             self.assertEqual(getattr(provider, "__simula_embedding_provider_name__"), "nim:embedding-model")
         finally:
             for key, value in old.items():
