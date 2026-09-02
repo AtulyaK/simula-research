@@ -1,7 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+from hashlib import sha256
+from math import isfinite, sqrt
 from statistics import median
 from typing import Any
+
+DEFAULT_DIVERSITY_LOCAL_K = 10
+DEFAULT_EMBEDDING_DIMENSION = 128
+
+EmbeddingProviderFn = Callable[[list[str]], Sequence[Sequence[float]]]
 
 DEFAULT_THRESHOLDS = {
     "node_coverage_ratio": 0.80,
@@ -43,6 +51,128 @@ def _gini(values: list[int]) -> float:
     for index, value in enumerate(sorted_values, start=1):
         weighted_sum += index * value
     return (2 * weighted_sum) / (length * total) - (length + 1) / length
+
+
+def deterministic_hash_embedding_provider(
+    texts: list[str],
+    *,
+    dimension: int = DEFAULT_EMBEDDING_DIMENSION,
+) -> list[list[float]]:
+    """Create stable, dependency-free embeddings for offline metric replay."""
+    if isinstance(dimension, bool) or not isinstance(dimension, int) or dimension <= 0:
+        raise ValueError("embedding dimension must be a positive integer")
+
+    embeddings: list[list[float]] = []
+    for text in texts:
+        vector = [0.0] * dimension
+        tokens = str(text).lower().split()
+        for token_index, token in enumerate(tokens):
+            digest = sha256(f"{token_index}:{token}".encode("utf-8")).digest()
+            bucket = int.from_bytes(digest[:4], "big") % dimension
+            sign = 1.0 if digest[4] & 1 else -1.0
+            vector[bucket] += sign
+        embeddings.append(vector)
+    return embeddings
+
+
+def _cosine_distance(left: Sequence[float], right: Sequence[float]) -> float:
+    dot_product = sum(left_value * right_value for left_value, right_value in zip(left, right))
+    left_norm = sqrt(sum(value * value for value in left))
+    right_norm = sqrt(sum(value * value for value in right))
+    if left_norm == 0.0 or right_norm == 0.0:
+        return 0.0 if left_norm == right_norm else 1.0
+    return max(0.0, min(2.0, 1.0 - dot_product / (left_norm * right_norm)))
+
+
+def compute_intrinsic_diversity_metrics(
+    samples: list[dict[str, Any]],
+    *,
+    embedding_provider: EmbeddingProviderFn | None = None,
+    local_k: int = DEFAULT_DIVERSITY_LOCAL_K,
+) -> dict[str, Any]:
+    """Compute paper-style global and local embedding diversity distances."""
+    if isinstance(local_k, bool) or not isinstance(local_k, int) or local_k <= 0:
+        raise ValueError("local_k must be a positive integer")
+    if not samples:
+        return {
+            "sample_count": 0,
+            "embedding_provider": "hash_sha256_v1"
+            if embedding_provider is None
+            else "custom",
+            "embedding_dimension": None,
+            "global_pairwise_cosine_distance": None,
+            "local_knn_cosine_distance": None,
+            "local_k": local_k,
+            "effective_local_neighbor_count": 0,
+            "evaluation_status": "not_evaluable",
+            "not_evaluable_reason": "missing_samples",
+        }
+
+    texts = [str(sample.get("text", "")) for sample in samples]
+    provider = embedding_provider or deterministic_hash_embedding_provider
+    raw_embeddings = provider(texts)
+    if not isinstance(raw_embeddings, Sequence) or isinstance(raw_embeddings, (str, bytes)):
+        raise ValueError("embedding provider must return a sequence of vectors")
+    if len(raw_embeddings) != len(texts):
+        raise ValueError("embedding provider must return one vector per sample")
+
+    embeddings: list[list[float]] = []
+    dimension: int | None = None
+    for embedding in raw_embeddings:
+        if not isinstance(embedding, Sequence) or isinstance(embedding, (str, bytes)):
+            raise ValueError("embedding provider vectors must be sequences")
+        vector = [float(value) for value in embedding]
+        if not vector:
+            raise ValueError("embedding provider vectors must not be empty")
+        if dimension is None:
+            dimension = len(vector)
+        elif len(vector) != dimension:
+            raise ValueError("embedding provider vectors must have equal dimensions")
+        if not all(isfinite(value) for value in vector):
+            raise ValueError("embedding provider vectors must contain finite numbers")
+        embeddings.append(vector)
+
+    pairwise_distances = [
+        _cosine_distance(embeddings[left_index], embeddings[right_index])
+        for left_index in range(len(embeddings))
+        for right_index in range(left_index + 1, len(embeddings))
+    ]
+    local_distances: list[float] = []
+    effective_neighbor_counts: list[int] = []
+    for index, embedding in enumerate(embeddings):
+        neighbor_distances = sorted(
+            _cosine_distance(embedding, other)
+            for neighbor_index, other in enumerate(embeddings)
+            if neighbor_index != index
+        )
+        neighbor_count = min(local_k, len(neighbor_distances))
+        if neighbor_count:
+            local_distances.append(sum(neighbor_distances[:neighbor_count]) / neighbor_count)
+            effective_neighbor_counts.append(neighbor_count)
+
+    return {
+        "sample_count": len(samples),
+        "embedding_provider": "hash_sha256_v1" if embedding_provider is None else "custom",
+        "embedding_dimension": dimension,
+        "global_pairwise_cosine_distance": (
+            sum(pairwise_distances) / len(pairwise_distances)
+            if pairwise_distances
+            else 0.0
+        ),
+        "global_pairwise_comparison_count": len(pairwise_distances),
+        "local_knn_cosine_distance": (
+            sum(local_distances) / len(local_distances)
+            if local_distances
+            else None
+        ),
+        "local_k": local_k,
+        "effective_local_neighbor_count": (
+            sum(effective_neighbor_counts) / len(effective_neighbor_counts)
+            if effective_neighbor_counts
+            else 0
+        ),
+        "evaluation_status": "evaluated",
+    }
 
 
 def compute_coverage_metrics(

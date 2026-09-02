@@ -8,6 +8,7 @@ from simula_research.evaluation_metrics import (
     build_gate_report,
     compute_complexity_metrics,
     compute_coverage_metrics,
+    compute_intrinsic_diversity_metrics,
     compute_quality_metrics,
 )
 
@@ -18,6 +19,7 @@ __all__ = [
     "validate_artifact_tree",
     "compute_coverage_metrics",
     "compute_complexity_metrics",
+    "compute_intrinsic_diversity_metrics",
     "compute_quality_metrics",
     "build_gate_report",
 ]

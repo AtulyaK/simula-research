@@ -63,9 +63,19 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             comparison_tables = json.loads(comparison_tables_path.read_text(encoding="utf-8"))
             self.assertEqual(
                 set(comparison_tables.keys()),
-                {"coverage_comparison", "complexity_comparison", "quality_comparison", "gate_comparison"},
+                {
+                    "coverage_comparison",
+                    "diversity_comparison",
+                    "complexity_comparison",
+                    "quality_comparison",
+                    "gate_comparison",
+                },
             )
             self.assertEqual(len(comparison_tables["coverage_comparison"]), 6)
+            self.assertEqual(len(comparison_tables["diversity_comparison"]), 6)
+            self.assertIn("diversity_evidence", json.loads(
+                Path(run_reports["B0"]["artifacts"]["run_report"]).read_text(encoding="utf-8")
+            ))
 
     def test_a5_persists_reduced_critic_strictness_policy(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

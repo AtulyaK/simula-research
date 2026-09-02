@@ -22,7 +22,7 @@ Primary reference: [`research_paper.pdf`](./research_paper.pdf), titled
 | Paper system versions compare Baseline, Local, Global, Local + Global, and Full System (Table 1). | Approximated | The executable matrix now includes B0 plus A1-A5. B0 is the full reference; A1/A2 approximate removal of global/local controls; A3/A4/A5 are validation ablations and are not a one-to-one reproduction of Table 1. |
 | Paper datasets include CTI-MCQ, CTI-RCM, LEXam, GSM8k, and selected Global MMLU subsets (Sec. 3.2). | Missing | The repository currently runs one `pilot-domain` objective with synthetic fixture data. Dataset adapters, licenses, downloads, and fixed task schemas are not present. |
 | Generated data is deduplicated and decontaminated against test sets using 13-gram Jaccard threshold 0.8 (Sec. 3.2). | Missing | No persisted n-gram decontamination stage or report exists. |
-| Intrinsic diversity uses embedding cosine distance globally and over k=10 nearest-neighbor groups; taxonomy assignment reports coverage (Sec. 3.3). | Approximated | Taxonomy coverage is implemented. Embedding generation, global pairwise distance, local nearest-neighbor distance, and assignment-backed coverage are not yet implemented. |
+| Intrinsic diversity uses embedding cosine distance globally and over k=10 nearest-neighbor groups; taxonomy assignment reports coverage (Sec. 3.3). | Approximated | Taxonomy coverage plus persisted global pairwise and local k-nearest-neighbor distance reports are implemented. Offline reports use deterministic `hash_sha256_v1` embeddings; paper-scale model embeddings and assignment-backed evaluation remain incomplete. |
 | Complexity uses repeated batch-wise judgments and Elo calibration; BS=N=5 is the reported practical setting (Sec. 2.3, App. E). | Approximated | Pairwise judgments are injectable, validated, persisted, and gated by minimum comparisons. Reports now compute deterministic Elo ratings, but the provider seam does not yet schedule cross-item batches or reproduce the paper's BS=N=5 scoring loop. |
 | Double-critic rejection sampling improves correctness and tracks rejection/accuracy effects (Sec. 3.1, App. D). | Approximated | Dual-critic decisions, agreement, rejection, and regeneration artifacts exist. Controlled corruption, benchmark correctness, and empirical accuracy lift are not implemented. |
 | Downstream evaluation uses Gemma 3 4B students, Gemini 2.5 Flash teacher data, LoRA, ten seeds, and dataset-size scaling (Sec. 3.4, App. F.1). | Missing | No training, benchmark adapter, split policy, or downstream result artifact exists. |
@@ -50,8 +50,8 @@ system-version reproduction is required.
 ## Priority order
 
 1. Implement fixed-protocol Elo calibration from persisted batch judgments.
-2. Add deterministic embedding-compatible intrinsic diversity metrics and
-   preserve the existing taxonomy coverage output.
+2. Replace the deterministic embedding fallback with a paper-compatible model
+   embedding provider and preserve the existing taxonomy coverage output.
 3. Add dataset/task adapters and decontamination artifacts for one paper
    dataset before attempting all five.
 4. Add a downstream evaluation seam with persisted split, training, seed, and
@@ -65,4 +65,4 @@ system-version reproduction is required.
 - **Traceability/Auditability:** every current matrix run persists resolved configuration, lineage, stage artifacts, and integrity hashes; this matrix records the remaining evidence gaps explicitly.
 - **Protocol/Comparability:** frozen comparability fields and ADR 0003 metric semantics remain unchanged. A2, A3, and A5 are documented ablations; they must not be interpreted as the paper's exact Table 1 labels.
 - **Control-Axis Impact:** A1 targets coverage, A2 local diversity, A3 complexity, and A4/A5 quality policy independently; reporting continues to expose all three axes.
-- **Deviation Log:** actual LLM-driven taxonomy/synthesis, paper datasets, embedding metrics, Elo calibration, decontamination, and downstream training remain incomplete.
+- **Deviation Log:** actual LLM-driven taxonomy/synthesis, paper datasets, paper-compatible embedding models, batch Elo scheduling, decontamination, and downstream training remain incomplete; deterministic diversity and pairwise Elo diagnostics are now persisted.

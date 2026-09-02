@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from simula_research.evaluation_metrics import (
+    EmbeddingProviderFn,
     build_gate_report,
     compute_complexity_metrics,
     compute_coverage_metrics,
+    compute_intrinsic_diversity_metrics,
     compute_quality_metrics,
 )
 from simula_research.complexity_judgments import (
@@ -285,6 +287,8 @@ def execute_issue7_matrix(
     per_node_instantiation_count: int | None = None,
     complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
     complexity_judgment_config: dict[str, int] | None = None,
+    embedding_provider: EmbeddingProviderFn | None = None,
+    diversity_local_k: int = 10,
 ) -> dict[str, Any]:
     if per_node_instantiation_count is not None and (
         isinstance(per_node_instantiation_count, bool)
@@ -382,6 +386,11 @@ def execute_issue7_matrix(
             stage3_samples=stage3_samples,
             taxonomy_nodes=taxonomy_nodes,
         )
+        diversity = compute_intrinsic_diversity_metrics(
+            accepted_samples,
+            embedding_provider=embedding_provider,
+            local_k=diversity_local_k,
+        )
 
         decisions_by_instantiation_id = {
             str(decision["instantiation_id"]): decision for decision in stage4_decisions
@@ -440,6 +449,12 @@ def execute_issue7_matrix(
                     "_on_disagreement"
                 ),
             },
+            "intrinsic_diversity_protocol": {
+                "embedding_provider": diversity["embedding_provider"],
+                "embedding_dimension": diversity["embedding_dimension"],
+                "local_k": diversity["local_k"],
+                "evaluation_status": diversity["evaluation_status"],
+            },
             "artifact_schema_version": persisted_manifest["artifact_schema_version"],
             **request["manifest_metadata"],
         }
@@ -485,6 +500,7 @@ def execute_issue7_matrix(
             "run_identity": run_identity,
             "protocol": protocol,
             "coverage_evidence": coverage,
+            "diversity_evidence": diversity,
             "complexity_evidence": complexity,
             "quality_evidence": quality,
             "gate_summary": gate_report["gate_decision"],
@@ -498,6 +514,7 @@ def execute_issue7_matrix(
             "run_identity": run_identity,
             "protocol": protocol,
             "coverage": coverage,
+            "diversity": diversity,
             "complexity": complexity,
             "quality": quality,
             "gate_report": gate_report,
@@ -534,6 +551,19 @@ def execute_issue7_matrix(
                 "acceptance_rate": run_reports[preset_id]["quality"]["acceptance_rate"],
                 "critic_agreement": run_reports[preset_id]["quality"]["critic_agreement"],
                 "regen_burden": run_reports[preset_id]["quality"]["regen_burden"],
+            }
+            for preset_id in PRESET_IDS
+        ],
+        "diversity_comparison": [
+            {
+                "preset_id": preset_id,
+                "sample_count": run_reports[preset_id]["diversity"]["sample_count"],
+                "global_pairwise_cosine_distance": run_reports[preset_id]["diversity"][
+                    "global_pairwise_cosine_distance"
+                ],
+                "local_knn_cosine_distance": run_reports[preset_id]["diversity"][
+                    "local_knn_cosine_distance"
+                ],
             }
             for preset_id in PRESET_IDS
         ],

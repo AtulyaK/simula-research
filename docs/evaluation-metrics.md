@@ -5,6 +5,7 @@
 Define how validation runs are scored and compared for Simula-style dataset generation. Metrics are organized by the three control axes:
 
 - coverage
+- diversity
 - complexity
 - quality
 
@@ -101,6 +102,20 @@ complexified sample and its source counterpart. Comparisons are persisted in
 `not_evaluable` until every complexified sample meets the protocol's minimum
 comparison count.
 
+## Diversity metrics
+
+Intrinsic diversity uses embedding cosine distance over accepted samples:
+
+- `global_pairwise_cosine_distance`: mean distance across every unique sample pair.
+- `local_knn_cosine_distance`: mean distance to each sample's nearest `k`
+  neighbors, with `k=10` by default (or all available neighbors for smaller
+  runs).
+
+The metric accepts an embedding provider for real model embeddings. Offline
+runs use the deterministic `hash_sha256_v1` provider and must be labeled with
+that protocol metadata; these values are replay-compatible diagnostics, not
+paper-scale embedding evidence.
+
 ## Quality metrics
 
 ### 1) Dual-critic acceptance rate
@@ -130,6 +145,7 @@ High values indicate quality gate inefficiency.
 Primary gate is not a single scalar metric. Use a gate table:
 
 - Coverage: `node_coverage_ratio`, `depth_coverage_profile`, `coverage_balance`
+- Diversity: global pairwise and local k-nearest-neighbor cosine distance
 - Complexity: calibrated score distribution and `complexity_shift`
 - Quality: `acceptance_rate`, `critic_agreement`, `regen_burden`
 
