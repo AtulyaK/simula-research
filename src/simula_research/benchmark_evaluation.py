@@ -6,7 +6,11 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-from simula_research.dataset_adapters import load_cti_bench_tsv, load_gsm8k_jsonl
+from simula_research.dataset_adapters import (
+    load_cti_bench_tsv,
+    load_global_mmlu_jsonl,
+    load_gsm8k_jsonl,
+)
 from simula_research.dataset_verification import verify_local_dataset_file
 from simula_research.downstream_evaluation import (
     score_exact_match_predictions,
@@ -21,6 +25,8 @@ def _load_local_tasks(
     path: str | Path,
     split: str,
     local_dataset_manifest: dict[str, Any] | None,
+    global_mmlu_config: str | None,
+    global_mmlu_selection: dict[str, Any] | None,
 ) -> tuple[list[dict[str, Any]], str]:
     normalized_id = dataset_id.strip()
     if local_dataset_manifest is not None:
@@ -34,6 +40,19 @@ def _load_local_tasks(
         )
     if normalized_id.casefold() == "gsm8k":
         return load_gsm8k_jsonl(path, split=split), "exact_match"
+    if normalized_id.casefold() == "global-mmlu":
+        config = (global_mmlu_config or "").strip()
+        if not config:
+            raise ValueError("Global-MMLU local loading requires --global-mmlu-config")
+        return (
+            load_global_mmlu_jsonl(
+                path,
+                config=config,
+                split=split,
+                selection=global_mmlu_selection,
+            ),
+            "multiple_choice",
+        )
     raise ValueError(
         f"unsupported local benchmark {normalized_id!r}; "
         "parquet-backed benchmarks require an optional reader"
@@ -122,6 +141,8 @@ def score_local_benchmark(
     dataset_size: int,
     seed: int,
     local_dataset_manifest: dict[str, Any] | None = None,
+    global_mmlu_config: str | None = None,
+    global_mmlu_selection: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Load a supported local benchmark and emit a persisted result record."""
     if not isinstance(dataset_id, str) or not dataset_id.strip():
@@ -137,6 +158,8 @@ def score_local_benchmark(
         path=path,
         split=split,
         local_dataset_manifest=local_dataset_manifest,
+        global_mmlu_config=global_mmlu_config,
+        global_mmlu_selection=global_mmlu_selection,
     )
 
     predictions = load_prediction_artifact(predictions_path)
@@ -145,7 +168,7 @@ def score_local_benchmark(
         if task_type == "multiple_choice"
         else score_exact_match_predictions(tasks, predictions)
     )
-    return {
+    result = {
         "schema_version": "0.1.0",
         "dataset_id": normalized_id,
         "split": split,
@@ -158,6 +181,13 @@ def score_local_benchmark(
         "missing_prediction_count": score["missing_prediction_count"],
         "score": score,
     }
+    if global_mmlu_selection is not None:
+        result["selection"] = {
+            "selection_id": global_mmlu_selection["selection_id"],
+            "revision": global_mmlu_selection["revision"],
+            "config": (global_mmlu_config or "").strip(),
+        }
+    return result
 
 
 def predict_local_benchmark(
@@ -169,6 +199,8 @@ def predict_local_benchmark(
     seed: int,
     model: str | None = None,
     local_dataset_manifest: dict[str, Any] | None = None,
+    global_mmlu_config: str | None = None,
+    global_mmlu_selection: dict[str, Any] | None = None,
     completion: Callable[..., Any] = nvidia_json_completion,
 ) -> dict[str, Any]:
     """Generate a model-labeled prediction artifact for a supported local benchmark."""
@@ -182,6 +214,8 @@ def predict_local_benchmark(
         path=path,
         split=split,
         local_dataset_manifest=local_dataset_manifest,
+        global_mmlu_config=global_mmlu_config,
+        global_mmlu_selection=global_mmlu_selection,
     )
     event_log: list[dict[str, Any]] = []
     resolved_model = (
@@ -197,7 +231,7 @@ def predict_local_benchmark(
         completion=completion,
         event_log=event_log,
     )
-    return {
+    artifact = {
         "schema_version": "0.1.0",
         "dataset_id": normalized_id,
         "split": split,
@@ -209,3 +243,10 @@ def predict_local_benchmark(
         "predictions": predictions,
         "provider_events": event_log,
     }
+    if global_mmlu_selection is not None:
+        artifact["selection"] = {
+            "selection_id": global_mmlu_selection["selection_id"],
+            "revision": global_mmlu_selection["revision"],
+            "config": (global_mmlu_config or "").strip(),
+        }
+    return artifact

@@ -12,7 +12,7 @@ from simula_research.benchmark_evaluation import (
     predict_local_benchmark,
     score_local_benchmark,
 )
-from simula_research.dataset_adapters import load_split_manifest
+from simula_research.dataset_adapters import load_global_mmlu_selection, load_split_manifest
 from simula_research.dataset_verification import build_local_dataset_manifest
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
 
@@ -106,6 +106,11 @@ def _run_score_benchmark(args: argparse.Namespace) -> int:
             )
         except json.JSONDecodeError as error:
             raise ValueError(f"invalid local dataset manifest JSON: {args.local_manifest}") from error
+    global_mmlu_selection = (
+        load_global_mmlu_selection(args.selection_manifest)
+        if args.selection_manifest
+        else None
+    )
     result = score_local_benchmark(
         dataset_id=args.dataset_id,
         path=args.dataset_path,
@@ -114,6 +119,8 @@ def _run_score_benchmark(args: argparse.Namespace) -> int:
         dataset_size=args.dataset_size,
         seed=args.seed,
         local_dataset_manifest=local_dataset_manifest,
+        global_mmlu_config=args.global_mmlu_config,
+        global_mmlu_selection=global_mmlu_selection,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -135,6 +142,11 @@ def _run_predict_benchmark(args: argparse.Namespace) -> int:
             )
         except json.JSONDecodeError as error:
             raise ValueError(f"invalid local dataset manifest JSON: {args.local_manifest}") from error
+    global_mmlu_selection = (
+        load_global_mmlu_selection(args.selection_manifest)
+        if args.selection_manifest
+        else None
+    )
     artifact = predict_local_benchmark(
         dataset_id=args.dataset_id,
         path=args.dataset_path,
@@ -143,6 +155,8 @@ def _run_predict_benchmark(args: argparse.Namespace) -> int:
         seed=args.seed,
         model=args.model,
         local_dataset_manifest=local_dataset_manifest,
+        global_mmlu_config=args.global_mmlu_config,
+        global_mmlu_selection=global_mmlu_selection,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -218,7 +232,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     score_benchmark = commands.add_parser(
         "score-benchmark",
-        help="Score a local CTIBench or GSM8k split from prediction JSON.",
+        help="Score a local benchmark split from prediction JSON.",
     )
     score_benchmark.add_argument("--dataset-id", required=True)
     score_benchmark.add_argument("--dataset-path", required=True)
@@ -226,6 +240,14 @@ def _build_parser() -> argparse.ArgumentParser:
     score_benchmark.add_argument("--split", default="test")
     score_benchmark.add_argument("--dataset-size", type=int, required=True)
     score_benchmark.add_argument("--seed", type=int, required=True)
+    score_benchmark.add_argument(
+        "--global-mmlu-config",
+        help="Global-MMLU language/config name, such as en, ko, or ne.",
+    )
+    score_benchmark.add_argument(
+        "--selection-manifest",
+        help="Optional paper Global-MMLU selection manifest.",
+    )
     score_benchmark.add_argument(
         "--local-manifest",
         help="Optional verified local dataset manifest to recheck before scoring.",
@@ -246,6 +268,14 @@ def _build_parser() -> argparse.ArgumentParser:
     predict_benchmark.add_argument("--dataset-size", type=int, required=True)
     predict_benchmark.add_argument("--seed", type=int, required=True)
     predict_benchmark.add_argument("--model")
+    predict_benchmark.add_argument(
+        "--global-mmlu-config",
+        help="Global-MMLU language/config name, such as en, ko, or ne.",
+    )
+    predict_benchmark.add_argument(
+        "--selection-manifest",
+        help="Optional paper Global-MMLU selection manifest.",
+    )
     predict_benchmark.add_argument(
         "--local-manifest",
         help="Optional verified local dataset manifest to recheck before prediction.",

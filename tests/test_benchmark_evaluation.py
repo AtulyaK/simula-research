@@ -126,6 +126,62 @@ class BenchmarkEvaluationTests(unittest.TestCase):
         self.assertEqual(result["accuracy"], 0.0)
         self.assertEqual(result["missing_prediction_count"], 1)
 
+    def test_score_local_global_mmlu_applies_selection_manifest(self) -> None:
+        selection = {
+            "schema_version": "0.1.0",
+            "selection_id": "test-selection",
+            "dataset_id": "Global-MMLU",
+            "source": "https://example.test/global-mmlu",
+            "revision": "revision",
+            "split": "test",
+            "languages": [
+                {"config": "en", "resource_tier": "high", "expected_records": 1}
+            ],
+            "subjects": {"mathematics": ["elementary_mathematics"]},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_path = root / "global-mmlu.jsonl"
+            predictions_path = root / "predictions.json"
+            dataset_path.write_text(
+                "\n".join(
+                    json.dumps(record)
+                    for record in [
+                        {
+                            "sample_id": "selected",
+                            "question": "One plus one?",
+                            "choices": ["1", "2"],
+                            "answer": "B",
+                            "subject": "elementary_mathematics",
+                        },
+                        {
+                            "sample_id": "excluded",
+                            "question": "Who am I?",
+                            "choices": ["A", "B"],
+                            "answer": "A",
+                            "subject": "philosophy",
+                        },
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            predictions_path.write_text(json.dumps({"selected": "B"}), encoding="utf-8")
+
+            result = score_local_benchmark(
+                dataset_id="Global-MMLU",
+                path=dataset_path,
+                predictions_path=predictions_path,
+                split="test",
+                dataset_size=1,
+                seed=0,
+                global_mmlu_config="en",
+                global_mmlu_selection=selection,
+            )
+
+        self.assertEqual(result["task_count"], 1)
+        self.assertEqual(result["accuracy"], 1.0)
+        self.assertEqual(result["missing_prediction_count"], 0)
+
     def test_score_local_benchmark_can_require_verified_manifest(self) -> None:
         split_manifest = {
             "schema_version": "0.1.0",

@@ -13,6 +13,8 @@ from simula_research.dataset_adapters import (
     adapt_lexam_record,
     adapt_gsm8k_record,
     load_cti_bench_tsv,
+    load_global_mmlu_jsonl,
+    load_global_mmlu_selection,
     load_gsm8k_jsonl,
     load_split_manifest,
     validate_split_manifest,
@@ -134,7 +136,7 @@ class DatasetAdapterTests(unittest.TestCase):
 
     def test_paper_global_mmlu_selection_is_pinned(self) -> None:
         path = Path(__file__).parents[1] / "configs" / "paper_global_mmlu_selection.json"
-        selection = json.loads(path.read_text(encoding="utf-8"))
+        selection = load_global_mmlu_selection(path)
 
         self.assertEqual(selection["revision"], "0e619dbeb34206cd48705a1a0ea7fb21cae09993")
         self.assertEqual(
@@ -149,6 +151,50 @@ class DatasetAdapterTests(unittest.TestCase):
             set(selection["subjects"]),
             {"mathematics", "computer_science", "physics"},
         )
+
+    def test_load_global_mmlu_jsonl_applies_paper_subject_selection(self) -> None:
+        selection = {
+            "schema_version": "0.1.0",
+            "selection_id": "test-selection",
+            "dataset_id": "Global-MMLU",
+            "source": "https://example.test/global-mmlu",
+            "revision": "revision",
+            "split": "test",
+            "languages": [
+                {"config": "en", "resource_tier": "high", "expected_records": 1}
+            ],
+            "subjects": {"mathematics": ["elementary_mathematics"]},
+        }
+        records = [
+            {
+                "sample_id": "excluded",
+                "question": "Who am I?",
+                "choices": ["A", "B"],
+                "answer": "A",
+                "subject": "philosophy",
+            },
+            {
+                "sample_id": "selected",
+                "question": "One plus one?",
+                "choices": ["1", "2"],
+                "answer": "B",
+                "subject": "elementary_mathematics",
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            path = Path(tmp_dir) / "global-mmlu.jsonl"
+            path.write_text("\n".join(json.dumps(record) for record in records), encoding="utf-8")
+
+            tasks = load_global_mmlu_jsonl(
+                path,
+                config="en",
+                split="test",
+                selection=selection,
+            )
+
+        self.assertEqual([task["task_id"] for task in tasks], ["selected"])
+        self.assertEqual(tasks[0]["metadata"]["source_index"], 1)
+        self.assertEqual(tasks[0]["metadata"]["subject"], "elementary_mathematics")
 
     def test_adapt_gsm8k_record_preserves_rationale_and_extracts_final_answer(self) -> None:
         task = adapt_gsm8k_record(

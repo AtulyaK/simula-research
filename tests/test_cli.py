@@ -133,6 +133,66 @@ class CliTests(unittest.TestCase):
             scored = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(scored["accuracy"], 1.0)
 
+    def test_score_benchmark_passes_global_mmlu_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selection_path = root / "selection.json"
+            output_path = root / "result.json"
+            selection_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "0.1.0",
+                        "selection_id": "test-selection",
+                        "dataset_id": "Global-MMLU",
+                        "source": "https://example.test/global-mmlu",
+                        "revision": "revision",
+                        "split": "test",
+                        "languages": [
+                            {
+                                "config": "en",
+                                "resource_tier": "high",
+                                "expected_records": 1,
+                            }
+                        ],
+                        "subjects": {"mathematics": ["elementary_mathematics"]},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            expected = {"accuracy": 1.0}
+            with mock.patch(
+                "simula_research.cli.score_local_benchmark",
+                return_value=expected,
+            ) as score:
+                result = main(
+                    [
+                        "score-benchmark",
+                        "--dataset-id",
+                        "Global-MMLU",
+                        "--dataset-path",
+                        str(root / "global-mmlu.jsonl"),
+                        "--predictions",
+                        str(root / "predictions.json"),
+                        "--global-mmlu-config",
+                        "en",
+                        "--selection-manifest",
+                        str(selection_path),
+                        "--dataset-size",
+                        "1",
+                        "--seed",
+                        "0",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(score.call_args.kwargs["global_mmlu_config"], "en")
+            self.assertEqual(
+                score.call_args.kwargs["global_mmlu_selection"]["selection_id"],
+                "test-selection",
+            )
+
     def test_predict_benchmark_writes_prediction_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

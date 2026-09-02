@@ -85,7 +85,24 @@ file's SHA-256 and observed count, and exits with status `2` when any count
 does not match the pinned manifest.
 For the paper's Global MMLU benchmark, apply the subject/language selection in
 `configs/paper_global_mmlu_selection.json` before scoring; the split manifest
-intentionally verifies the complete 14,042-row source config.
+intentionally verifies the complete 14,042-row source config. JSONL source files
+can be scored directly by selecting one language/config:
+
+```powershell
+py -3 -m simula_research.cli score-benchmark `
+  --dataset-id Global-MMLU `
+  --dataset-path C:\data\global-mmlu-en.jsonl `
+  --predictions C:\data\global-mmlu-en-predictions.json `
+  --global-mmlu-config en `
+  --selection-manifest configs\paper_global_mmlu_selection.json `
+  --dataset-size 1436 `
+  --seed 0 `
+  --output artifacts\datasets\global-mmlu-en-result.json
+```
+
+The loader filters the full JSONL source to the pinned Mathematics, Computer
+Science, and Physics subjects and records the selection revision in the result
+artifact. Parquet-backed source loading still requires an optional reader.
 
 For supported TSV/JSONL benchmarks, score a model's task-id prediction
 artifact without installing a model runtime:
@@ -102,9 +119,8 @@ py -3 -m simula_research.cli score-benchmark `
 ```
 
 Prediction JSON may be either a task-ID mapping or a list of
-`{"task_id": "...", "prediction": "..."}` objects. The scorer currently
-supports CTI-MCQ, CTI-RCM, and GSM8k; parquet-backed benchmarks still require
-an optional reader.
+`{"task_id": "...", "prediction": "..."}` objects. The scorer currently supports CTI-MCQ, CTI-RCM, GSM8k, and Global-MMLU JSONL;
+parquet-backed benchmarks still require an optional reader.
 
 With `NVIDIA_API_KEY` or `NVAPI_KEY` in the ignored local `.env`, generate a
 bounded prediction artifact through the configured NVIDIA NIM model:

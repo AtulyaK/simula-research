@@ -9,6 +9,7 @@ from typing import Any
 TASK_SCHEMA_VERSION = "0.1.0"
 GSM8K_DATASET_ID = "GSM8k"
 SPLIT_MANIFEST_SCHEMA_VERSION = "0.1.0"
+GLOBAL_MMLU_SELECTION_SCHEMA_VERSION = "0.1.0"
 
 
 def _require_non_empty_text(value: Any, *, field: str) -> str:
@@ -289,6 +290,132 @@ def adapt_global_mmlu_record(
         source_format="global_mmlu",
         config=config,
     )
+
+
+def validate_global_mmlu_selection(selection: dict[str, Any]) -> None:
+    """Validate a paper-defined Global MMLU subject/language selection."""
+    if not isinstance(selection, dict):
+        raise ValueError("Global MMLU selection must be an object")
+    if selection.get("schema_version") != GLOBAL_MMLU_SELECTION_SCHEMA_VERSION:
+        raise ValueError("unsupported Global MMLU selection schema version")
+    for field in ("selection_id", "dataset_id", "source", "revision", "split"):
+        _require_non_empty_text(selection.get(field), field=field)
+    if selection["dataset_id"] != "Global-MMLU":
+        raise ValueError("Global MMLU selection dataset_id must be Global-MMLU")
+
+    languages = selection.get("languages")
+    if not isinstance(languages, list) or not languages:
+        raise ValueError("Global MMLU selection must contain languages")
+    language_configs: set[str] = set()
+    for index, language in enumerate(languages):
+        if not isinstance(language, dict):
+            raise ValueError(f"Global MMLU selection language {index} must be an object")
+        config = _require_non_empty_text(language.get("config"), field=f"languages[{index}].config")
+        _require_non_empty_text(
+            language.get("resource_tier"),
+            field=f"languages[{index}].resource_tier",
+        )
+        expected_records = language.get("expected_records")
+        if (
+            isinstance(expected_records, bool)
+            or not isinstance(expected_records, int)
+            or expected_records <= 0
+        ):
+            raise ValueError(
+                f"languages[{index}].expected_records must be a positive integer"
+            )
+        if config in language_configs:
+            raise ValueError(f"Global MMLU selection repeats config {config!r}")
+        language_configs.add(config)
+
+    subjects = selection.get("subjects")
+    if not isinstance(subjects, dict) or not subjects:
+        raise ValueError("Global MMLU selection must contain subjects")
+    subject_ids: set[str] = set()
+    for category, values in subjects.items():
+        _require_non_empty_text(category, field="subjects category")
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"subjects[{category!r}] must be a non-empty list")
+        for subject in values:
+            normalized_subject = _require_non_empty_text(subject, field="subject")
+            if normalized_subject in subject_ids:
+                raise ValueError(f"Global MMLU selection repeats subject {normalized_subject!r}")
+            subject_ids.add(normalized_subject)
+
+
+def load_global_mmlu_selection(path: str | Path) -> dict[str, Any]:
+    """Load and validate a paper-defined Global MMLU selection manifest."""
+    source_path = Path(path)
+    try:
+        selection = json.loads(source_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as error:
+        raise ValueError(f"invalid Global MMLU selection JSON: {source_path}") from error
+    validate_global_mmlu_selection(selection)
+    return selection
+
+
+def load_global_mmlu_jsonl(
+    path: str | Path,
+    *,
+    config: str,
+    split: str,
+    selection: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Load Global MMLU JSONL and optionally apply a paper subject selection."""
+    config = _require_non_empty_text(config, field="config")
+    split = _require_non_empty_text(split, field="split")
+    selected_subjects: set[str] | None = None
+    expected_records: int | None = None
+    if selection is not None:
+        validate_global_mmlu_selection(selection)
+        if selection["split"] != split:
+            raise ValueError("Global MMLU selection split does not match requested split")
+        language = next(
+            (
+                entry
+                for entry in selection["languages"]
+                if entry["config"] == config
+            ),
+            None,
+        )
+        if language is None:
+            raise ValueError(f"Global MMLU selection does not include config {config!r}")
+        selected_subjects = {
+            subject
+            for category in selection["subjects"].values()
+            for subject in category
+        }
+        expected_records = int(language["expected_records"])
+
+    source_path = Path(path)
+    tasks: list[dict[str, Any]] = []
+    source_index = 0
+    with source_path.open(encoding="utf-8") as file_handle:
+        for line_number, line in enumerate(file_handle, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"invalid Global MMLU JSON on line {line_number}") from error
+            if not isinstance(record, dict):
+                raise ValueError(f"Global MMLU record on line {line_number} must be an object")
+            if selected_subjects is None or record.get("subject") in selected_subjects:
+                tasks.append(
+                    adapt_global_mmlu_record(
+                        record,
+                        config=config,
+                        split=split,
+                        source_index=source_index,
+                    )
+                )
+            source_index += 1
+    if expected_records is not None and len(tasks) != expected_records:
+        raise ValueError(
+            f"Global MMLU selection expected {expected_records} records for {config!r}, "
+            f"found {len(tasks)}"
+        )
+    return tasks
 
 
 def adapt_lexam_record(
