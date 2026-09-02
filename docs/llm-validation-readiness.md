@@ -35,6 +35,7 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
 - **Provider/runtime metadata (Issue #41):** optional `provider_runtime` dict is merged into the run `manifest` and echoed under `stage_outputs.stage_4_dual_critic_quality_verification.provider_runtime` when supplied. `provider_runtime_from_env()` in `critic_provider_adapter.py` collects **non-secret** transport knobs from environment variables for operator runs.
 - **Execution fidelity (Issue #42):** `execute_issue7_matrix` passes each preset’s `pipeline_config` and any preset-specific policy into `run_pipeline`, which maps toggles to taxonomy/local/complexification/dual-critic execution (A1 shallow taxonomy, A2 one instantiation per node, A3 zero complexification, A4 `single_critic_mode`, and A5 accept-on-disagreement). Reporting-time metric hacks have been removed; matrix metrics now reflect actual stage outputs.
 - **Env-based critic wiring:** `critic_sample_evaluator_from_env()` returns `None` (hash default), or a **non-network** `stub` / `replay` evaluator for smoke tests (`SIMULA_CRITIC_BACKEND`, `SIMULA_CRITIC_REPLAY_JSON`). The live NVIDIA NIM backend is available behind `SIMULA_CRITIC_BACKEND=nim` (requires `NVIDIA_API_KEY` or `NVAPI_KEY`) and is **fail-closed** on ambiguous outputs (invalid/unclear verdicts become `reject` with structured event logging). **`execute_issue7_matrix`** passes both `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into `run_pipeline` for all six matrix cells. See `docs/research-validation-playbook.md` and `scripts/run_issue7_matrix.sh`.
+- **Batch complexity wiring:** `batch_complexity_judgment_provider_from_env()` selects the live NIM batch scorer when the critic backend is `nim`/`nvidia`, or a deterministic replay scorer when `SIMULA_COMPLEXITY_BACKEND=replay` and `SIMULA_COMPLEXITY_REPLAY_JSON` is set. The scorer sends each scheduled batch once, requires an ordered JSON array of `{item_id, score}` objects, and raises on malformed or incomplete responses rather than fabricating complexity evidence. `execute_issue7_matrix` auto-selects this provider when no explicit batch provider is supplied.
 - Stages 1–3 remain deterministic in-repo logic by default (Phase 2 of this guide).
 
 ### Issue #7 matrix
@@ -100,6 +101,10 @@ NIM backend env vars:
   - `SIMULA_CRITIC_MODEL_A`, `SIMULA_CRITIC_MODEL_B` (per-critic override)
   - `SIMULA_NIM_MAX_TOKENS` (or `SIMULA_NVIDIA_MAX_TOKENS`)
   - `SIMULA_NIM_REASONING_EFFORT` (or `SIMULA_NVIDIA_REASONING_EFFORT`)
+  - `SIMULA_COMPLEXITY_MODEL` (optional batch-complexity model override)
+  - `SIMULA_COMPLEXITY_BACKEND` (`replay` for offline scores; otherwise follows
+    `SIMULA_CRITIC_BACKEND`)
+  - `SIMULA_COMPLEXITY_REPLAY_JSON` (required for complexity replay)
 
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does
@@ -116,6 +121,13 @@ payload shown in the NVIDIA API examples is not used by this pipeline.
   retries use a five-second minimum delay. For live NIM matrix runs, structured provider failure events are persisted in
   `40_dual_critic_quality/nim_event_log.json`; prompts, responses, and API keys
   are not written to that log.
+
+Batch-complexity replay files use either `[item_id, score]` rows or
+`{"item_id": "...", "score": ...}` objects, for example:
+
+```json
+[["item-1", 12], {"item_id": "item-2", "score": 88}]
+```
 
 ## 3) Data and compliance controls
 

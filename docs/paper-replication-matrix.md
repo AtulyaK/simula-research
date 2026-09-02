@@ -23,7 +23,7 @@ Primary reference: [`research_paper.pdf`](./research_paper.pdf), titled
 | Paper datasets include CTI-MCQ, CTI-RCM, LEXam, GSM8k, and selected Global MMLU subsets (Sec. 3.2). | Approximated | A local JSONL adapter and fixed task schema now support GSM8k records. Dataset downloads, licenses, the other four datasets, and benchmark-specific schemas remain incomplete. |
 | Generated data is deduplicated and decontaminated against test sets using 13-gram Jaccard threshold 0.8 (Sec. 3.2). | Approximated | Deterministic duplicate removal and 13-gram Jaccard filtering are available as an opt-in pipeline step with persisted reports; full paper dataset splits and benchmark execution remain incomplete. |
 | Intrinsic diversity uses embedding cosine distance globally and over k=10 nearest-neighbor groups; taxonomy assignment reports coverage (Sec. 3.3). | Approximated | Taxonomy coverage plus persisted global pairwise and local k-nearest-neighbor distance reports are implemented. Offline reports use deterministic `hash_sha256_v1` embeddings; paper-scale model embeddings and assignment-backed evaluation remain incomplete. |
-| Complexity uses repeated batch-wise judgments and Elo calibration; BS=N=5 is the reported practical setting (Sec. 2.3, App. E). | Approximated | Pairwise judgments are injectable, validated, persisted, and gated by minimum comparisons. A deterministic cross-item `BS`/`N` scheduler and score-to-comparison conversion now exist; a real batch judge and paper dataset are still missing. |
+| Complexity uses repeated batch-wise judgments and Elo calibration; BS=N=5 is the reported practical setting (Sec. 2.3, App. E). | Approximated | Pairwise judgments are injectable, validated, persisted, and gated by minimum comparisons. The deterministic cross-item `BS`/`N` scheduler, score-to-comparison conversion, NIM/Kimi batch scorer, and offline replay path now exist; live evidence on paper datasets is still missing. |
 | Double-critic rejection sampling improves correctness and tracks rejection/accuracy effects (Sec. 3.1, App. D). | Approximated | Dual-critic decisions, agreement, rejection, and regeneration artifacts exist. Controlled corruption, benchmark correctness, and empirical accuracy lift are not implemented. |
 | Downstream evaluation uses Gemma 3 4B students, Gemini 2.5 Flash teacher data, LoRA, ten seeds, and dataset-size scaling (Sec. 3.4, App. F.1). | Missing | No training, benchmark adapter, split policy, or downstream result artifact exists. |
 | Full Simula generally dominates downstream scaling and complexity effects are domain-dependent (Sec. 4.3). | Missing | These are paper findings, not repository evidence. They require real datasets, generation, training, and repeated evaluations. |
@@ -49,8 +49,8 @@ system-version reproduction is required.
 
 ## Priority order
 
-1. Connect a real batch judge to the fixed-protocol Elo scheduler and persist
-   its `BS=N=5` evidence.
+1. Run the NIM/Kimi batch judge on fixed paper-dataset splits and persist
+   `BS=N=5` evidence with provider metadata.
 2. Replace the deterministic embedding fallback with a paper-compatible model
    embedding provider and preserve the existing taxonomy coverage output.
 3. Add adapters and fixed split manifests for the remaining paper datasets
@@ -66,4 +66,4 @@ system-version reproduction is required.
 - **Traceability/Auditability:** every current matrix run persists resolved configuration, lineage, stage artifacts, and integrity hashes; this matrix records the remaining evidence gaps explicitly.
 - **Protocol/Comparability:** frozen comparability fields and ADR 0003 metric semantics remain unchanged. A2, A3, and A5 are documented ablations; they must not be interpreted as the paper's exact Table 1 labels.
 - **Control-Axis Impact:** A1 targets coverage, A2 local diversity, A3 complexity, and A4/A5 quality policy independently; reporting continues to expose all three axes.
-- **Deviation Log:** actual LLM-driven taxonomy/synthesis, complete paper datasets, paper-compatible embedding models, batch Elo scheduling, benchmark split manifests, and downstream training remain incomplete; deterministic diversity, pairwise Elo, and opt-in decontamination diagnostics are now persisted.
+- **Deviation Log:** actual LLM-driven taxonomy/synthesis, complete paper datasets, paper-compatible embedding models, benchmark split manifests, and downstream training remain incomplete; deterministic diversity, batch/pairwise Elo, and opt-in decontamination diagnostics are now persisted, with a live NIM/Kimi batch scorer available.

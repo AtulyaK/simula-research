@@ -2,7 +2,7 @@
 
 ## Status
 
-**Stub / operator policy** — not a code change to ADR 0003 thresholds or metric formulas. Classification logic for deterministic reruns lives in `src/simula_research/issue9_reproducibility.py` (`ACCEPTABLE_DRIFT_MAX_DELTA = 0.02`). This document states how **live LLM critics** (for example `SIMULA_CRITIC_BACKEND=nim`) map onto that classification when exact byte-level replay is not expected.
+**Stub / operator policy** — not a code change to ADR 0003 thresholds or metric formulas. Classification logic for deterministic reruns lives in `src/simula_research/issue9_reproducibility.py` (`ACCEPTABLE_DRIFT_MAX_DELTA = 0.02`). This document states how **live LLM judgments** (critics or batch complexity scoring) map onto that classification when exact byte-level replay is not expected.
 
 ## Purpose
 
@@ -29,6 +29,10 @@ Do **not** widen `ACCEPTABLE_DRIFT_MAX_DELTA` in code without ADR 0003 impact re
 
 Stages 1–3 remain deterministic in-repo unless future provider hooks (#60) are enabled with explicit comparability waiver.
 
+When `SIMULA_COMPLEXITY_BACKEND` is unset, batch complexity scoring follows
+`SIMULA_CRITIC_BACKEND`; `replay` remains the exact-replay option for recorded
+batch scores.
+
 ## Operator workflow (Phase 4)
 
 1. Run matrix with frozen env (see `scripts/run_issue7_matrix.sh` and `docs/research-validation-playbook.md`).
@@ -51,7 +55,8 @@ Structured comparability for ablations is independent of provider drift:
 ## Secrets and logging
 
 - Never persist API keys in manifests, `provider_runtime`, or incident logs.
-- NIM adapter fail-closed: ambiguous model output → `reject` with sanitized events (no prompt text).
+- NIM critic adapter fail-closed: ambiguous model output → `reject` with sanitized events (no prompt text).
+- NIM batch scorer fails closed by raising on malformed scores and records only sanitized request metadata.
 
 ## Human / org actions required for live validation
 

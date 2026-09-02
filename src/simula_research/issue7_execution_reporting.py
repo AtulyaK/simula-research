@@ -20,6 +20,7 @@ from simula_research.complexity_judgments import (
     calibrate_elo_ratings,
 )
 from simula_research.critic_provider_adapter import (
+    batch_complexity_judgment_provider_from_env,
     critic_sample_evaluator_from_env,
     provider_runtime_from_env,
 )
@@ -327,6 +328,11 @@ def execute_issue7_matrix(
             [] if backend in {"nim", "nvidia"} else None
         )
         critic_sample_evaluator = critic_sample_evaluator_from_env(event_log=provider_event_log)
+        resolved_batch_complexity_provider = (
+            batch_complexity_judgment_provider
+            if batch_complexity_judgment_provider is not None
+            else batch_complexity_judgment_provider_from_env(event_log=provider_event_log)
+        )
         model_ids = dict(request["model_ids"])
         nim_critic = provider_runtime.get("nim_critic")
         critic_models = nim_critic.get("critic_models") if isinstance(nim_critic, dict) else None
@@ -351,7 +357,7 @@ def execute_issue7_matrix(
             "provider_event_log": provider_event_log,
             "critic_sample_evaluator": critic_sample_evaluator,
             "complexity_judgment_provider": complexity_judgment_provider,
-            "batch_complexity_judgment_provider": batch_complexity_judgment_provider,
+            "batch_complexity_judgment_provider": resolved_batch_complexity_provider,
             "complexity_judgment_config": complexity_judgment_config,
         }
         local_diversification_config = request.get("local_diversification_config")
@@ -466,10 +472,10 @@ def execute_issue7_matrix(
             "batch_scheduler": "prepare_complexity_batch_schedule",
             "active_scoring_mode": (
                 "batchwise_and_pairwise"
-                if batch_complexity_judgment_provider is not None
+                if resolved_batch_complexity_provider is not None
                 and complexity_judgment_provider is not None
                 else "batchwise"
-                if batch_complexity_judgment_provider is not None
+                if resolved_batch_complexity_provider is not None
                 else "pairwise_complexified_source"
                 if complexity_judgment_provider is not None
                 else "missing_provider"

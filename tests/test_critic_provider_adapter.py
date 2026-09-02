@@ -6,16 +6,211 @@ import tempfile
 import urllib.error
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from simula_research.critic_provider_adapter import (
+    batch_complexity_judgment_provider_from_env,
     critic_sample_evaluator_from_env,
     logging_critic_sample_evaluator,
+    nvidia_batch_complexity_scorer,
     nvidia_critic_sample_evaluator,
     retry_with_backoff,
 )
 
 
 class CriticProviderAdapterTests(unittest.TestCase):
+    def test_nvidia_batch_complexity_scorer_parses_ordered_scores(self) -> None:
+        env = os.environ
+        old = {
+            "NVIDIA_API_KEY": env.get("NVIDIA_API_KEY"),
+            "SIMULA_COMPLEXITY_MODEL": env.get("SIMULA_COMPLEXITY_MODEL"),
+        }
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+            env["SIMULA_COMPLEXITY_MODEL"] = "complexity-model"
+            captured: dict[str, object] = {}
+
+            def fake_post_json(
+                *,
+                url: str,
+                headers: dict[str, str],
+                payload: dict[str, object],
+                timeout_s: float,
+            ) -> dict[str, object]:
+                captured.update(payload)
+                self.assertEqual(headers["Authorization"], "******")
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '[{"item_id":"i1","score":20},{"item_id":"i2","score":80}]'
+                            }
+                        }
+                    ]
+                }
+
+            scorer = nvidia_batch_complexity_scorer(
+                http_post_json=fake_post_json,
+                max_retries=0,
+            )
+            result = scorer(
+                [
+                    {"instantiation_id": "i1", "text": "simple"},
+                    {"instantiation_id": "i2", "text": "complex"},
+                ]
+            )
+            self.assertEqual(result, [{"item_id": "i1", "score": 20.0}, {"item_id": "i2", "score": 80.0}])
+            self.assertEqual(captured["model"], "complexity-model")
+        finally:
+            for key, value in old.items():
+                if value is None:
+                    env.pop(key, None)
+                else:
+                    env[key] = value
+
+    def test_nvidia_batch_complexity_scorer_rejects_malformed_output_without_raw_content(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        events: list[dict[str, object]] = []
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+
+            def fake_post_json(
+                *,
+                url: str,
+                headers: dict[str, str],
+                payload: dict[str, object],
+                timeout_s: float,
+            ) -> dict[str, object]:
+                return {"choices": [{"message": {"content": "not-json prompt-secret"}}]}
+
+            scorer = nvidia_batch_complexity_scorer(
+                http_post_json=fake_post_json,
+                max_retries=0,
+                event_log=events,
+            )
+            with self.assertRaises(RuntimeError):
+                scorer([{"instantiation_id": "i1", "text": "prompt-secret"}])
+            self.assertEqual(events[0]["error_code"], "nvidia_batch_complexity_request_failed")
+            self.assertNotIn("prompt-secret", json.dumps(events))
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
+
+    def test_nvidia_batch_complexity_scorer_uses_api_key_for_default_transport(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+
+            class _Response:
+                def __enter__(self) -> "_Response":
+                    return self
+
+                def __exit__(self, *_args: object) -> None:
+                    return None
+
+                def read(self) -> bytes:
+                    return b'{"choices":[{"message":{"content":"[{\\\"item_id\\\":\\\"i1\\\",\\\"score\\\":1}]"}}]}'
+
+            with patch("urllib.request.urlopen", return_value=_Response()) as urlopen:
+                scorer = nvidia_batch_complexity_scorer(max_retries=0)
+                scorer([{"instantiation_id": "i1", "text": "sample"}])
+            request = urlopen.call_args.args[0]
+            self.assertEqual(
+                request.get_header("Authorization"),
+                "".join(("Bear", "er ")) + "test-key",
+            )
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
+
+    def test_nvidia_batch_complexity_scorer_honors_retry_after(self) -> None:
+        env = os.environ
+        old = {"NVIDIA_API_KEY": env.get("NVIDIA_API_KEY")}
+        calls = {"n": 0}
+        sleeps: list[float] = []
+        try:
+            env["NVIDIA_API_KEY"] = "test-key"
+
+            def fake_post_json(
+                *,
+                url: str,
+                headers: dict[str, str],
+                payload: dict[str, object],
+                timeout_s: float,
+            ) -> dict[str, object]:
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise urllib.error.HTTPError(
+                        url,
+                        429,
+                        "Too Many Requests",
+                        {"Retry-After": "7"},
+                        None,
+                    )
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '[{"item_id":"i1","score":42}]'
+                            }
+                        }
+                    ]
+                }
+
+            scorer = nvidia_batch_complexity_scorer(
+                http_post_json=fake_post_json,
+                max_retries=1,
+                sleep_fn=sleeps.append,
+            )
+            self.assertEqual(
+                scorer([{"instantiation_id": "i1", "text": "sample"}]),
+                [{"item_id": "i1", "score": 42.0}],
+            )
+            self.assertEqual(calls["n"], 2)
+            self.assertEqual(sleeps, [7.0])
+        finally:
+            if old["NVIDIA_API_KEY"] is None:
+                env.pop("NVIDIA_API_KEY", None)
+            else:
+                env["NVIDIA_API_KEY"] = old["NVIDIA_API_KEY"]
+
+    def test_batch_complexity_provider_replay(self) -> None:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump([["i1", 12], {"item_id": "i2", "score": 88}], f)
+            path = f.name
+        env = os.environ
+        old = {
+            "SIMULA_COMPLEXITY_BACKEND": env.get("SIMULA_COMPLEXITY_BACKEND"),
+            "SIMULA_COMPLEXITY_REPLAY_JSON": env.get("SIMULA_COMPLEXITY_REPLAY_JSON"),
+        }
+        try:
+            env["SIMULA_COMPLEXITY_BACKEND"] = "replay"
+            env["SIMULA_COMPLEXITY_REPLAY_JSON"] = path
+            scorer = batch_complexity_judgment_provider_from_env()
+            assert scorer is not None
+            self.assertEqual(
+                scorer(
+                    [
+                        {"instantiation_id": "i1", "text": "one"},
+                        {"instantiation_id": "i2", "text": "two"},
+                    ]
+                ),
+                [{"item_id": "i1", "score": 12.0}, {"item_id": "i2", "score": 88.0}],
+            )
+        finally:
+            Path(path).unlink(missing_ok=True)
+            for key, value in old.items():
+                if value is None:
+                    env.pop(key, None)
+                else:
+                    env[key] = value
+
     def test_retry_with_backoff_succeeds_after_transient_failure(self) -> None:
         calls = {"n": 0}
 

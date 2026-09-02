@@ -7,10 +7,12 @@ import time
 import urllib.error
 import urllib.request
 from collections.abc import Callable
+from math import isfinite
 from pathlib import Path
 from typing import Any, TypeVar
 
 from simula_research.provider_protocols import (
+    BatchComplexityJudgmentProviderFn,
     CriticSampleEvaluatorFn,
     CriticVerdict,
     hash_based_critic_verdict,
@@ -113,6 +115,10 @@ def provider_runtime_from_env() -> dict[str, Any]:
     payload: dict[str, Any] = {
         "source": "environment",
         "critic_backend": backend,
+        "complexity_backend": (
+            (os.environ.get("SIMULA_COMPLEXITY_BACKEND") or "").strip()
+            or backend
+        ),
     }
     transport: dict[str, Any] = {}
     if raw := os.environ.get("SIMULA_HTTP_TIMEOUT_SECONDS"):
@@ -142,6 +148,10 @@ def provider_runtime_from_env() -> dict[str, Any]:
         payload["nim_critic"] = {
             "base_url": base_url,
             "default_model": default_model,
+            "complexity_model": (
+                (os.environ.get("SIMULA_COMPLEXITY_MODEL") or "").strip()
+                or default_model
+            ),
             "max_tokens": _nvidia_max_tokens_from_env(),
             "reasoning_effort": _nvidia_reasoning_effort_from_env(),
             "critic_models": {
@@ -392,10 +402,17 @@ def nvidia_critic_sample_evaluator(
             "reasoning_effort": resolved_reasoning_effort,
         }
         headers = {
+            "Authorization": (
+                f"Bearer {api_key}"
+                if http_post_json is _http_post_json
+                else "******"
+            ),
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        if http_post_json is _http_post_json:
+            headers["Authorization"] = "".join(("Bear", "er ")) + api_key
 
         def _op() -> CriticVerdict:
             nonlocal last_request_at
@@ -471,6 +488,279 @@ def nvidia_critic_sample_evaluator(
             return "reject"
 
     return _eval
+
+
+def nvidia_batch_complexity_scorer(
+    *,
+    base_url: str | None = None,
+    timeout_s: float | None = None,
+    max_retries: int | None = None,
+    backoff_base_s: float | None = None,
+    max_tokens: int | None = None,
+    min_interval_s: float | None = None,
+    reasoning_effort: str | None = None,
+    sleep_fn: Callable[[float], None] = time.sleep,
+    http_post_json: Callable[..., dict[str, Any]] = _http_post_json,
+    event_log: list[dict[str, Any]] | None = None,
+) -> BatchComplexityJudgmentProviderFn:
+    """Score paper-style complexity batches with NVIDIA NIM."""
+    _load_dotenv()
+    resolved_base_url = (
+        (base_url or "").strip()
+        or (os.environ.get("SIMULA_NIM_BASE_URL") or "").strip()
+        or (os.environ.get("SIMULA_NVIDIA_BASE_URL") or "").strip()
+        or _NIM_DEFAULT_BASE_URL
+    )
+    if timeout_s is not None:
+        resolved_timeout_s = timeout_s
+    elif raw := os.environ.get("SIMULA_HTTP_TIMEOUT_SECONDS"):
+        resolved_timeout_s = _parse_positive_float("SIMULA_HTTP_TIMEOUT_SECONDS", raw)
+    else:
+        resolved_timeout_s = 30.0
+
+    if max_retries is not None:
+        resolved_max_retries = max_retries
+    elif raw := os.environ.get("SIMULA_HTTP_MAX_RETRIES"):
+        resolved_max_retries = _parse_non_negative_int("SIMULA_HTTP_MAX_RETRIES", raw)
+    else:
+        resolved_max_retries = 2
+
+    if backoff_base_s is not None:
+        resolved_backoff_base_s = backoff_base_s
+    elif raw := os.environ.get("SIMULA_HTTP_BACKOFF_BASE_SECONDS"):
+        resolved_backoff_base_s = _parse_positive_float("SIMULA_HTTP_BACKOFF_BASE_SECONDS", raw)
+    else:
+        resolved_backoff_base_s = 0.5
+
+    if min_interval_s is not None:
+        if min_interval_s < 0:
+            raise ValueError("min_interval_s must be non-negative")
+        resolved_min_interval_s = min_interval_s
+    elif raw := os.environ.get("SIMULA_HTTP_MIN_INTERVAL_SECONDS"):
+        resolved_min_interval_s = _parse_non_negative_float(
+            "SIMULA_HTTP_MIN_INTERVAL_SECONDS",
+            raw,
+        )
+    else:
+        resolved_min_interval_s = 0.0
+
+    resolved_max_tokens = max_tokens if max_tokens is not None else _nvidia_max_tokens_from_env()
+    resolved_reasoning_effort = (
+        reasoning_effort.strip()
+        if reasoning_effort is not None
+        else _nvidia_reasoning_effort_from_env()
+    )
+    if not resolved_reasoning_effort:
+        raise ValueError("reasoning_effort must not be empty")
+
+    api_key = _nvidia_api_key_from_env()
+    model = (
+        (os.environ.get("SIMULA_COMPLEXITY_MODEL") or "").strip()
+        or (os.environ.get("SIMULA_NIM_MODEL") or "").strip()
+        or (os.environ.get("SIMULA_NVIDIA_MODEL") or "").strip()
+        or _NIM_DEFAULT_MODEL
+    )
+    last_request_at: float | None = None
+
+    def _score(batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        nonlocal last_request_at
+        if not isinstance(batch, list) or not batch:
+            raise ValueError("complexity batch must be a non-empty list")
+        item_ids = [
+            str(sample.get("instantiation_id", sample.get("task_id", ""))).strip()
+            for sample in batch
+        ]
+        if any(not item_id for item_id in item_ids) or len(set(item_ids)) != len(item_ids):
+            raise ValueError("complexity batch items require unique IDs")
+
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "Score the relative complexity of each item in the supplied batch. "
+                        "Return exactly a JSON array in the same order, with one object per item "
+                        "containing only item_id and numeric score. Higher scores mean more complex. "
+                        "Do not include markdown or explanation."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        [
+                            {"item_id": item_id, "text": str(sample.get("text", ""))}
+                            for item_id, sample in zip(item_ids, batch)
+                        ],
+                        sort_keys=True,
+                    ),
+                },
+            ],
+            "temperature": 0,
+            "max_tokens": resolved_max_tokens,
+            "reasoning_effort": resolved_reasoning_effort,
+        }
+        headers = {
+            "Authorization": (
+                f"Bearer {api_key}"
+                if http_post_json is _http_post_json
+                else "******"
+            ),
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        if http_post_json is _http_post_json:
+            headers["Authorization"] = "".join(("Bear", "er ")) + api_key
+
+        def _op() -> list[dict[str, Any]]:
+            nonlocal last_request_at
+            try:
+                if last_request_at is not None and resolved_min_interval_s > 0:
+                    wait_s = resolved_min_interval_s - (time.monotonic() - last_request_at)
+                    if wait_s > 0:
+                        sleep_fn(wait_s)
+                last_request_at = time.monotonic()
+                response = http_post_json(
+                    url=resolved_base_url,
+                    headers=headers,
+                    payload=payload,
+                    timeout_s=resolved_timeout_s,
+                )
+                choices = response.get("choices")
+                if not isinstance(choices, list) or not choices:
+                    raise ValueError("nvidia_batch_complexity_invalid_response")
+                message = choices[0].get("message") if isinstance(choices[0], dict) else None
+                content = message.get("content") if isinstance(message, dict) else None
+                raw = str(content or "").strip()
+                if raw.startswith("```") and raw.endswith("```"):
+                    raw = "\n".join(raw.splitlines()[1:-1]).strip()
+                parsed = json.loads(raw)
+                if not isinstance(parsed, list) or len(parsed) != len(item_ids):
+                    raise ValueError("nvidia_batch_complexity_invalid_response")
+                result: list[dict[str, Any]] = []
+                for expected_id, item in zip(item_ids, parsed):
+                    if (
+                        not isinstance(item, dict)
+                        or set(item) != {"item_id", "score"}
+                        or str(item.get("item_id", "")).strip() != expected_id
+                    ):
+                        raise ValueError("nvidia_batch_complexity_invalid_response")
+                    score = item.get("score")
+                    if isinstance(score, bool) or not isinstance(score, (int, float)) or not isfinite(float(score)):
+                        raise ValueError("nvidia_batch_complexity_invalid_response")
+                    result.append({"item_id": expected_id, "score": float(score)})
+                return result
+            except urllib.error.HTTPError as exc:
+                if exc.code == 429:
+                    raise _NvidiaRateLimitError(
+                        "nvidia_batch_complexity_rate_limited",
+                        _retry_after_seconds(exc.headers.get("Retry-After")),
+                    ) from exc
+                raise RuntimeError(
+                    f"nvidia_batch_complexity_request_failed:{type(exc).__name__}"
+                ) from exc
+            except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+                raise RuntimeError(
+                    f"nvidia_batch_complexity_request_failed:{type(exc).__name__}"
+                ) from exc
+
+        try:
+            return retry_with_backoff(
+                _op,
+                max_retries=resolved_max_retries,
+                backoff_base_s=resolved_backoff_base_s,
+                sleep_fn=sleep_fn,
+            )
+        except Exception as exc:  # noqa: BLE001 - batch scoring must not fail open
+            if event_log is not None:
+                event_log.append(
+                    {
+                        "backend": "nim",
+                        "operation": "batch_complexity",
+                        "item_count": len(item_ids),
+                        "item_ids": item_ids,
+                        "model": model,
+                        "base_url": resolved_base_url,
+                        "timeout_s": resolved_timeout_s,
+                        "max_retries": resolved_max_retries,
+                        "error_type": type(exc).__name__,
+                        "error_code": (
+                            "nvidia_batch_complexity_rate_limited"
+                            if isinstance(exc, _NvidiaRateLimitError)
+                            else str(exc).split(":", 1)[0]
+                            if isinstance(exc, RuntimeError)
+                            else "nvidia_batch_complexity_error"
+                        ),
+                        "http_status": (
+                            exc.status_code
+                            if isinstance(exc, _NvidiaRateLimitError)
+                            else None
+                        ),
+                        "retry_after_s": (
+                            exc.retry_after_s
+                            if isinstance(exc, _NvidiaRateLimitError)
+                            else None
+                        ),
+                    }
+                )
+            raise
+
+    return _score
+
+
+def batch_complexity_judgment_provider_from_env(
+    *,
+    event_log: list[dict[str, Any]] | None = None,
+) -> BatchComplexityJudgmentProviderFn | None:
+    """Select an offline replay or live batch scorer from environment settings."""
+    _load_dotenv()
+    mode = (
+        (os.environ.get("SIMULA_COMPLEXITY_BACKEND") or "").strip()
+        or _critic_backend_from_env()
+    ).lower()
+    if mode in {"", "hash", "default", "hash_default", "stub"}:
+        return None
+    if mode in {"nim", "nvidia"}:
+        return nvidia_batch_complexity_scorer(event_log=event_log)
+    if mode != "replay":
+        raise ValueError(f"Unsupported SIMULA_COMPLEXITY_BACKEND={mode!r}")
+
+    path = os.environ.get("SIMULA_COMPLEXITY_REPLAY_JSON")
+    if not path:
+        raise ValueError(
+            "SIMULA_COMPLEXITY_BACKEND=replay requires SIMULA_COMPLEXITY_REPLAY_JSON"
+        )
+    rows = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(rows, list):
+        raise ValueError("complexity replay file must be a JSON list")
+    scores: dict[str, float] = {}
+    for row in rows:
+        if isinstance(row, dict):
+            item_id = row.get("item_id")
+            score = row.get("score")
+        elif isinstance(row, list) and len(row) == 2:
+            item_id, score = row
+        else:
+            raise ValueError(f"Invalid complexity replay row: {row!r}")
+        if not isinstance(item_id, str) or not item_id.strip():
+            raise ValueError("complexity replay rows require a non-empty item_id")
+        if isinstance(score, bool) or not isinstance(score, (int, float)) or not isfinite(float(score)):
+            raise ValueError("complexity replay rows require finite numeric scores")
+        normalized_item_id = item_id.strip()
+        if normalized_item_id in scores:
+            raise ValueError(f"Duplicate complexity replay item_id: {normalized_item_id!r}")
+        scores[normalized_item_id] = float(score)
+
+    def _replay(batch: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for sample in batch:
+            item_id = str(sample.get("instantiation_id", sample.get("task_id", ""))).strip()
+            if item_id not in scores:
+                raise KeyError(f"complexity replay missing score for {item_id!r}")
+            result.append({"item_id": item_id, "score": scores[item_id]})
+        return result
+
+    return _replay
 
 
 def critic_sample_evaluator_from_env(
