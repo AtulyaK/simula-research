@@ -120,7 +120,14 @@ def run_pipeline(
         "overlap_rejection_threshold": float(
             local_options.get("overlap_rejection_threshold", 0.8)
         ),
+        "node_mix_size": int(local_options.get("node_mix_size", 1)),
     }
+    if (
+        resolved_local_config["per_node_instantiation_count"] <= 0
+        or not 0 <= resolved_local_config["overlap_rejection_threshold"] <= 1
+        or resolved_local_config["node_mix_size"] <= 0
+    ):
+        raise ValueError("invalid local diversification configuration")
 
     complex_cfg = dict(complexification_config or {})
     if pipeline_config is not None and not pipeline_config.get("complexification_enabled", True):

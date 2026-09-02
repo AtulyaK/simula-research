@@ -110,6 +110,35 @@ class GenerationProviderAdapterTests(unittest.TestCase):
             output["instantiations"][0]["instantiation_id"],
         )
 
+    def test_local_provider_records_same_depth_compatible_node_mixes(self) -> None:
+        taxonomy = default_taxonomy_provider("security", TaxonomyConfig(max_depth=1, branching_factor=2))
+        provider = nvidia_local_diversification_provider(
+            http_post_json=self._fake_transport(
+                [
+                    '[{"index":0,"text":"root scenario"}]',
+                    '[{"index":0,"text":"combined scenario"}]',
+                ]
+            ),
+            max_retries=0,
+        )
+
+        output = provider(
+            taxonomy,
+            options={
+                "per_node_instantiation_count": 1,
+                "node_mix_size": 2,
+            },
+        )
+
+        validate_local_diversification_output(output)
+        mixed = [
+            row
+            for row in output["instantiations"]
+            if len(row.get("compatible_taxonomy_node_ids", [])) == 2
+        ]
+        self.assertEqual(len(mixed), 1)
+        self.assertEqual(output["diversification_policy"]["node_mix_size"], 2)
+
     def test_complexification_provider_preserves_stage_contract(self) -> None:
         samples = [
             {

@@ -22,7 +22,10 @@ from simula_research.critic_provider_adapter import (
     _parse_positive_float,
     retry_with_backoff,
 )
-from simula_research.local_diversification import _token_overlap_ratio
+from simula_research.local_diversification import (
+    _compatible_node_groups,
+    _token_overlap_ratio,
+)
 from simula_research.provider_protocols import (
     ComplexificationProviderFn,
     LocalDiversificationProviderFn,
@@ -421,9 +424,10 @@ def _local_rows_from_response(response: Any, *, expected_count: int) -> list[dic
 def nvidia_local_diversification_provider(
     *,
     event_log: list[dict[str, Any]] | None = None,
+    node_mix_size: int = 1,
     **completion_options: Any,
 ) -> LocalDiversificationProviderFn:
-    """Generate local instantiations in ordered per-node NIM batches."""
+    """Generate local instantiations in ordered NIM batches over compatible node groups."""
 
     def _generate(
         taxonomy: dict[str, Any],
@@ -433,24 +437,28 @@ def nvidia_local_diversification_provider(
         values = options or {}
         count = int(values.get("per_node_instantiation_count", 3))
         threshold = float(values.get("overlap_rejection_threshold", 0.8))
-        if count <= 0 or not 0 <= threshold <= 1:
+        resolved_node_mix_size = int(values.get("node_mix_size", node_mix_size))
+        if count <= 0 or not 0 <= threshold <= 1 or resolved_node_mix_size <= 0:
             raise ValueError("invalid local diversification options")
         accepted: list[dict[str, Any]] = []
         rejections: list[dict[str, Any]] = []
-        for node in taxonomy["nodes"]:
-            node_id = str(node["taxonomy_node_id"])
-            label = str(node["label"])
-            meta_prompt_id = f"mp-{_stable_id(node_id, label)}"
+        for node_group in _compatible_node_groups(taxonomy["nodes"], resolved_node_mix_size):
+            taxonomy_node_ids = [str(node["taxonomy_node_id"]) for node in node_group]
+            taxonomy_labels = [str(node["label"]) for node in node_group]
+            node_id = taxonomy_node_ids[0]
+            group_key = "|".join(taxonomy_node_ids)
+            meta_prompt_id = f"mp-{_stable_id(group_key, '|'.join(taxonomy_labels))}"
             response = nvidia_json_completion(
                 system_prompt=(
-                    "Generate diverse assessment scenarios for one taxonomy node. Return only a "
-                    "JSON array in index order; each object must contain only index and text."
+                    "Generate diverse assessment scenarios for one taxonomy node or a compatible "
+                    "same-depth node mix. Return only a JSON array in index order; each object "
+                    "must contain only index and text."
                 ),
                 user_content=json.dumps(
                     {
                         "domain": taxonomy["domain_namespace"],
-                        "taxonomy_node_id": node_id,
-                        "taxonomy_label": label,
+                        "taxonomy_node_ids": taxonomy_node_ids,
+                        "taxonomy_labels": taxonomy_labels,
                         "requested_count": count,
                     },
                     sort_keys=True,
@@ -460,9 +468,9 @@ def nvidia_local_diversification_provider(
                 **completion_options,
             )
             rows = _local_rows_from_response(response, expected_count=count)
-            kept_for_node: list[dict[str, Any]] = []
+            kept_for_group: list[dict[str, Any]] = []
             for row in rows:
-                instantiation_id = f"inst-{_stable_id(node_id, str(row['index']))}"
+                instantiation_id = f"inst-{_stable_id(group_key, str(row['index']))}"
                 candidate = {
                     "instantiation_id": instantiation_id,
                     "taxonomy_node_id": node_id,
@@ -474,21 +482,25 @@ def nvidia_local_diversification_provider(
                     },
                     "text": row["text"],
                 }
+                if len(taxonomy_node_ids) > 1:
+                    candidate["compatible_taxonomy_node_ids"] = taxonomy_node_ids
+                    candidate["lineage"]["compatible_taxonomy_node_ids"] = taxonomy_node_ids
                 if any(
                     _token_overlap_ratio(candidate["text"], prior["text"]) >= threshold
-                    for prior in kept_for_node
+                    for prior in kept_for_group
                 ):
-                    rejections.append(
-                        {
-                            "reason": "low_diversity",
-                            "taxonomy_node_id": node_id,
-                            "meta_prompt_id": meta_prompt_id,
-                            "candidate_instantiation_id": instantiation_id,
-                        }
-                    )
+                    rejection = {
+                        "reason": "low_diversity",
+                        "taxonomy_node_id": node_id,
+                        "meta_prompt_id": meta_prompt_id,
+                        "candidate_instantiation_id": instantiation_id,
+                    }
+                    if len(taxonomy_node_ids) > 1:
+                        rejection["compatible_taxonomy_node_ids"] = taxonomy_node_ids
+                    rejections.append(rejection)
                     continue
                 accepted.append(candidate)
-                kept_for_node.append(candidate)
+                kept_for_group.append(candidate)
         return {
             "instantiations": accepted,
             "rejections": rejections,
@@ -497,6 +509,10 @@ def nvidia_local_diversification_provider(
                 "check_name": "token_overlap_rejection",
                 "threshold": threshold,
                 "provider": "nvidia_nim",
+            },
+            "diversification_policy": {
+                "node_mix_size": resolved_node_mix_size,
+                "mixing_strategy": "same_depth_sequential_groups",
             },
         }
 
@@ -655,6 +671,16 @@ def _taxonomy_refinement_from_env() -> bool:
     raise ValueError("SIMULA_TAXONOMY_REFINEMENT must be a boolean")
 
 
+def _local_node_mix_size_from_env() -> int:
+    raw = (os.environ.get("SIMULA_LOCAL_NODE_MIX_SIZE") or "").strip()
+    if not raw:
+        return 1
+    value = _parse_non_negative_int("SIMULA_LOCAL_NODE_MIX_SIZE", raw)
+    if value <= 0:
+        raise ValueError("SIMULA_LOCAL_NODE_MIX_SIZE must be positive")
+    return value
+
+
 def generation_providers_from_env(
     *,
     event_log: list[dict[str, Any]] | None = None,
@@ -672,6 +698,9 @@ def generation_providers_from_env(
             proposal_count=_taxonomy_proposal_count_from_env(),
             refinement_enabled=_taxonomy_refinement_from_env(),
         ),
-        "local_diversification": nvidia_local_diversification_provider(event_log=event_log),
+        "local_diversification": nvidia_local_diversification_provider(
+            event_log=event_log,
+            node_mix_size=_local_node_mix_size_from_env(),
+        ),
         "complexification": nvidia_complexification_provider(event_log=event_log),
     }

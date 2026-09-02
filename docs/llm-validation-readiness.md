@@ -124,6 +124,14 @@ NIM backend env vars:
   - `SIMULA_GENERATION_REASONING_EFFORT` (optional generation-specific reasoning setting)
   - `SIMULA_TAXONOMY_PROPOSAL_COUNT` (optional best-of-N taxonomy proposals per node)
   - `SIMULA_TAXONOMY_REFINEMENT` (`true`/`false` to enable a refinement request over proposals)
+  - `SIMULA_LOCAL_NODE_MIX_SIZE` (optional same-depth taxonomy-node mix size for NIM local diversification; default `1`)
+
+For direct pipeline calls, set `local_diversification_config.node_mix_size` to a
+positive integer. Values above `1` batch adjacent nodes at the same taxonomy
+depth into compatible mixes and persist the selected node IDs in each
+instantiation's lineage. This is an executable approximation of the paper's
+compatible-node sampler, not evidence of the paper's learned compatibility
+distribution.
 
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does

@@ -62,6 +62,55 @@ class Issue3LocalDiversificationTest(unittest.TestCase):
         self.assertIn("meta_prompt_id", rejection)
         self.assertIn("candidate_instantiation_id", rejection)
 
+    def test_compatible_node_mixes_preserve_all_node_lineage(self) -> None:
+        taxonomy = {
+            "domain_namespace": "customer-support",
+            "root_taxonomy_node_id": "tax-root",
+            "nodes": [
+                {
+                    "taxonomy_node_id": "tax-root",
+                    "parent_taxonomy_node_id": None,
+                    "label": "root support",
+                    "depth": 0,
+                },
+                {
+                    "taxonomy_node_id": "tax-a",
+                    "parent_taxonomy_node_id": "tax-root",
+                    "label": "routing",
+                    "depth": 1,
+                },
+                {
+                    "taxonomy_node_id": "tax-b",
+                    "parent_taxonomy_node_id": "tax-root",
+                    "label": "resolution",
+                    "depth": 1,
+                },
+            ],
+            "edges": [
+                {"parent_taxonomy_node_id": "tax-root", "taxonomy_node_id": "tax-a"},
+                {"parent_taxonomy_node_id": "tax-root", "taxonomy_node_id": "tax-b"},
+            ],
+            "generation_policy": {"max_depth": 1, "branching_factor": 2},
+        }
+
+        result = build_local_diversification(
+            taxonomy=taxonomy,
+            per_node_instantiation_count=1,
+            node_mix_size=2,
+        )
+
+        mixed = [
+            item
+            for item in result["instantiations"]
+            if "compatible_taxonomy_node_ids" in item
+        ]
+        self.assertEqual(len(mixed), 1)
+        self.assertEqual(mixed[0]["compatible_taxonomy_node_ids"], ["tax-a", "tax-b"])
+        self.assertEqual(
+            mixed[0]["lineage"]["compatible_taxonomy_node_ids"],
+            ["tax-a", "tax-b"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
