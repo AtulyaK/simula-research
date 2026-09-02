@@ -122,6 +122,8 @@ NIM backend env vars:
   - `SIMULA_GENERATION_BASE_URL` (optional generation endpoint override)
   - `SIMULA_GENERATION_MAX_TOKENS` (optional generation-specific response budget)
   - `SIMULA_GENERATION_REASONING_EFFORT` (optional generation-specific reasoning setting)
+  - `SIMULA_TAXONOMY_PROPOSAL_COUNT` (optional best-of-N taxonomy proposals per node)
+  - `SIMULA_TAXONOMY_REFINEMENT` (`true`/`false` to enable a refinement request over proposals)
 
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does

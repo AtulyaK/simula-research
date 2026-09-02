@@ -277,9 +277,15 @@ def _labels_from_response(response: Any, *, branching_factor: int) -> list[str]:
 def nvidia_taxonomy_provider(
     *,
     event_log: list[dict[str, Any]] | None = None,
+    proposal_count: int = 1,
+    refinement_enabled: bool = False,
     **completion_options: Any,
 ) -> TaxonomyProviderFn:
-    """Generate taxonomy children with one strict NIM JSON request per expandable node."""
+    """Generate taxonomy children with optional best-of-N and refinement requests."""
+    if isinstance(proposal_count, bool) or not isinstance(proposal_count, int) or proposal_count <= 0:
+        raise ValueError("proposal_count must be a positive integer")
+    if not isinstance(refinement_enabled, bool):
+        raise ValueError("refinement_enabled must be a boolean")
 
     def _generate(domain_objective: str, config: TaxonomyConfig | None = None) -> dict[str, Any]:
         resolved_config = config or TaxonomyConfig()
@@ -304,26 +310,61 @@ def nvidia_taxonomy_provider(
             depth = int(parent["depth"])
             if depth >= resolved_config.max_depth:
                 continue
-            response = nvidia_json_completion(
-                system_prompt=(
-                    "Expand a domain taxonomy. Return only a JSON object with a labels array. "
-                    "Each label must be a distinct actionable factor of variation; do not include "
-                    "the parent label or explanations."
-                ),
-                user_content=json.dumps(
-                    {
-                        "domain": domain_objective,
-                        "parent_label": parent["label"],
-                        "parent_depth": depth,
-                        "requested_children": resolved_config.branching_factor,
-                    },
-                    sort_keys=True,
-                ),
-                operation="nvidia_taxonomy",
-                event_log=event_log,
-                **completion_options,
-            )
-            for label in _labels_from_response(response, branching_factor=resolved_config.branching_factor):
+            proposal_labels: list[str] = []
+            for proposal_index in range(proposal_count):
+                response = nvidia_json_completion(
+                    system_prompt=(
+                        "Propose actionable factors for a domain taxonomy. Return only a JSON "
+                        "object with a labels array; do not include the parent label or explanations."
+                    ),
+                    user_content=json.dumps(
+                        {
+                            "domain": domain_objective,
+                            "parent_label": parent["label"],
+                            "parent_depth": depth,
+                            "requested_children": resolved_config.branching_factor,
+                            "proposal_index": proposal_index,
+                        },
+                        sort_keys=True,
+                    ),
+                    operation=(
+                        "nvidia_taxonomy"
+                        if proposal_count == 1
+                        else "nvidia_taxonomy_proposal"
+                    ),
+                    event_log=event_log,
+                    **completion_options,
+                )
+                for label in _labels_from_response(
+                    response,
+                    branching_factor=resolved_config.branching_factor,
+                ):
+                    if label not in proposal_labels:
+                        proposal_labels.append(label)
+            if refinement_enabled and proposal_labels:
+                response = nvidia_json_completion(
+                    system_prompt=(
+                        "Refine candidate taxonomy factors. Return only a JSON object with a "
+                        "labels array containing the strongest distinct factors; do not explain."
+                    ),
+                    user_content=json.dumps(
+                        {
+                            "domain": domain_objective,
+                            "parent_label": parent["label"],
+                            "candidate_labels": proposal_labels,
+                            "requested_children": resolved_config.branching_factor,
+                        },
+                        sort_keys=True,
+                    ),
+                    operation="nvidia_taxonomy_refinement",
+                    event_log=event_log,
+                    **completion_options,
+                )
+                proposal_labels = _labels_from_response(
+                    response,
+                    branching_factor=resolved_config.branching_factor,
+                )
+            for label in proposal_labels[: resolved_config.branching_factor]:
                 child_id = _taxonomy_node_id(namespace, str(parent["taxonomy_node_id"]), label)
                 child = {
                     "taxonomy_node_id": child_id,
@@ -352,6 +393,8 @@ def nvidia_taxonomy_provider(
                 "branching_factor": resolved_config.branching_factor,
                 "merge_filter_strategy": "provider-label-normalize+deduplicate",
                 "provider": "nvidia_nim",
+                "proposal_count": proposal_count,
+                "refinement_enabled": refinement_enabled,
             },
         }
 
@@ -591,6 +634,27 @@ def nvidia_complexification_provider(
     return _generate
 
 
+def _taxonomy_proposal_count_from_env() -> int:
+    raw = (os.environ.get("SIMULA_TAXONOMY_PROPOSAL_COUNT") or "").strip()
+    if not raw:
+        return 1
+    value = _parse_non_negative_int("SIMULA_TAXONOMY_PROPOSAL_COUNT", raw)
+    if value <= 0:
+        raise ValueError("SIMULA_TAXONOMY_PROPOSAL_COUNT must be positive")
+    return value
+
+
+def _taxonomy_refinement_from_env() -> bool:
+    raw = (os.environ.get("SIMULA_TAXONOMY_REFINEMENT") or "").strip().lower()
+    if not raw:
+        return False
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError("SIMULA_TAXONOMY_REFINEMENT must be a boolean")
+
+
 def generation_providers_from_env(
     *,
     event_log: list[dict[str, Any]] | None = None,
@@ -603,7 +667,11 @@ def generation_providers_from_env(
     if mode not in {"nim", "nvidia"}:
         raise ValueError(f"Unsupported SIMULA_GENERATION_BACKEND={mode!r}")
     return {
-        "taxonomy": nvidia_taxonomy_provider(event_log=event_log),
+        "taxonomy": nvidia_taxonomy_provider(
+            event_log=event_log,
+            proposal_count=_taxonomy_proposal_count_from_env(),
+            refinement_enabled=_taxonomy_refinement_from_env(),
+        ),
         "local_diversification": nvidia_local_diversification_provider(event_log=event_log),
         "complexification": nvidia_complexification_provider(event_log=event_log),
     }

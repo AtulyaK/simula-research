@@ -67,6 +67,27 @@ class GenerationProviderAdapterTests(unittest.TestCase):
         self.assertEqual(len(taxonomy["nodes"]), 3)
         self.assertEqual(taxonomy["generation_policy"]["provider"], "nvidia_nim")
 
+    def test_taxonomy_provider_supports_best_of_n_and_refinement(self) -> None:
+        provider = nvidia_taxonomy_provider(
+            proposal_count=2,
+            refinement_enabled=True,
+            http_post_json=self._fake_transport(
+                [
+                    '{"labels":["access control"]}',
+                    '{"labels":["detection"]}',
+                    '{"labels":["detection","access control"]}',
+                ]
+            ),
+            max_retries=0,
+        )
+
+        taxonomy = provider("cyber security", TaxonomyConfig(max_depth=1, branching_factor=2))
+
+        validate_taxonomy_output(taxonomy)
+        self.assertEqual(len(taxonomy["nodes"]), 3)
+        self.assertEqual(taxonomy["generation_policy"]["proposal_count"], 2)
+        self.assertTrue(taxonomy["generation_policy"]["refinement_enabled"])
+
     def test_local_provider_builds_lineage_and_rejects_duplicate_text(self) -> None:
         taxonomy = default_taxonomy_provider("security", TaxonomyConfig(max_depth=0, branching_factor=1))
         provider = nvidia_local_diversification_provider(
