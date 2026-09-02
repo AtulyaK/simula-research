@@ -418,6 +418,24 @@ def load_global_mmlu_jsonl(
     return tasks
 
 
+def adapt_lexam_record(
+    record: dict[str, Any],
+    *,
+    config: str,
+    split: str,
+    source_index: int,
+) -> dict[str, Any]:
+    """Adapt one LEXam record into the fixed task schema."""
+    return _adapt_multiple_choice_record(
+        record,
+        dataset_id="LEXam",
+        split=split,
+        source_index=source_index,
+        source_format="lexam",
+        config=config,
+    )
+
+
 def load_lexam_jsonl(
     path: str | Path,
     *,
@@ -446,24 +464,6 @@ def load_lexam_jsonl(
                 )
             )
     return tasks
-
-
-def adapt_lexam_record(
-    record: dict[str, Any],
-    *,
-    config: str,
-    split: str,
-    source_index: int,
-) -> dict[str, Any]:
-    """Adapt one LEXam record into the fixed task schema."""
-    return _adapt_multiple_choice_record(
-        record,
-        dataset_id="LEXam",
-        split=split,
-        source_index=source_index,
-        source_format="lexam",
-        config=config,
-    )
 
 
 def validate_split_manifest(manifest: dict[str, Any]) -> None:
