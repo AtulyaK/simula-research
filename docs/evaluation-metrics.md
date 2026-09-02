@@ -71,6 +71,12 @@ Suggested defaults for reproducible first phase:
 - K-factor: 32
 - minimum comparisons per sample: 5
 
+The reporting layer emits an `elo_calibration` record with the fixed initial
+rating, K-factor, comparison count, raw ratings, and 0-100 normalized ratings.
+This is valid calibration evidence for persisted pairwise comparisons; it is
+not equivalent to the paper's batch scheduler until cross-item batch judgments
+are available.
+
 ### 2) Complexity shift vs baseline
 
 `complexity_shift = median_complexity(run) - median_complexity(baseline)`

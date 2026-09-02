@@ -13,7 +13,7 @@ from simula_research.run_config_presets import (
 
 class Wave2ConfigScaffoldingTest(unittest.TestCase):
     def test_required_presets_exist_with_labels(self) -> None:
-        self.assertEqual(PRESET_IDS, ("B0", "A1", "A4"))
+        self.assertEqual(PRESET_IDS, ("B0", "A1", "A2", "A3", "A4", "A5"))
         for preset_id in PRESET_IDS:
             preset = get_config_preset(preset_id)
             self.assertEqual(preset["baseline_or_ablation_tag"], preset_id)
@@ -47,6 +47,24 @@ class Wave2ConfigScaffoldingTest(unittest.TestCase):
             set(request["manifest_metadata"].keys()),
             set(REQUIRED_PRESET_FIELDS),
         )
+
+    def test_a2_disables_local_diversification(self) -> None:
+        preset = get_config_preset("A2")
+        self.assertFalse(preset["pipeline_config"]["local_diversification_enabled"])
+        self.assertEqual(preset["hypothesis_focus"], ["H2"])
+
+    def test_a3_disables_complexification(self) -> None:
+        preset = get_config_preset("A3")
+        self.assertFalse(preset["pipeline_config"]["complexification_enabled"])
+        self.assertEqual(preset["hypothesis_focus"], ["H3"])
+
+    def test_a5_accepts_critic_disagreements(self) -> None:
+        preset = get_config_preset("A5")
+        self.assertEqual(
+            preset["dual_critic_config"]["disagreement_policy"],
+            "accept",
+        )
+        self.assertEqual(preset["hypothesis_focus"], ["H4"])
 
 
 if __name__ == "__main__":

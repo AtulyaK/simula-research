@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-PRESET_IDS: tuple[str, ...] = ("B0", "A1", "A4")
+PRESET_IDS: tuple[str, ...] = ("B0", "A1", "A2", "A3", "A4", "A5")
 COMPARABILITY_FIELDS: tuple[str, ...] = (
     "domain_objective",
     "seed",
@@ -66,6 +66,30 @@ _PRESETS: dict[str, dict[str, Any]] = {
             "complexify_fraction": 1.0,
         },
     },
+    "A2": {
+        **_COMMON_COMPARABILITY,
+        "baseline_or_ablation_tag": "A2",
+        "run_label": "ablation-no-local-diversification",
+        "hypothesis_focus": ["H2"],
+        "pipeline_config": {
+            "global_diversification_enabled": True,
+            "local_diversification_enabled": False,
+            "complexification_enabled": True,
+            "dual_critic_enabled": True,
+        },
+    },
+    "A3": {
+        **_COMMON_COMPARABILITY,
+        "baseline_or_ablation_tag": "A3",
+        "run_label": "ablation-no-complexification",
+        "hypothesis_focus": ["H3"],
+        "pipeline_config": {
+            "global_diversification_enabled": True,
+            "local_diversification_enabled": True,
+            "complexification_enabled": False,
+            "dual_critic_enabled": True,
+        },
+    },
     "A4": {
         **_COMMON_COMPARABILITY,
         "baseline_or_ablation_tag": "A4",
@@ -77,6 +101,21 @@ _PRESETS: dict[str, dict[str, Any]] = {
             "complexification_enabled": True,
             "dual_critic_enabled": False,
             "single_critic_mode": "critic_a",
+        },
+    },
+    "A5": {
+        **_COMMON_COMPARABILITY,
+        "baseline_or_ablation_tag": "A5",
+        "run_label": "ablation-reduced-critic-strictness",
+        "hypothesis_focus": ["H4"],
+        "pipeline_config": {
+            "global_diversification_enabled": True,
+            "local_diversification_enabled": True,
+            "complexification_enabled": True,
+            "dual_critic_enabled": True,
+        },
+        "dual_critic_config": {
+            "disagreement_policy": "accept",
         },
     },
 }
@@ -132,4 +171,6 @@ def build_run_request(preset_id: str) -> dict[str, Any]:
         request["local_diversification_config"] = dict(preset["local_diversification_config"])
     if "complexification_config" in preset:
         request["complexification_config"] = dict(preset["complexification_config"])
+    if "dual_critic_config" in preset:
+        request["dual_critic_config"] = dict(preset["dual_critic_config"])
     return request

@@ -148,7 +148,10 @@ class Issue9ReproducibilityTests(unittest.TestCase):
                 commit_hash="deadbeef",
             )
 
-            self.assertEqual(set(result["manifest_validation"].keys()), {"B0", "A1", "A4"})
+            self.assertEqual(
+                set(result["manifest_validation"].keys()),
+                {"B0", "A1", "A2", "A3", "A4", "A5"},
+            )
             self.assertTrue(all(item["ok"] for item in result["manifest_validation"].values()))
             self.assertIn(
                 result["baseline_rerun"]["classification"],

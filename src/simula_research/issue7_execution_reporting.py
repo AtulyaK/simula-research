@@ -12,6 +12,10 @@ from simula_research.evaluation_metrics import (
     compute_coverage_metrics,
     compute_quality_metrics,
 )
+from simula_research.complexity_judgments import (
+    build_elo_comparisons,
+    calibrate_elo_ratings,
+)
 from simula_research.critic_provider_adapter import (
     critic_sample_evaluator_from_env,
     provider_runtime_from_env,
@@ -94,6 +98,8 @@ def _compute_complexity_metrics_from_judgments(
     samples: list[dict[str, Any]],
     pairwise_judgments: list[dict[str, Any]],
     minimum_comparisons_per_sample: int,
+    initial_rating: int,
+    k_factor: int,
 ) -> dict[str, Any]:
     complexified_samples = [
         sample for sample in samples if bool(sample.get("is_complexified"))
@@ -136,6 +142,31 @@ def _compute_complexity_metrics_from_judgments(
         baseline_complexity_scores=baseline_scores,
         complexification_pairs=pairwise_judgments,
     )
+    elo_ratings = calibrate_elo_ratings(
+        build_elo_comparisons(pairwise_judgments),
+        initial_rating=initial_rating,
+        k_factor=k_factor,
+    )
+    elo_values = list(elo_ratings.values())
+    elo_min = min(elo_values)
+    elo_max = max(elo_values)
+    elo_span = elo_max - elo_min
+    normalized_elo_ratings = {
+        item_id: (
+            50.0
+            if elo_span == 0
+            else (rating - elo_min) / elo_span * 100.0
+        )
+        for item_id, rating in elo_ratings.items()
+    }
+    complexity["elo_calibration"] = {
+        "method": "elo_v1",
+        "initial_rating": initial_rating,
+        "k_factor": k_factor,
+        "comparison_count": len(pairwise_judgments),
+        "ratings": elo_ratings,
+        "normalized_ratings": normalized_elo_ratings,
+    }
     complexity["proxy_metrics"] = _compute_not_evaluable_complexity_metrics(samples)["proxy_metrics"]
     complexity["judgment_sample_count"] = len(judgments_by_sample)
     return complexity
@@ -315,6 +346,8 @@ def execute_issue7_matrix(
             pipeline_kwargs["local_diversification_config"] = dict(local_diversification_config)
         if request.get("complexification_config") is not None:
             pipeline_kwargs["complexification_config"] = dict(request["complexification_config"])
+        if request.get("dual_critic_config") is not None:
+            pipeline_kwargs["dual_critic_config"] = dict(request["dual_critic_config"])
         pipeline_result = run_pipeline(**pipeline_kwargs)
 
         persisted = _load_persisted_run_inputs(artifact_root, pipeline_result)
@@ -378,6 +411,8 @@ def execute_issue7_matrix(
             samples=complexity_samples,
             pairwise_judgments=pairwise_judgments,
             minimum_comparisons_per_sample=minimum_comparisons,
+            initial_rating=int(judgment_config.get("initial_rating", 1000)),
+            k_factor=int(judgment_config.get("k_factor", 32)),
         )
 
         quality = compute_quality_metrics(issue5_outputs=stage4)
@@ -400,7 +435,10 @@ def execute_issue7_matrix(
             "complexity_judgment_protocol": complexity_judgment_protocol,
             "critic_adjudication_config": {
                 "mode": "dual_critic" if request["pipeline_config"]["dual_critic_enabled"] else "single_critic",
-                "policy": "reject_on_disagreement",
+                "policy": (
+                    f"{request.get('dual_critic_config', {}).get('disagreement_policy', 'reject')}"
+                    "_on_disagreement"
+                ),
             },
             "artifact_schema_version": persisted_manifest["artifact_schema_version"],
             **request["manifest_metadata"],

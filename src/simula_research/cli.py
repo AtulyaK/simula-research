@@ -43,7 +43,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Simula research validation workflows.")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    matrix = commands.add_parser("matrix", help="Execute the Issue 7 B0/A1/A4 matrix.")
+    matrix = commands.add_parser("matrix", help="Execute the Issue 7 full ablation matrix.")
     matrix.add_argument(
         "--artifact-root",
         default=os.environ.get("SIMULA_ARTIFACT_ROOT", "artifacts/runs"),

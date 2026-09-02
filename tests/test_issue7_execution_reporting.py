@@ -34,9 +34,9 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             )
 
             run_reports = output["run_reports"]
-            self.assertEqual(set(run_reports.keys()), {"B0", "A1", "A4"})
+            self.assertEqual(set(run_reports.keys()), {"B0", "A1", "A2", "A3", "A4", "A5"})
 
-            for preset_id in ("B0", "A1", "A4"):
+            for preset_id in ("B0", "A1", "A2", "A3", "A4", "A5"):
                 per_run = run_reports[preset_id]
                 self.assertIn("run_id", per_run["run_identity"])
                 self.assertEqual(per_run["run_identity"]["branch"], "feature/issue-7-execute-b0-a1-a4")
@@ -65,7 +65,22 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                 set(comparison_tables.keys()),
                 {"coverage_comparison", "complexity_comparison", "quality_comparison", "gate_comparison"},
             )
-            self.assertEqual(len(comparison_tables["coverage_comparison"]), 3)
+            self.assertEqual(len(comparison_tables["coverage_comparison"]), 6)
+
+    def test_a5_persists_reduced_critic_strictness_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="ablation-a5",
+                commit_hash="deadbeef",
+            )
+
+        protocol = output["run_reports"]["A5"]["protocol"]
+        self.assertEqual(
+            protocol["critic_adjudication_config"]["policy"],
+            "accept_on_disagreement",
+        )
 
     def test_dual_critic_agreement_is_reported_and_single_critic_is_not_evaluable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -176,6 +191,9 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
         self.assertGreater(complexity["complexification_pairs_evaluated"], 0)
         self.assertAlmostEqual(complexity["complexification_precision"], 1.0)
         self.assertAlmostEqual(complexity["complexity_shift"], 0.4)
+        self.assertEqual(complexity["elo_calibration"]["method"], "elo_v1")
+        self.assertEqual(complexity["elo_calibration"]["comparison_count"], len(pairwise_judgments))
+        self.assertTrue(complexity["elo_calibration"]["ratings"])
         self.assertEqual(b0["protocol"]["complexity_judgment_protocol"]["evidence_status"], "evaluated")
         self.assertNotIn("not_evaluable_reason", b0["protocol"]["complexity_judgment_protocol"])
         self.assertEqual(

@@ -7,7 +7,7 @@ This guide explains how to make the repository ready for end-to-end validation w
 Use this together with:
 
 - `docs/research_paper.pdf` (research intent and validation framing)
-- `docs/research-validation-playbook.md` (hypotheses H1-H4, B0/A1/A4 matrix, run checklist)
+- `docs/research-validation-playbook.md` (hypotheses H1-H4, full B0/A1/A2/A3/A4/A5 matrix, run checklist)
 - `docs/pipeline-spec.md` (stage contracts)
 - `docs/evaluation-metrics.md` (metric definitions and gates)
 - `docs/reproducibility-ops.md` (manifest/artifact/rerun protocol)
@@ -33,13 +33,13 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
   - **`CriticSampleEvaluatorFn` (Issue #22):** `(sample, critic_id) -> verdict` — **provider-facing** path: full Stage-3 sample dict (lineage, `is_complexified`, regenerated `text`, …) without changing Stage 4 JSON artifact field names.
 - Helpers for rollout: `sample_evaluator_from_text_fn` (parity / replay vs hash path), `recorded_sample_evaluator` (offline replay from a fixed verdict table). `critic_verdict` and `critic_sample_evaluator` are **mutually exclusive** at the pipeline boundary.
 - **Provider/runtime metadata (Issue #41):** optional `provider_runtime` dict is merged into the run `manifest` and echoed under `stage_outputs.stage_4_dual_critic_quality_verification.provider_runtime` when supplied. `provider_runtime_from_env()` in `critic_provider_adapter.py` collects **non-secret** transport knobs from environment variables for operator runs.
-- **Execution fidelity (Issue #42):** `execute_issue7_matrix` passes each preset’s `pipeline_config` into `run_pipeline`, which maps toggles to taxonomy/local/complexification/dual-critic execution (A1 shallow taxonomy, A4 `single_critic_mode`, etc.). Reporting-time metric hacks for A1/A4 have been removed; matrix metrics now reflect actual stage outputs.
-- **Env-based critic wiring:** `critic_sample_evaluator_from_env()` returns `None` (hash default), or a **non-network** `stub` / `replay` evaluator for smoke tests (`SIMULA_CRITIC_BACKEND`, `SIMULA_CRITIC_REPLAY_JSON`). The live NVIDIA NIM backend is available behind `SIMULA_CRITIC_BACKEND=nim` (requires `NVIDIA_API_KEY` or `NVAPI_KEY`) and is **fail-closed** on ambiguous outputs (invalid/unclear verdicts become `reject` with structured event logging). **`execute_issue7_matrix`** passes both `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into `run_pipeline` for B0/A1/A4. See `docs/research-validation-playbook.md` and `scripts/run_issue7_matrix.sh`.
+- **Execution fidelity (Issue #42):** `execute_issue7_matrix` passes each preset’s `pipeline_config` and any preset-specific policy into `run_pipeline`, which maps toggles to taxonomy/local/complexification/dual-critic execution (A1 shallow taxonomy, A2 one instantiation per node, A3 zero complexification, A4 `single_critic_mode`, and A5 accept-on-disagreement). Reporting-time metric hacks have been removed; matrix metrics now reflect actual stage outputs.
+- **Env-based critic wiring:** `critic_sample_evaluator_from_env()` returns `None` (hash default), or a **non-network** `stub` / `replay` evaluator for smoke tests (`SIMULA_CRITIC_BACKEND`, `SIMULA_CRITIC_REPLAY_JSON`). The live NVIDIA NIM backend is available behind `SIMULA_CRITIC_BACKEND=nim` (requires `NVIDIA_API_KEY` or `NVAPI_KEY`) and is **fail-closed** on ambiguous outputs (invalid/unclear verdicts become `reject` with structured event logging). **`execute_issue7_matrix`** passes both `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into `run_pipeline` for all six matrix cells. See `docs/research-validation-playbook.md` and `scripts/run_issue7_matrix.sh`.
 - Stages 1–3 remain deterministic in-repo logic by default (Phase 2 of this guide).
 
 ### Issue #7 matrix
 
-`src/simula_research/issue7_execution_reporting.py` passes preset `pipeline_config` into `run_pipeline` so B0/A1/A4 differ in persisted artifacts and downstream metrics without report-only adjustments.
+`src/simula_research/issue7_execution_reporting.py` passes each preset's pipeline and critic policy into `run_pipeline` so B0/A1/A2/A3/A4/A5 differ in persisted artifacts and downstream metrics without report-only adjustments.
 
 For free-tier or rate-limited provider validation, use the opt-in reduced-size
 mode. It overrides the local instantiation count for every preset and records

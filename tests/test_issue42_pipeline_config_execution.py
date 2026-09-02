@@ -104,6 +104,52 @@ class Issue42PipelineConfigExecutionTests(unittest.TestCase):
                 len(a1_samples),
             )
 
+    def test_full_ablation_matrix_changes_the_intended_runtime_axes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = execute_issue7_matrix(
+                artifact_root=tmp,
+                report_root=tmp,
+                per_node_instantiation_count=2,
+            )
+
+            a2_report = out["run_reports"]["A2"]
+            a2_root = Path(tmp) / a2_report["run_identity"]["run_id"]
+            a2_samples = json.loads(
+                (a2_root / "30_complexification" / "samples.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                len(a2_samples),
+                a2_report["coverage"]["eligible_nodes"],
+            )
+
+            a3_report = out["run_reports"]["A3"]
+            a3_root = Path(tmp) / a3_report["run_identity"]["run_id"]
+            a3_samples = json.loads(
+                (a3_root / "30_complexification" / "samples.json").read_text(encoding="utf-8")
+            )
+            self.assertTrue(a3_samples)
+            self.assertTrue(all(not sample["is_complexified"] for sample in a3_samples))
+            a3_config = json.loads(
+                (a3_root / "00_spec" / "run_config.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                a3_config["complexification_config"]["complexify_fraction"],
+                0.0,
+            )
+
+            self.assertEqual(
+                out["run_reports"]["A5"]["protocol"]["critic_adjudication_config"]["mode"],
+                "dual_critic",
+            )
+            self.assertEqual(
+                out["run_reports"]["A5"]["protocol"]["critic_adjudication_config"]["policy"],
+                "accept_on_disagreement",
+            )
+            self.assertGreaterEqual(
+                out["run_reports"]["A5"]["quality"]["acceptance_rate"],
+                out["run_reports"]["B0"]["quality"]["acceptance_rate"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

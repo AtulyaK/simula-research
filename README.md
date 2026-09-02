@@ -46,7 +46,7 @@ Domain language anchors:
 
 ## First validation quickstart
 
-From the repository root, run the Issue 7 B0/A1/A4 matrix with the native
+From the repository root, run the full Issue 7 B0/A1/A2/A3/A4/A5 matrix with the native
 Python runner:
 
 ```powershell
@@ -56,7 +56,7 @@ py -3 -m simula_research.cli matrix
 ```
 
 For rate-limited providers, run an opt-in smaller matrix while preserving the
-same B0/A1/A4 semantics:
+same six-cell ablation semantics:
 
 ```powershell
 py -3 -m simula_research.cli matrix --per-node-instantiations 1

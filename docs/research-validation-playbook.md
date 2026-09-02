@@ -77,9 +77,9 @@ Stop if: required env vars are missing for your chosen backend, spend caps would
 
 For Issue #9 **full** manifest validation on disk, write `manifest.json` with all fields in `validators.validate_manifest_schema` (including `created_at_utc`, `domain_objective`, `owner`, `commit_hash`, `branch`). The minimal `run_pipeline` return manifest is sufficient for stage boot only.
 
-## Issue #7 matrix (B0 / A1 / A4)
+## Issue #7 matrix (B0 / A1 / A2 / A3 / A4 / A5)
 
-`execute_issue7_matrix` wires `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into each preset run. Shell wrappers:
+`execute_issue7_matrix` wires `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into each preset run. It executes the full six-cell matrix, with each ablation changing only its documented control axis. Shell wrappers:
 
 ```bash
 cd /path/to/simula-research

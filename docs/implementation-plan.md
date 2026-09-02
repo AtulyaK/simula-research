@@ -20,6 +20,26 @@ The first implementation cycle succeeds when we can run a full baseline plus tar
 - Preserve comparability across baseline and ablation runs.
 - Treat reproducibility metadata as a hard requirement, not an afterthought.
 
+## Post-engineering paper replication phase
+
+The initial deterministic validation cycle and provider seams are complete.
+Work now targets fidelity to the paper rather than additional infrastructure.
+The active claim-to-evidence inventory is
+[`paper-replication-matrix.md`](./paper-replication-matrix.md).
+
+Current execution priority:
+
+1. complete batch-wise Elo complexity calibration;
+2. add persisted intrinsic embedding-compatible diversity metrics;
+3. add one paper-dataset adapter and 13-gram decontamination;
+4. add a downstream training/evaluation seam;
+5. replace deterministic Stage 1-3 stand-ins with provider-backed
+   implementations while retaining replayable fixtures.
+
+The full executable ablation matrix is B0/A1/A2/A3/A4/A5. The additional
+cells extend the original B0/A1/A4 validation playbook and must not be
+reported as exact replicas of the paper's Table 1 system labels.
+
 ## Architecture modules (first-pass)
 
 ### 1) RunSpec and configuration layer

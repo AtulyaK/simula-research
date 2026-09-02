@@ -277,7 +277,7 @@ def run_issue9_reproducibility_check(
     reproducibility_status = {
         "status": baseline_rerun["classification"],
         "detail": (
-            "Issue #9 completed manifest validation for B0/A1/A4 and executed "
+            "Issue #9 completed manifest validation for the configured ablation matrix and executed "
             "deterministic baseline rerun classification."
         ),
         "manifest_validation": {

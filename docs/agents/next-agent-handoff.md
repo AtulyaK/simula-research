@@ -21,7 +21,18 @@ Agents should **not** reopen Milestone 1–3 implementation unless a regression 
 
 ---
 
-## Executive summary — two “done” notions
+## Historical completion summary — two “done” notions
+
+## Active continuation: paper replication
+
+The engineering closure described below is historical. The active task is now
+to improve fidelity to `docs/research_paper.pdf`; see
+[`docs/paper-replication-matrix.md`](../paper-replication-matrix.md) for the
+claim-to-evidence inventory. The full executable matrix is B0/A1/A2/A3/A4/A5,
+but only B0 is the reference run and A1-A5 are documented validation
+ablations. The next high-value slices are Elo calibration, intrinsic diversity,
+one real paper-dataset adapter with decontamination, and a downstream
+evaluation seam.
 
 ### Research engineering + deterministic validation — **closed**
 

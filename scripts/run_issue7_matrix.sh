@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execute Issue #7 B0/A1/A4 matrix.
+# Execute the full Issue #7 B0/A1/A2/A3/A4/A5 matrix.
 #
 # Provider critic backend (Stage 4):
 #   SIMULA_CRITIC_BACKEND=stub   — non-network hash parity (default)
