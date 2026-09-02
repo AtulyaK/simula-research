@@ -36,6 +36,7 @@ The codebase supports a deterministic full pipeline and milestone evidence. LLM-
 - **Execution fidelity (Issue #42):** `execute_issue7_matrix` passes each preset’s `pipeline_config` and any preset-specific policy into `run_pipeline`, which maps toggles to taxonomy/local/complexification/dual-critic execution (A1 shallow taxonomy, A2 one instantiation per node, A3 zero complexification, A4 `single_critic_mode`, and A5 accept-on-disagreement). Reporting-time metric hacks have been removed; matrix metrics now reflect actual stage outputs.
 - **Env-based critic wiring:** `critic_sample_evaluator_from_env()` returns `None` (hash default), or a **non-network** `stub` / `replay` evaluator for smoke tests (`SIMULA_CRITIC_BACKEND`, `SIMULA_CRITIC_REPLAY_JSON`). The live NVIDIA NIM backend is available behind `SIMULA_CRITIC_BACKEND=nim` (requires `NVIDIA_API_KEY` or `NVAPI_KEY`) and is **fail-closed** on ambiguous outputs (invalid/unclear verdicts become `reject` with structured event logging). **`execute_issue7_matrix`** passes both `provider_runtime_from_env()` and `critic_sample_evaluator_from_env()` into `run_pipeline` for all six matrix cells. See `docs/research-validation-playbook.md` and `scripts/run_issue7_matrix.sh`.
 - **Batch complexity wiring:** `batch_complexity_judgment_provider_from_env()` selects the live NIM batch scorer when the critic backend is `nim`/`nvidia`, or a deterministic replay scorer when `SIMULA_COMPLEXITY_BACKEND=replay` and `SIMULA_COMPLEXITY_REPLAY_JSON` is set. The scorer sends each scheduled batch once, requires an ordered JSON array of `{item_id, score}` objects, and raises on malformed or incomplete responses rather than fabricating complexity evidence. `execute_issue7_matrix` auto-selects this provider when no explicit batch provider is supplied.
+- **Embedding wiring:** `embedding_provider_from_env()` is explicitly opt-in through `SIMULA_EMBEDDING_BACKEND=nim`/`nvidia`; otherwise diversity metrics retain the deterministic hash fallback. The remote adapter accepts an OpenAI-compatible embeddings response, records the configured model name in diversity metrics, and fails closed with sanitized events. Matrix execution auto-selects it only when explicitly configured.
 - Stages 1–3 remain deterministic in-repo logic by default (Phase 2 of this guide).
 
 ### Issue #7 matrix
@@ -105,6 +106,10 @@ NIM backend env vars:
   - `SIMULA_COMPLEXITY_BACKEND` (`replay` for offline scores; otherwise follows
     `SIMULA_CRITIC_BACKEND`)
   - `SIMULA_COMPLEXITY_REPLAY_JSON` (required for complexity replay)
+  - `SIMULA_EMBEDDING_BACKEND` (`nim`/`nvidia` to enable remote embeddings)
+  - `SIMULA_EMBEDDING_BASE_URL` (or `SIMULA_NIM_EMBEDDING_BASE_URL`)
+  - `SIMULA_EMBEDDING_MODEL` (default `nvidia/nv-embedqa-e5-v5`)
+  - `SIMULA_EMBEDDING_INPUT_TYPE` (default `passage`)
 
 The default NIM critic model is `moonshotai/kimi-k3`, with
 `reasoning_effort=max` and `max_tokens=16384` so Kimi's reasoning phase does

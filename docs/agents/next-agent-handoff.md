@@ -31,9 +31,10 @@ to improve fidelity to `docs/research_paper.pdf`; see
 claim-to-evidence inventory. The full executable matrix is B0/A1/A2/A3/A4/A5,
 but only B0 is the reference run and A1-A5 are documented validation
 ablations. A live NIM/Kimi batch judge is now connected to the BS/N Elo
-scheduler, with deterministic replay coverage. The next high-value slices are
-paper-compatible intrinsic embeddings, remaining dataset adapters, and a
-downstream evaluation seam.
+scheduler, with deterministic replay coverage, and a configurable remote
+embedding seam now fronts the deterministic diversity fallback. The next
+high-value slices are validating a supported embedding deployment, remaining
+dataset adapters, and a downstream evaluation seam.
 
 ### Research engineering + deterministic validation — **closed**
 

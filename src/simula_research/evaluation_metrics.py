@@ -93,12 +93,15 @@ def compute_intrinsic_diversity_metrics(
     """Compute paper-style global and local embedding diversity distances."""
     if isinstance(local_k, bool) or not isinstance(local_k, int) or local_k <= 0:
         raise ValueError("local_k must be a positive integer")
+    embedding_provider_name = (
+        "hash_sha256_v1"
+        if embedding_provider is None
+        else str(getattr(embedding_provider, "__simula_embedding_provider_name__", "custom"))
+    )
     if not samples:
         return {
             "sample_count": 0,
-            "embedding_provider": "hash_sha256_v1"
-            if embedding_provider is None
-            else "custom",
+            "embedding_provider": embedding_provider_name,
             "embedding_dimension": None,
             "global_pairwise_cosine_distance": None,
             "local_knn_cosine_distance": None,
@@ -152,7 +155,7 @@ def compute_intrinsic_diversity_metrics(
 
     return {
         "sample_count": len(samples),
-        "embedding_provider": "hash_sha256_v1" if embedding_provider is None else "custom",
+        "embedding_provider": embedding_provider_name,
         "embedding_dimension": dimension,
         "global_pairwise_cosine_distance": (
             sum(pairwise_distances) / len(pairwise_distances)

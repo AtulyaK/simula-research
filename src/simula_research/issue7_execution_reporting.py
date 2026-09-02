@@ -14,6 +14,7 @@ from simula_research.evaluation_metrics import (
     compute_intrinsic_diversity_metrics,
     compute_quality_metrics,
 )
+from simula_research.embedding_provider_adapter import embedding_provider_from_env
 from simula_research.complexity_judgments import (
     COMPLEXITY_JUDGMENT_DEFAULTS,
     build_elo_comparisons,
@@ -324,14 +325,22 @@ def execute_issue7_matrix(
         request = build_run_request(preset_id)
         provider_runtime = provider_runtime_from_env()
         backend = str(provider_runtime.get("critic_backend", "")).strip().lower()
+        embedding_backend = str(provider_runtime.get("embedding_backend", "")).strip().lower()
         provider_event_log: list[dict[str, Any]] | None = (
-            [] if backend in {"nim", "nvidia"} else None
+            []
+            if backend in {"nim", "nvidia"} or embedding_backend in {"nim", "nvidia"}
+            else None
         )
         critic_sample_evaluator = critic_sample_evaluator_from_env(event_log=provider_event_log)
         resolved_batch_complexity_provider = (
             batch_complexity_judgment_provider
             if batch_complexity_judgment_provider is not None
             else batch_complexity_judgment_provider_from_env(event_log=provider_event_log)
+        )
+        resolved_embedding_provider = (
+            embedding_provider
+            if embedding_provider is not None
+            else embedding_provider_from_env(event_log=provider_event_log)
         )
         model_ids = dict(request["model_ids"])
         nim_critic = provider_runtime.get("nim_critic")
@@ -408,7 +417,7 @@ def execute_issue7_matrix(
         )
         diversity = compute_intrinsic_diversity_metrics(
             accepted_samples,
-            embedding_provider=embedding_provider,
+            embedding_provider=resolved_embedding_provider,
             local_k=diversity_local_k,
         )
 
