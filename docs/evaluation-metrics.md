@@ -74,9 +74,11 @@ Suggested defaults for reproducible first phase:
 
 The reporting layer emits an `elo_calibration` record with the fixed initial
 rating, K-factor, comparison count, raw ratings, and 0-100 normalized ratings.
-This is valid calibration evidence for persisted pairwise comparisons; it is
-not equivalent to the paper's batch scheduler until cross-item batch judgments
-are available.
+The `prepare_complexity_batch_schedule` and
+`collect_batchwise_complexity_judgments` seams implement deterministic
+cross-item scheduling and pairwise conversion for `BS`/`N` experiments.
+Issue 7's existing complexified-vs-source provider remains a separate
+backward-compatible scoring mode until a real batch judge is supplied.
 
 ### 2) Complexity shift vs baseline
 

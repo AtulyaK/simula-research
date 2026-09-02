@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from simula_research.complexity_judgments import (
     COMPLEXITY_JUDGMENT_DEFAULTS,
+    collect_batchwise_complexity_judgments,
     collect_pairwise_complexity_judgments,
 )
 from simula_research.decontamination import (
@@ -16,6 +17,7 @@ from simula_research.decontamination import (
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.manifest import validate_manifest
 from simula_research.provider_protocols import (
+    BatchComplexityJudgmentProviderFn,
     ComplexityJudgmentProviderFn,
     ComplexificationProviderFn,
     CriticSampleEvaluatorFn,
@@ -77,6 +79,7 @@ def run_pipeline(
     critic_verdict: CriticVerdictFn | None = None,
     critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
     complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
+    batch_complexity_judgment_provider: BatchComplexityJudgmentProviderFn | None = None,
     complexity_judgment_config: dict[str, int] | None = None,
     dataset_protocol_config: dict[str, Any] | None = None,
     decontamination_reference_samples: list[dict[str, Any]] | None = None,
@@ -213,6 +216,19 @@ def run_pipeline(
         semantic_overlap_threshold=resolved_complexification_config["semantic_overlap_threshold"],
         strategy=resolved_complexification_config["strategy"],
     )
+    batchwise_complexity = (
+        collect_batchwise_complexity_judgments(
+            samples=complexification["samples"],
+            provider=batch_complexity_judgment_provider,
+            batch_size=int(resolved_complexity_judgment_config["batch_size"]),
+            samples_per_item=int(resolved_complexity_judgment_config["samples_per_item"]),
+            seed=seed,
+            initial_rating=int(resolved_complexity_judgment_config["initial_rating"]),
+            k_factor=int(resolved_complexity_judgment_config["k_factor"]),
+        )
+        if batch_complexity_judgment_provider is not None
+        else None
+    )
     pairwise_complexity_judgments = (
         collect_pairwise_complexity_judgments(
             samples=complexification["samples"],
@@ -222,6 +238,9 @@ def run_pipeline(
         else []
     )
     complexification_artifact_payload = dict(complexification)
+    if batchwise_complexity is not None:
+        complexification["batchwise_complexity"] = batchwise_complexity
+        complexification_artifact_payload["batchwise_complexity"] = batchwise_complexity
     if complexity_judgment_provider is not None:
         complexification["pairwise_judgments"] = pairwise_complexity_judgments
         complexification_artifact_payload["pairwise_judgments"] = pairwise_complexity_judgments

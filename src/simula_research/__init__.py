@@ -15,6 +15,10 @@ from simula_research.decontamination import (
     deduplicate_and_decontaminate,
     ngram_jaccard_similarity,
 )
+from simula_research.complexity_judgments import (
+    collect_batchwise_complexity_judgments,
+    prepare_complexity_batch_schedule,
+)
 from simula_research.dataset_adapters import (
     adapt_gsm8k_record,
     load_gsm8k_jsonl,
@@ -35,5 +39,7 @@ __all__ = [
     "validate_task_record",
     "ngram_jaccard_similarity",
     "deduplicate_and_decontaminate",
+    "prepare_complexity_batch_schedule",
+    "collect_batchwise_complexity_judgments",
     "build_gate_report",
 ]

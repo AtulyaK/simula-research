@@ -58,6 +58,12 @@ class ComplexityJudgmentProviderFn(Protocol):
     ) -> list[dict[str, Any]]: ...
 
 
+class BatchComplexityJudgmentProviderFn(Protocol):
+    """Injectable batch scorer for paper-style BS/N complexity calibration."""
+
+    def __call__(self, batch: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
+
+
 def default_taxonomy_provider(domain_objective: str, config: TaxonomyConfig | None = None) -> dict[str, Any]:
     return build_taxonomy(domain_objective, config)
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from math import pow
+from collections.abc import Callable
+from itertools import combinations
+from math import isfinite, pow
 from typing import Any
 
 from simula_research.provider_protocols import ComplexityJudgmentProviderFn
@@ -9,6 +11,8 @@ COMPLEXITY_JUDGMENT_DEFAULTS: dict[str, int] = {
     "initial_rating": 1000,
     "k_factor": 32,
     "minimum_comparisons_per_sample": 5,
+    "batch_size": 5,
+    "samples_per_item": 5,
 }
 VALID_WINNERS = {"complexified", "baseline", "tie"}
 VALID_ELO_WINNERS = {"left", "right", "tie"}
@@ -90,6 +94,194 @@ def build_elo_comparisons(
             }
         )
     return comparisons
+
+
+def prepare_complexity_batch_schedule(
+    item_ids: list[str],
+    *,
+    batch_size: int = COMPLEXITY_JUDGMENT_DEFAULTS["batch_size"],
+    samples_per_item: int = COMPLEXITY_JUDGMENT_DEFAULTS["samples_per_item"],
+    seed: int = 0,
+) -> list[dict[str, Any]]:
+    """Schedule each item in N deterministic, varied scoring batches."""
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size <= 0:
+        raise ValueError("batch_size must be a positive integer")
+    if (
+        isinstance(samples_per_item, bool)
+        or not isinstance(samples_per_item, int)
+        or samples_per_item <= 0
+    ):
+        raise ValueError("samples_per_item must be a positive integer")
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+        raise ValueError("seed must be a non-negative integer")
+
+    normalized_ids = [str(item_id).strip() for item_id in item_ids]
+    if any(not item_id for item_id in normalized_ids):
+        raise ValueError("item_ids must contain non-empty strings")
+    if len(set(normalized_ids)) != len(normalized_ids):
+        raise ValueError("item_ids must be unique")
+
+    schedule: list[dict[str, Any]] = []
+    if not normalized_ids:
+        return schedule
+    for repetition in range(samples_per_item):
+        rotation = (seed + repetition) % len(normalized_ids)
+        ordered_ids = normalized_ids[rotation:] + normalized_ids[:rotation]
+        if repetition % 2:
+            ordered_ids.reverse()
+        repetition_batches: list[list[str]] = []
+        for start in range(0, len(ordered_ids), batch_size):
+            batch = ordered_ids[start : start + batch_size]
+            if len(batch) == 1 and repetition_batches:
+                repetition_batches[-1].extend(batch)
+            else:
+                repetition_batches.append(batch)
+        for batch_index, batch in enumerate(repetition_batches):
+            schedule.append(
+                {
+                    "batch_id": f"batch-{repetition:03d}-{batch_index:03d}",
+                    "repetition": repetition,
+                    "item_ids": batch,
+                }
+            )
+    return schedule
+
+
+def collect_batchwise_complexity_judgments(
+    samples: list[dict[str, Any]],
+    provider: Callable[[list[dict[str, Any]]], list[dict[str, Any]]],
+    *,
+    batch_size: int = COMPLEXITY_JUDGMENT_DEFAULTS["batch_size"],
+    samples_per_item: int = COMPLEXITY_JUDGMENT_DEFAULTS["samples_per_item"],
+    seed: int = 0,
+    initial_rating: int = COMPLEXITY_JUDGMENT_DEFAULTS["initial_rating"],
+    k_factor: int = COMPLEXITY_JUDGMENT_DEFAULTS["k_factor"],
+) -> dict[str, Any]:
+    """Run the paper-style batch scoring loop and derive Elo comparisons."""
+    sample_by_id: dict[str, dict[str, Any]] = {}
+    for sample in samples:
+        if not isinstance(sample, dict):
+            raise ValueError("complexity samples must contain objects")
+        item_id = str(sample.get("instantiation_id", sample.get("task_id", ""))).strip()
+        if not item_id:
+            raise ValueError("complexity samples require instantiation_id or task_id")
+        if item_id in sample_by_id:
+            raise ValueError(f"complexity samples contain duplicate item id {item_id!r}")
+        sample_by_id[item_id] = sample
+
+    schedule = prepare_complexity_batch_schedule(
+        list(sample_by_id),
+        batch_size=batch_size,
+        samples_per_item=samples_per_item,
+        seed=seed,
+    )
+    raw_scores: list[dict[str, Any]] = []
+    comparisons: list[dict[str, Any]] = []
+    for batch in schedule:
+        batch_samples = [sample_by_id[item_id] for item_id in batch["item_ids"]]
+        scored_items = provider(batch_samples)
+        if not isinstance(scored_items, list):
+            raise ValueError("batch complexity provider must return a list")
+        if any(not isinstance(item, dict) for item in scored_items):
+            raise ValueError("batch complexity provider entries must be objects")
+        expected_ids = batch["item_ids"]
+        actual_ids = [
+            str(item.get("item_id", "")).strip()
+            for item in scored_items
+        ]
+        if actual_ids != expected_ids:
+            raise ValueError(
+                f"batch complexity provider must return scores in batch order: {expected_ids!r}"
+            )
+        scores: dict[str, float] = {}
+        for item in scored_items:
+            score = item.get("score")
+            if not _is_number(score) or not isfinite(float(score)):
+                raise ValueError("batch complexity scores must be finite numbers")
+            item_id = str(item["item_id"]).strip()
+            scores[item_id] = float(score)
+            raw_scores.append(
+                {
+                    "batch_id": batch["batch_id"],
+                    "repetition": batch["repetition"],
+                    "item_id": item_id,
+                    "score": float(score),
+                }
+            )
+        for left_id, right_id in combinations(expected_ids, 2):
+            left_score = scores[left_id]
+            right_score = scores[right_id]
+            winner = (
+                "left"
+                if left_score > right_score
+                else "right"
+                if right_score > left_score
+                else "tie"
+            )
+            comparisons.append(
+                {
+                    "judgment_id": f"{batch['batch_id']}:{left_id}:{right_id}",
+                    "batch_id": batch["batch_id"],
+                    "repetition": batch["repetition"],
+                    "left_item_id": left_id,
+                    "right_item_id": right_id,
+                    "left_score": left_score,
+                    "right_score": right_score,
+                    "winner": winner,
+                }
+            )
+
+    ratings = calibrate_elo_ratings(
+        comparisons,
+        initial_rating=initial_rating,
+        k_factor=k_factor,
+    )
+    rating_values = list(ratings.values())
+    rating_min = min(rating_values, default=0.0)
+    rating_span = max(rating_values, default=0.0) - rating_min
+    normalized_ratings = {
+        item_id: (
+            50.0
+            if rating_span == 0.0
+            else (rating - rating_min) / rating_span * 100.0
+        )
+        for item_id, rating in ratings.items()
+    }
+    raw_score_values: dict[str, list[float]] = {}
+    for row in raw_scores:
+        raw_score_values.setdefault(row["item_id"], []).append(row["score"])
+    raw_score_averages = {
+        item_id: sum(scores) / len(scores)
+        for item_id, scores in raw_score_values.items()
+    }
+    appearance_counts = {item_id: 0 for item_id in sample_by_id}
+    for batch in schedule:
+        for item_id in batch["item_ids"]:
+            appearance_counts[item_id] += 1
+    return {
+        "protocol": {
+            "version": "batchwise-elo-v1",
+            "batch_size": batch_size,
+            "samples_per_item": samples_per_item,
+            "seed": seed,
+            "item_count": len(sample_by_id),
+            "batch_count": len(schedule),
+            "comparison_count": len(comparisons),
+            "appearance_counts": appearance_counts,
+        },
+        "batches": schedule,
+        "raw_scores": raw_scores,
+        "raw_score_averages": raw_score_averages,
+        "comparisons": comparisons,
+        "elo_calibration": {
+            "method": "elo_v1",
+            "initial_rating": initial_rating,
+            "k_factor": k_factor,
+            "comparison_count": len(comparisons),
+            "ratings": ratings,
+            "normalized_ratings": normalized_ratings,
+        },
+    }
 
 
 def collect_pairwise_complexity_judgments(

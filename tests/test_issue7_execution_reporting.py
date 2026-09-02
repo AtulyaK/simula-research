@@ -44,6 +44,14 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
                 self.assertEqual(per_run["protocol"]["baseline_or_ablation_tag"], preset_id)
                 self.assertIn("taxonomy_eligibility_policy", per_run["protocol"])
                 self.assertIn("complexity_judgment_protocol", per_run["protocol"])
+                self.assertEqual(
+                    per_run["protocol"]["complexity_judgment_protocol"]["batch_size"],
+                    5,
+                )
+                self.assertEqual(
+                    per_run["protocol"]["complexity_judgment_protocol"]["samples_per_item"],
+                    5,
+                )
                 self.assertIn("critic_adjudication_config", per_run["protocol"])
                 self.assertIn("failure_analysis", per_run)
 
@@ -210,6 +218,42 @@ class Issue7ExecutionReportingTests(unittest.TestCase):
             b0["gate_report"]["gate_decision"]["complexity.complexification_precision"]["status"],
             "pass",
         )
+
+    def test_injected_batch_judge_persists_bs_n_evidence(self) -> None:
+        def batch_provider(batch: list[dict[str, object]]) -> list[dict[str, object]]:
+            return [
+                {
+                    "item_id": str(sample["instantiation_id"]),
+                    "score": float(len(str(sample.get("text", "")))),
+                }
+                for sample in batch
+            ]
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output = execute_issue7_matrix(
+                artifact_root=tmp_dir,
+                report_root=tmp_dir,
+                branch_name="feature/batchwise-complexity",
+                commit_hash="deadbeef",
+                batch_complexity_judgment_provider=batch_provider,
+            )
+
+            b0 = output["run_reports"]["B0"]
+            batchwise = b0["complexity"]["batchwise_evidence"]
+            batchwise_path = (
+                Path(tmp_dir)
+                / str(b0["run_identity"]["run_id"])
+                / "30_complexification"
+                / "batchwise_complexity.json"
+            )
+            self.assertTrue(batchwise_path.is_file())
+            self.assertEqual(
+                b0["protocol"]["complexity_judgment_protocol"]["active_scoring_mode"],
+                "batchwise",
+            )
+
+        self.assertEqual(batchwise["protocol"]["batch_size"], 5)
+        self.assertEqual(batchwise["protocol"]["samples_per_item"], 5)
 
     def test_missing_stage3_taxonomy_nodes_stay_in_coverage_denominator(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:

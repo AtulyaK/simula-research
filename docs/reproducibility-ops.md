@@ -104,6 +104,8 @@ configuration, artifact integrity metadata, required stage directories, and cano
 - `50_curated_dataset/accepted_samples.json`, `50_curated_dataset/dataset_manifest.json`
 - Optional `50_curated_dataset/decontamination_report.json` and
   `decontamination_rejections.json` when a held-out reference set is supplied.
+- Optional `30_complexification/batchwise_complexity.json` when a batch
+  complexity provider is supplied.
 - `60_evaluation/evaluation_handoff.json`
 - `70_diagnostics/diagnostics_summary.json`
 

@@ -29,7 +29,7 @@ The active claim-to-evidence inventory is
 
 Current execution priority:
 
-1. complete batch-wise Elo complexity calibration;
+1. connect a real batch judge to the batch-wise Elo scheduler;
 2. replace deterministic diversity embeddings with a paper-compatible model
    embedding provider;
 3. add adapters and fixed split manifests for the remaining paper datasets;

@@ -15,6 +15,7 @@ from simula_research.evaluation_metrics import (
     compute_quality_metrics,
 )
 from simula_research.complexity_judgments import (
+    COMPLEXITY_JUDGMENT_DEFAULTS,
     build_elo_comparisons,
     calibrate_elo_ratings,
 )
@@ -23,7 +24,10 @@ from simula_research.critic_provider_adapter import (
     provider_runtime_from_env,
 )
 from simula_research.pipeline import run_pipeline
-from simula_research.provider_protocols import ComplexityJudgmentProviderFn
+from simula_research.provider_protocols import (
+    BatchComplexityJudgmentProviderFn,
+    ComplexityJudgmentProviderFn,
+)
 from simula_research.run_config_presets import PRESET_IDS, build_run_request, validate_all_presets
 from simula_research.validators import validate_artifact_tree
 
@@ -233,6 +237,7 @@ def _load_persisted_run_inputs(
         stage4_artifacts = stage4["stage4_artifacts"]
         stage4_decisions = _read_json(stage4_artifacts["critic_decisions"])
         pairwise_path = stage3_artifacts.get("pairwise_judgments")
+        batchwise_path = stage3_artifacts.get("batchwise_complexity")
         return {
             "manifest": manifest,
             "stage_outputs": stage_outputs,
@@ -250,6 +255,9 @@ def _load_persisted_run_inputs(
                 else []
             ),
             "pairwise_judgments": _read_json(pairwise_path) if pairwise_path else [],
+            "batchwise_complexity": (
+                _read_json(batchwise_path) if batchwise_path else None
+            ),
             "manifest_path": str(canonical_manifest_path),
             "artifact_validation": None,
         }
@@ -265,6 +273,7 @@ def _load_persisted_run_inputs(
     stage_outputs_path = run_root / "00_spec" / "stage_outputs.json"
     stage_outputs = _read_json(stage_outputs_path)
     stage4_decisions = _read_json(run_root / "40_dual_critic_quality" / "critic_decisions.json")
+    batchwise_path = run_root / "30_complexification" / "batchwise_complexity.json"
     return {
         "manifest": persisted_manifest,
         "stage_outputs": stage_outputs,
@@ -274,6 +283,9 @@ def _load_persisted_run_inputs(
         "accepted_samples": _read_json(run_root / "50_curated_dataset" / "accepted_samples.json"),
         "regenerations": _read_json(run_root / "40_dual_critic_quality" / "regenerations.json"),
         "pairwise_judgments": _read_json(run_root / "30_complexification" / "pairwise_judgments.json"),
+        "batchwise_complexity": (
+            _read_json(batchwise_path) if batchwise_path.is_file() else None
+        ),
         "manifest_path": str(canonical_manifest_path),
         "artifact_validation": artifact_validation,
     }
@@ -286,6 +298,7 @@ def execute_issue7_matrix(
     commit_hash: str = "unknown",
     per_node_instantiation_count: int | None = None,
     complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
+    batch_complexity_judgment_provider: BatchComplexityJudgmentProviderFn | None = None,
     complexity_judgment_config: dict[str, int] | None = None,
     embedding_provider: EmbeddingProviderFn | None = None,
     diversity_local_k: int = 10,
@@ -338,6 +351,7 @@ def execute_issue7_matrix(
             "provider_event_log": provider_event_log,
             "critic_sample_evaluator": critic_sample_evaluator,
             "complexity_judgment_provider": complexity_judgment_provider,
+            "batch_complexity_judgment_provider": batch_complexity_judgment_provider,
             "complexity_judgment_config": complexity_judgment_config,
         }
         local_diversification_config = request.get("local_diversification_config")
@@ -423,14 +437,43 @@ def execute_issue7_matrix(
             initial_rating=int(judgment_config.get("initial_rating", 1000)),
             k_factor=int(judgment_config.get("k_factor", 32)),
         )
+        batchwise_complexity = persisted["batchwise_complexity"]
+        if batchwise_complexity is not None:
+            if not isinstance(batchwise_complexity, dict):
+                raise ValueError("persisted batchwise complexity evidence must be an object")
+            complexity["batchwise_evidence"] = batchwise_complexity
 
         quality = compute_quality_metrics(issue5_outputs=stage4)
 
         complexity_judgment_protocol = {
-            "version": "milestone-1",
-            "k_factor": int(judgment_config.get("k_factor", 32)),
-            "initial_rating": int(judgment_config.get("initial_rating", 1000)),
+            "version": "batchwise-elo-v1",
+            "k_factor": int(
+                judgment_config.get("k_factor", COMPLEXITY_JUDGMENT_DEFAULTS["k_factor"])
+            ),
+            "initial_rating": int(
+                judgment_config.get("initial_rating", COMPLEXITY_JUDGMENT_DEFAULTS["initial_rating"])
+            ),
             "minimum_comparisons_per_sample": minimum_comparisons,
+            "batch_size": int(
+                judgment_config.get("batch_size", COMPLEXITY_JUDGMENT_DEFAULTS["batch_size"])
+            ),
+            "samples_per_item": int(
+                judgment_config.get(
+                    "samples_per_item",
+                    COMPLEXITY_JUDGMENT_DEFAULTS["samples_per_item"],
+                )
+            ),
+            "batch_scheduler": "prepare_complexity_batch_schedule",
+            "active_scoring_mode": (
+                "batchwise_and_pairwise"
+                if batch_complexity_judgment_provider is not None
+                and complexity_judgment_provider is not None
+                else "batchwise"
+                if batch_complexity_judgment_provider is not None
+                else "pairwise_complexified_source"
+                if complexity_judgment_provider is not None
+                else "missing_provider"
+            ),
             "evidence_status": complexity["evaluation_status"],
         }
         if complexity["evaluation_status"] != "evaluated":
