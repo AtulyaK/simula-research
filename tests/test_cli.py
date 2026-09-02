@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -11,6 +12,89 @@ from simula_research.cli import main
 
 
 class CliTests(unittest.TestCase):
+    def test_verify_datasets_writes_local_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            split_manifest = {
+                "schema_version": "0.1.0",
+                "manifest_id": "test-splits",
+                "splits": [
+                    {
+                        "dataset_id": "tiny",
+                        "source": "https://example.test/tiny",
+                        "revision": "abc123",
+                        "source_path": "tiny.tsv",
+                        "format": "tsv",
+                        "split": "test",
+                        "expected_records": 1,
+                        "selection_status": "test",
+                    }
+                ],
+            }
+            split_path = root / "splits.json"
+            source_path = root / "tiny.tsv"
+            output_path = root / "local-manifest.json"
+            split_path.write_text(json.dumps(split_manifest), encoding="utf-8")
+            source_path.write_text("question\tanswer\nhello\tworld\n", encoding="utf-8")
+
+            result = main(
+                [
+                    "verify-datasets",
+                    "--split-manifest",
+                    str(split_path),
+                    "--output",
+                    str(output_path),
+                    "--dataset-path",
+                    f"tiny={source_path}",
+                ]
+            )
+
+            self.assertEqual(result, 0)
+            manifest = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertTrue(manifest["all_count_matches"])
+            self.assertEqual(manifest["splits"][0]["observed_records"], 1)
+
+    def test_verify_datasets_returns_nonzero_for_count_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            split_manifest = {
+                "schema_version": "0.1.0",
+                "manifest_id": "test-splits",
+                "splits": [
+                    {
+                        "dataset_id": "tiny",
+                        "source": "https://example.test/tiny",
+                        "revision": "abc123",
+                        "source_path": "tiny.tsv",
+                        "format": "tsv",
+                        "split": "test",
+                        "expected_records": 2,
+                        "selection_status": "test",
+                    }
+                ],
+            }
+            split_path = root / "splits.json"
+            source_path = root / "tiny.tsv"
+            output_path = root / "local-manifest.json"
+            split_path.write_text(json.dumps(split_manifest), encoding="utf-8")
+            source_path.write_text("question\tanswer\nhello\tworld\n", encoding="utf-8")
+
+            result = main(
+                [
+                    "verify-datasets",
+                    "--split-manifest",
+                    str(split_path),
+                    "--output",
+                    str(output_path),
+                    "--dataset-path",
+                    f"tiny={source_path}",
+                ]
+            )
+
+            self.assertEqual(result, 2)
+            manifest = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertFalse(manifest["all_count_matches"])
+
     def test_matrix_command_runs_with_explicit_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

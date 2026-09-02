@@ -65,6 +65,25 @@ py -3 -m simula_research.cli matrix --per-node-instantiations 1
 The Bash wrapper accepts the equivalent `SIMULA_MATRIX_PER_NODE_INSTANTIATIONS=1`
 environment variable.
 
+After downloading benchmark files separately, build a local hash/count manifest
+without adding the data to this repository:
+
+```powershell
+py -3 -m simula_research.cli verify-datasets `
+  --dataset-path CTI-MCQ=C:\data\cti-mcq.tsv `
+  --dataset-path CTI-RCM=C:\data\cti-rcm.tsv `
+  --dataset-path GSM8k=C:\data\gsm8k.jsonl `
+  --dataset-path LEXam=C:\data\lexam.parquet `
+  --dataset-path Global-MMLU=C:\data\global-mmlu.parquet `
+  --observed-count LEXam=1655 `
+  --observed-count Global-MMLU=14042 `
+  --output artifacts\datasets\local_manifest.json
+```
+
+The command uses `configs/paper_dataset_splits.json` by default, records each
+file's SHA-256 and observed count, and exits with status `2` when any count
+does not match the pinned manifest.
+
 The existing `scripts/run_issue7_matrix.sh` wrapper is equivalent for Bash
 environments. The staged flow for the first end-to-end validation cycle is:
 

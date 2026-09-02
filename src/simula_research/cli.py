@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from simula_research.dataset_adapters import load_split_manifest
+from simula_research.dataset_verification import build_local_dataset_manifest
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
 
 
@@ -39,6 +42,57 @@ def _run_matrix(args: argparse.Namespace) -> int:
     return 0
 
 
+def _parse_assignment(value: str) -> tuple[str, str]:
+    dataset_id, separator, assigned_value = value.partition("=")
+    if not separator or not dataset_id.strip() or not assigned_value.strip():
+        raise argparse.ArgumentTypeError("expected DATASET_ID=VALUE")
+    return dataset_id.strip(), assigned_value.strip()
+
+
+def _parse_count_assignment(value: str) -> tuple[str, int]:
+    dataset_id, raw_count = _parse_assignment(value)
+    try:
+        count = int(raw_count)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("count must be an integer") from error
+    if count < 0:
+        raise argparse.ArgumentTypeError("count must be non-negative")
+    return dataset_id, count
+
+
+def _assignment_dict(
+    assignments: list[tuple[str, Any]],
+    *,
+    option_name: str,
+) -> dict[str, Any]:
+    values: dict[str, Any] = {}
+    for dataset_id, value in assignments:
+        if dataset_id in values:
+            raise ValueError(f"{option_name} was provided more than once for {dataset_id!r}")
+        values[dataset_id] = value
+    return values
+
+
+def _run_verify_datasets(args: argparse.Namespace) -> int:
+    local_paths = _assignment_dict(args.dataset_path, option_name="--dataset-path")
+    observed_counts = _assignment_dict(args.observed_count, option_name="--observed-count")
+    split_manifest = load_split_manifest(args.split_manifest)
+    local_manifest = build_local_dataset_manifest(
+        split_manifest,
+        local_paths,
+        observed_counts=observed_counts,
+    )
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(local_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print("local_manifest", output_path)
+    print("all_count_matches", local_manifest["all_count_matches"])
+    return 0 if local_manifest["all_count_matches"] else 2
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Simula research validation workflows.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -67,6 +121,38 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Override samples generated per taxonomy node for smaller provider runs.",
     )
     matrix.set_defaults(handler=_run_matrix)
+
+    verify_datasets = commands.add_parser(
+        "verify-datasets",
+        help="Build a hash/count manifest for downloaded benchmark files.",
+    )
+    verify_datasets.add_argument(
+        "--split-manifest",
+        default="configs/paper_dataset_splits.json",
+        help="Pinned benchmark split manifest to verify against.",
+    )
+    verify_datasets.add_argument(
+        "--dataset-path",
+        action="append",
+        type=_parse_assignment,
+        required=True,
+        metavar="DATASET_ID=PATH",
+        help="Local benchmark file path; repeat once for every pinned dataset.",
+    )
+    verify_datasets.add_argument(
+        "--observed-count",
+        action="append",
+        type=_parse_count_assignment,
+        default=[],
+        metavar="DATASET_ID=COUNT",
+        help="Observed row count for formats without a local reader, such as parquet.",
+    )
+    verify_datasets.add_argument(
+        "--output",
+        default="artifacts/datasets/local_manifest.json",
+        help="Path for the generated local-source manifest.",
+    )
+    verify_datasets.set_defaults(handler=_run_verify_datasets)
     return parser
 
 
