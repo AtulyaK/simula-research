@@ -50,6 +50,10 @@ from simula_research.dataset_verification import (
     validate_local_dataset_manifest,
     verify_local_split,
 )
+from simula_research.benchmark_evaluation import (
+    load_prediction_artifact,
+    score_local_benchmark,
+)
 
 __all__ = [
     "run_pipeline",
@@ -83,6 +87,8 @@ __all__ = [
     "verify_local_split",
     "build_local_dataset_manifest",
     "validate_local_dataset_manifest",
+    "load_prediction_artifact",
+    "score_local_benchmark",
     "ngram_jaccard_similarity",
     "deduplicate_and_decontaminate",
     "prepare_complexity_batch_schedule",

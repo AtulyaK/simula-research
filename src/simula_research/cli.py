@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from simula_research.benchmark_evaluation import score_local_benchmark
 from simula_research.dataset_adapters import load_split_manifest
 from simula_research.dataset_verification import build_local_dataset_manifest
 from simula_research.issue7_execution_reporting import execute_issue7_matrix
@@ -93,6 +94,26 @@ def _run_verify_datasets(args: argparse.Namespace) -> int:
     return 0 if local_manifest["all_count_matches"] else 2
 
 
+def _run_score_benchmark(args: argparse.Namespace) -> int:
+    result = score_local_benchmark(
+        dataset_id=args.dataset_id,
+        path=args.dataset_path,
+        predictions_path=args.predictions,
+        split=args.split,
+        dataset_size=args.dataset_size,
+        seed=args.seed,
+    )
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print("benchmark_result", output_path)
+    print("accuracy", result["accuracy"])
+    return 0
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Simula research validation workflows.")
     commands = parser.add_subparsers(dest="command", required=True)
@@ -153,6 +174,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path for the generated local-source manifest.",
     )
     verify_datasets.set_defaults(handler=_run_verify_datasets)
+
+    score_benchmark = commands.add_parser(
+        "score-benchmark",
+        help="Score a local CTIBench or GSM8k split from prediction JSON.",
+    )
+    score_benchmark.add_argument("--dataset-id", required=True)
+    score_benchmark.add_argument("--dataset-path", required=True)
+    score_benchmark.add_argument("--predictions", required=True)
+    score_benchmark.add_argument("--split", default="test")
+    score_benchmark.add_argument("--dataset-size", type=int, required=True)
+    score_benchmark.add_argument("--seed", type=int, required=True)
+    score_benchmark.add_argument(
+        "--output",
+        default="artifacts/datasets/benchmark_result.json",
+    )
+    score_benchmark.set_defaults(handler=_run_score_benchmark)
     return parser
 
 

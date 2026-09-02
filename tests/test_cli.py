@@ -95,6 +95,44 @@ class CliTests(unittest.TestCase):
             manifest = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertFalse(manifest["all_count_matches"])
 
+    def test_score_benchmark_writes_result_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            dataset_path = root / "cti.tsv"
+            predictions_path = root / "predictions.json"
+            output_path = root / "result.json"
+            dataset_path.write_text(
+                "Question\tA\tB\tC\tD\tGT\n"
+                "Which choice?\tfirst\tsecond\tthird\tfourth\tB\n",
+                encoding="utf-8",
+            )
+            predictions_path.write_text(
+                json.dumps({"cti-mcq-test-000000": "B"}),
+                encoding="utf-8",
+            )
+
+            result = main(
+                [
+                    "score-benchmark",
+                    "--dataset-id",
+                    "CTI-MCQ",
+                    "--dataset-path",
+                    str(dataset_path),
+                    "--predictions",
+                    str(predictions_path),
+                    "--dataset-size",
+                    "1",
+                    "--seed",
+                    "0",
+                    "--output",
+                    str(output_path),
+                ]
+            )
+
+            self.assertEqual(result, 0)
+            scored = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(scored["accuracy"], 1.0)
+
     def test_matrix_command_runs_with_explicit_paths(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

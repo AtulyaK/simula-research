@@ -84,6 +84,24 @@ The command uses `configs/paper_dataset_splits.json` by default, records each
 file's SHA-256 and observed count, and exits with status `2` when any count
 does not match the pinned manifest.
 
+For supported TSV/JSONL benchmarks, score a model's task-id prediction
+artifact without installing a model runtime:
+
+```powershell
+py -3 -m simula_research.cli score-benchmark `
+  --dataset-id CTI-MCQ `
+  --dataset-path C:\data\cti-mcq.tsv `
+  --predictions C:\data\cti-mcq-predictions.json `
+  --dataset-size 2500 `
+  --seed 0 `
+  --output artifacts\datasets\cti-mcq-result.json
+```
+
+Prediction JSON may be either a task-ID mapping or a list of
+`{"task_id": "...", "prediction": "..."}` objects. The scorer currently
+supports CTI-MCQ, CTI-RCM, and GSM8k; parquet-backed benchmarks still require
+an optional reader.
+
 The existing `scripts/run_issue7_matrix.sh` wrapper is equivalent for Bash
 environments. The staged flow for the first end-to-end validation cycle is:
 
