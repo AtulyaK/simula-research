@@ -53,10 +53,10 @@ system-version reproduction is required.
    `BS=N=5` evidence with provider metadata.
 2. Validate a supported paper-compatible embedding endpoint/model and preserve
    the existing taxonomy coverage output.
-3. Add download-free benchmark preparation/loading around
+3. Extend download-free benchmark preparation/loading around
    `configs/paper_dataset_splits.json` and
-   `configs/paper_global_mmlu_selection.json`; review licenses and add
-   parquet-capable optional tooling only if needed.
+   `configs/paper_global_mmlu_selection.json` to the remaining formats;
+   review licenses and add parquet-capable optional tooling only if needed.
 4. Implement downstream training/inference behind the persisted plan; execute
    real training only when compute and model access are available.
 5. Extend provider-backed Stage 1-3 generation toward best-of-N, planning,
