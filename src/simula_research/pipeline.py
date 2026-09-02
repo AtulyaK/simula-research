@@ -11,6 +11,8 @@ from simula_research.complexity_judgments import (
     collect_batchwise_complexity_judgments,
     collect_pairwise_complexity_judgments,
 )
+from simula_research.dataset_adapters import validate_split_manifest
+from simula_research.downstream_evaluation import validate_downstream_evaluation_plan
 from simula_research.decontamination import (
     deduplicate_and_decontaminate,
 )
@@ -82,6 +84,7 @@ def run_pipeline(
     batch_complexity_judgment_provider: BatchComplexityJudgmentProviderFn | None = None,
     complexity_judgment_config: dict[str, int] | None = None,
     dataset_protocol_config: dict[str, Any] | None = None,
+    downstream_evaluation_plan: dict[str, Any] | None = None,
     decontamination_reference_samples: list[dict[str, Any]] | None = None,
 ) -> dict[str, object]:
     if critic_verdict is not None and critic_sample_evaluator is not None:
@@ -148,10 +151,15 @@ def run_pipeline(
         **dict(complexity_judgment_config or {}),
     }
     resolved_dataset_protocol_config = dict(dataset_protocol_config or {})
+    benchmark_split_manifest = resolved_dataset_protocol_config.get("benchmark_split_manifest")
+    if benchmark_split_manifest is not None:
+        validate_split_manifest(benchmark_split_manifest)
     if decontamination_reference_samples is not None:
         resolved_dataset_protocol_config.setdefault(
             "decontamination_protocol", "13gram_jaccard_v1"
         )
+    if downstream_evaluation_plan is not None:
+        validate_downstream_evaluation_plan(downstream_evaluation_plan)
 
     resolved_run_config = {
         "pipeline_config": dict(manifest_pipeline),
@@ -162,6 +170,8 @@ def run_pipeline(
         "complexity_judgment_config": resolved_complexity_judgment_config,
         "dataset_protocol_config": resolved_dataset_protocol_config,
     }
+    if downstream_evaluation_plan is not None:
+        resolved_run_config["downstream_evaluation_plan"] = dict(downstream_evaluation_plan)
 
     manifest: dict[str, Any] = {
         **dict(manifest_metadata or {}),
@@ -345,6 +355,7 @@ def run_pipeline(
     curated_dataset: dict[str, Any] = {
         "run_id": run_id,
         "source_stage": "stage_4_dual_critic_quality_verification",
+        "dataset_protocol": resolved_dataset_protocol_config,
         "accepted_sample_count": len(accepted_samples),
         "accepted_samples": accepted_samples,
     }
@@ -379,12 +390,15 @@ def run_pipeline(
         "note": "run_pipeline persists evaluation inputs; gate metrics are computed by the evaluation/reporting layer.",
         "inputs": {
             "manifest": str(run_root / "00_spec" / "manifest.json"),
+            "dataset_protocol": resolved_dataset_protocol_config,
             "taxonomy_nodes": artifacts["taxonomy_nodes"],
             "complexification_samples": complex_artifacts["samples"],
             "critic_decisions": dual_critic_artifacts["critic_decisions"],
             "accepted_samples": curated_artifacts.get("accepted_samples"),
         },
     }
+    if downstream_evaluation_plan is not None:
+        evaluation_handoff["downstream_evaluation"] = dict(downstream_evaluation_plan)
     evaluation_artifacts = _persist_optional(store, "persist_evaluation_handoff", evaluation_handoff)
 
     stage_outputs["stage_5_evaluation_handoff"] = {

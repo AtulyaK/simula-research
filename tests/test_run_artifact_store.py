@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from simula_research.complexification import apply_complexification
+from simula_research.dataset_adapters import load_split_manifest
+from simula_research.downstream_evaluation import build_paper_downstream_evaluation_plan
 from simula_research.dual_critic import adjudicate_samples
 from simula_research.local_diversification import build_local_diversification
 from simula_research.pipeline import run_pipeline
@@ -70,6 +72,66 @@ class FileSystemRunArtifactStoreTests(unittest.TestCase):
 
 
 class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
+    def test_pipeline_persists_fixed_dataset_split_manifest_with_curated_dataset(self) -> None:
+        split_manifest = load_split_manifest(
+            Path(__file__).parents[1] / "configs" / "paper_dataset_splits.json"
+        )
+        downstream_plan = build_paper_downstream_evaluation_plan(
+            split_manifest,
+            dataset_sizes=[1000],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                domain_objective="pilot-domain",
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 0, "branching_factor": 1},
+                dataset_protocol_config={
+                    "benchmark_split_manifest": split_manifest,
+                    "task_schema_version": "0.1.0",
+                },
+                downstream_evaluation_plan=downstream_plan,
+            )
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            persisted = json.loads(
+                (run_root / "50_curated_dataset" / "dataset_manifest.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            evaluation_handoff = json.loads(
+                (run_root / "60_evaluation" / "evaluation_handoff.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+
+        self.assertEqual(
+            persisted["dataset_protocol"]["benchmark_split_manifest"]["manifest_id"],
+            "simula-paper-benchmark-splits",
+        )
+        self.assertEqual(
+            result["manifest"]["run_config"]["dataset_protocol_config"]["task_schema_version"],
+            "0.1.0",
+        )
+        self.assertEqual(
+            result["manifest"]["run_config"]["downstream_evaluation_plan"]["seeds"],
+            list(range(10)),
+        )
+        self.assertEqual(evaluation_handoff["downstream_evaluation"]["status"], "planned")
+
+    def test_pipeline_rejects_invalid_dataset_split_manifest(self) -> None:
+        with self.assertRaisesRegex(ValueError, "split manifest entry"):
+            run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                dataset_protocol_config={
+                    "benchmark_split_manifest": {
+                        "schema_version": "0.1.0",
+                        "splits": [{}],
+                    }
+                },
+            )
+
     def test_pipeline_can_persist_opt_in_decontamination_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = run_pipeline(

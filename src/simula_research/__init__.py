@@ -20,9 +20,23 @@ from simula_research.complexity_judgments import (
     prepare_complexity_batch_schedule,
 )
 from simula_research.dataset_adapters import (
+    adapt_cti_bench_record,
+    adapt_cti_rcm_record,
+    adapt_global_mmlu_record,
     adapt_gsm8k_record,
+    adapt_lexam_record,
+    load_cti_bench_tsv,
     load_gsm8k_jsonl,
+    load_split_manifest,
     validate_task_record,
+    validate_split_manifest,
+)
+from simula_research.downstream_evaluation import (
+    aggregate_seed_accuracies,
+    build_paper_downstream_evaluation_plan,
+    score_exact_match_predictions,
+    score_multiple_choice_predictions,
+    validate_downstream_evaluation_plan,
 )
 
 __all__ = [
@@ -34,9 +48,21 @@ __all__ = [
     "compute_complexity_metrics",
     "compute_intrinsic_diversity_metrics",
     "compute_quality_metrics",
+    "adapt_cti_bench_record",
+    "adapt_cti_rcm_record",
+    "adapt_global_mmlu_record",
     "adapt_gsm8k_record",
+    "adapt_lexam_record",
+    "load_cti_bench_tsv",
     "load_gsm8k_jsonl",
+    "load_split_manifest",
     "validate_task_record",
+    "validate_split_manifest",
+    "build_paper_downstream_evaluation_plan",
+    "validate_downstream_evaluation_plan",
+    "score_multiple_choice_predictions",
+    "score_exact_match_predictions",
+    "aggregate_seed_accuracies",
     "ngram_jaccard_similarity",
     "deduplicate_and_decontaminate",
     "prepare_complexity_batch_schedule",
