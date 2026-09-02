@@ -70,6 +70,56 @@ def build_paper_downstream_evaluation_plan(
     return plan
 
 
+def validate_downstream_evaluation_results(
+    plan: dict[str, Any],
+    results: list[dict[str, Any]],
+) -> None:
+    """Validate benchmark results against the pinned downstream protocol."""
+    if not isinstance(results, list):
+        raise ValueError("downstream evaluation results must be a list")
+    split_manifest = plan.get("dataset_split_manifest")
+    validate_split_manifest(split_manifest)
+    dataset_ids = {entry["dataset_id"] for entry in split_manifest["splits"]}
+    dataset_sizes = set(plan.get("dataset_size_scaling", []))
+    seeds = set(plan.get("seeds", []))
+    seen: set[tuple[str, int, int]] = set()
+    required_fields = ("dataset_id", "dataset_size", "seed", "task_type", "accuracy")
+    for index, result in enumerate(results):
+        if not isinstance(result, dict):
+            raise ValueError(f"downstream evaluation result {index} must be an object")
+        missing = [field for field in required_fields if field not in result]
+        if missing:
+            raise ValueError(f"downstream evaluation result {index} is missing fields {missing}")
+        dataset_id = _require_text(result["dataset_id"], field=f"results[{index}].dataset_id")
+        if dataset_id not in dataset_ids:
+            raise ValueError(f"results[{index}].dataset_id is not in the split manifest")
+        dataset_size = result["dataset_size"]
+        if (
+            isinstance(dataset_size, bool)
+            or not isinstance(dataset_size, int)
+            or dataset_size not in dataset_sizes
+        ):
+            raise ValueError(f"results[{index}].dataset_size is not in the evaluation plan")
+        seed = result["seed"]
+        if isinstance(seed, bool) or not isinstance(seed, int) or seed not in seeds:
+            raise ValueError(f"results[{index}].seed is not in the evaluation plan")
+        task_type = _require_text(result["task_type"], field=f"results[{index}].task_type")
+        if task_type not in {"multiple_choice", "exact_match"}:
+            raise ValueError(f"results[{index}].task_type is unsupported")
+        accuracy = result["accuracy"]
+        if (
+            isinstance(accuracy, bool)
+            or not isinstance(accuracy, (int, float))
+            or not math.isfinite(float(accuracy))
+            or not 0 <= accuracy <= 1
+        ):
+            raise ValueError(f"results[{index}].accuracy must be a finite number from 0 to 1")
+        identity = (dataset_id, dataset_size, seed)
+        if identity in seen:
+            raise ValueError(f"duplicate downstream evaluation result for {identity!r}")
+        seen.add(identity)
+
+
 def validate_downstream_evaluation_plan(plan: dict[str, Any]) -> None:
     """Validate persisted downstream protocol metadata before execution."""
     if not isinstance(plan, dict):
@@ -95,8 +145,7 @@ def validate_downstream_evaluation_plan(plan: dict[str, Any]) -> None:
         raise ValueError("downstream evaluation plan must contain ten unique seeds")
     _seed_values(seeds)
     _positive_ints(plan.get("dataset_size_scaling", []), field="dataset_size_scaling")
-    if not isinstance(plan.get("results"), list):
-        raise ValueError("downstream evaluation results must be a list")
+    validate_downstream_evaluation_results(plan, plan.get("results"))
 
 
 def _normalise_prediction(value: Any) -> str:

@@ -37,6 +37,7 @@ from simula_research.downstream_evaluation import (
     score_exact_match_predictions,
     score_multiple_choice_predictions,
     validate_downstream_evaluation_plan,
+    validate_downstream_evaluation_results,
 )
 from simula_research.generation_provider_adapter import (
     generation_providers_from_env,
@@ -71,6 +72,7 @@ __all__ = [
     "validate_split_manifest",
     "build_paper_downstream_evaluation_plan",
     "validate_downstream_evaluation_plan",
+    "validate_downstream_evaluation_results",
     "score_multiple_choice_predictions",
     "score_exact_match_predictions",
     "aggregate_seed_accuracies",

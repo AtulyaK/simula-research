@@ -25,6 +25,12 @@ class RunArtifactStore(Protocol):
     def persist_dual_critic(self, adjudication: dict[str, Any]) -> dict[str, str]:
         """Write Stage 4 artifacts."""
 
+    def persist_downstream_evaluation_results(
+        self,
+        evaluation_results: dict[str, Any],
+    ) -> dict[str, str]:
+        """Write benchmark result artifacts produced from the Stage 5 plan."""
+
 
 class FileSystemRunArtifactStore:
     """Default on-disk layout matching the historical pipeline paths (Issue #28)."""
@@ -242,6 +248,17 @@ class FileSystemRunArtifactStore:
         handoff_path.write_text(_dump_json(evaluation_handoff), encoding="utf-8")
 
         return {"evaluation_handoff": str(handoff_path)}
+
+    def persist_downstream_evaluation_results(
+        self,
+        evaluation_results: dict[str, Any],
+    ) -> dict[str, str]:
+        evaluation_dir = self._run_root / "60_evaluation"
+        evaluation_dir.mkdir(parents=True, exist_ok=True)
+
+        results_path = evaluation_dir / "downstream_evaluation_results.json"
+        results_path.write_text(_dump_json(evaluation_results), encoding="utf-8")
+        return {"downstream_evaluation_results": str(results_path)}
 
     def persist_diagnostics(self, diagnostics: dict[str, Any]) -> dict[str, str]:
         diagnostics_dir = self._run_root / "70_diagnostics"

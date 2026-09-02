@@ -70,6 +70,32 @@ class FileSystemRunArtifactStoreTests(unittest.TestCase):
                 "13gram_jaccard_v1",
             )
 
+    def test_persists_downstream_benchmark_results(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "run-test"
+            paths = FileSystemRunArtifactStore(root).persist_downstream_evaluation_results(
+                {
+                    "schema_version": "0.1.0",
+                    "run_id": "run-test",
+                    "results": [
+                        {
+                            "dataset_id": "GSM8k",
+                            "dataset_size": 1000,
+                            "seed": 0,
+                            "task_type": "exact_match",
+                            "accuracy": 0.5,
+                        }
+                    ],
+                }
+            )
+
+            result_path = Path(paths["downstream_evaluation_results"])
+            self.assertEqual(result_path.parent.name, "60_evaluation")
+            self.assertEqual(
+                json.loads(result_path.read_text(encoding="utf-8"))["results"][0]["accuracy"],
+                0.5,
+            )
+
 
 class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
     def test_pipeline_persists_fixed_dataset_split_manifest_with_curated_dataset(self) -> None:
@@ -118,6 +144,49 @@ class RunPipelineArtifactStoreFactoryTests(unittest.TestCase):
             list(range(10)),
         )
         self.assertEqual(evaluation_handoff["downstream_evaluation"]["status"], "planned")
+
+    def test_pipeline_persists_downstream_evaluation_results(self) -> None:
+        split_manifest = load_split_manifest(
+            Path(__file__).parents[1] / "configs" / "paper_dataset_splits.json"
+        )
+        downstream_plan = build_paper_downstream_evaluation_plan(
+            split_manifest,
+            dataset_sizes=[1000],
+        )
+        results = [
+            {
+                "dataset_id": "GSM8k",
+                "dataset_size": 1000,
+                "seed": 0,
+                "task_type": "exact_match",
+                "accuracy": 0.5,
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = run_pipeline(
+                seed=3,
+                model_ids={"generator": "g", "critic_a": "a", "critic_b": "b"},
+                artifact_root=tmp,
+                taxonomy_config={"max_depth": 0, "branching_factor": 1},
+                downstream_evaluation_plan=downstream_plan,
+                downstream_evaluation_results=results,
+            )
+            run_root = Path(tmp) / str(result["manifest"]["run_id"])
+            results_path = run_root / "60_evaluation" / "downstream_evaluation_results.json"
+            handoff = json.loads(
+                (run_root / "60_evaluation" / "evaluation_handoff.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertTrue(results_path.is_file())
+            self.assertEqual(
+                json.loads(results_path.read_text(encoding="utf-8"))["results"],
+                results,
+            )
+            self.assertIn(
+                "downstream_evaluation_results",
+                handoff["downstream_evaluation"]["artifacts"],
+            )
 
     def test_pipeline_rejects_invalid_dataset_split_manifest(self) -> None:
         with self.assertRaisesRegex(ValueError, "split manifest entry"):

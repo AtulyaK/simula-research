@@ -11,6 +11,7 @@ from simula_research.downstream_evaluation import (
     score_exact_match_predictions,
     score_multiple_choice_predictions,
     validate_downstream_evaluation_plan,
+    validate_downstream_evaluation_results,
 )
 
 
@@ -80,6 +81,38 @@ class DownstreamEvaluationTests(unittest.TestCase):
         self.assertEqual(result["mean_accuracy"], 0.625)
         self.assertAlmostEqual(result["stddev_accuracy"], 0.125)
         json.dumps(result)
+
+    def test_downstream_results_are_bound_to_plan_protocol(self) -> None:
+        plan = build_paper_downstream_evaluation_plan(
+            self.split_manifest,
+            dataset_sizes=[1000],
+        )
+        validate_downstream_evaluation_results(
+            plan,
+            [
+                {
+                    "dataset_id": "GSM8k",
+                    "dataset_size": 1000,
+                    "seed": 0,
+                    "task_type": "exact_match",
+                    "accuracy": 0.5,
+                }
+            ],
+        )
+
+        with self.assertRaisesRegex(ValueError, "dataset_id"):
+            validate_downstream_evaluation_results(
+                plan,
+                [
+                    {
+                        "dataset_id": "unknown",
+                        "dataset_size": 1000,
+                        "seed": 0,
+                        "task_type": "exact_match",
+                        "accuracy": 0.5,
+                    }
+                ],
+            )
 
 
 if __name__ == "__main__":

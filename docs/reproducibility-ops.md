@@ -107,6 +107,8 @@ configuration, artifact integrity metadata, required stage directories, and cano
 - Optional `30_complexification/batchwise_complexity.json` when a batch
   complexity provider is supplied.
 - `60_evaluation/evaluation_handoff.json`
+- Optional `60_evaluation/downstream_evaluation_results.json` when benchmark
+  results have been recorded against a downstream evaluation plan.
 - `70_diagnostics/diagnostics_summary.json`
 
 It also checks taxonomy graph acyclicity, node/edge parent consistency, unique IDs, lineage references, Stage 2→3→4 completeness, and accepted/rejected decision consistency. The public result shape remains `{"ok", "kind", "issues", "assumptions"}`.
