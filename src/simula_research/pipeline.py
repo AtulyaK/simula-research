@@ -29,6 +29,7 @@ from simula_research.provider_protocols import (
     CriticSampleEvaluatorFn,
     CriticVerdictFn,
     LocalDiversificationProviderFn,
+    RegenerationProviderFn,
     TaxonomyProviderFn,
     default_complexification_provider,
     default_local_diversification_provider,
@@ -84,6 +85,7 @@ def run_pipeline(
     complexification_provider: ComplexificationProviderFn | None = None,
     critic_verdict: CriticVerdictFn | None = None,
     critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
+    regeneration_provider: RegenerationProviderFn | None = None,
     complexity_judgment_provider: ComplexityJudgmentProviderFn | None = None,
     batch_complexity_judgment_provider: BatchComplexityJudgmentProviderFn | None = None,
     complexity_judgment_config: dict[str, int] | None = None,
@@ -283,6 +285,7 @@ def run_pipeline(
         policy=dual_cfg or None,
         critic_verdict=critic_verdict,
         critic_sample_evaluator=critic_sample_evaluator,
+        regeneration_provider=regeneration_provider,
     )
     validate_stage_handoffs(
         taxonomy=taxonomy,

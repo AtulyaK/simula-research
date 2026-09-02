@@ -29,6 +29,7 @@ from simula_research.local_diversification import (
 from simula_research.provider_protocols import (
     ComplexificationProviderFn,
     LocalDiversificationProviderFn,
+    RegenerationProviderFn,
     TaxonomyProviderFn,
 )
 from simula_research.taxonomy import (
@@ -709,6 +710,55 @@ def nvidia_complexification_provider(
     return _generate
 
 
+def nvidia_regeneration_provider(
+    *,
+    event_log: list[dict[str, Any]] | None = None,
+    **completion_options: Any,
+) -> RegenerationProviderFn:
+    """Regenerate a rejected sample with a strict, lineage-preserving NIM response."""
+
+    request_state: dict[str, float] = {}
+
+    def _generate(sample: dict[str, Any], regeneration_index: int) -> str:
+        if not isinstance(regeneration_index, int) or isinstance(regeneration_index, bool) or regeneration_index <= 0:
+            raise ValueError("regeneration_index must be a positive integer")
+        instantiation_id = str(sample.get("instantiation_id", "")).strip()
+        if not instantiation_id:
+            raise ValueError("regeneration samples require instantiation_id")
+        response = nvidia_json_completion(
+            system_prompt=(
+                "Regenerate the supplied assessment scenario after critic disagreement. "
+                "Preserve the intended answer and taxonomy intent while correcting weaknesses. "
+                "Return only a JSON object with exactly instantiation_id and text; do not explain."
+            ),
+            user_content=json.dumps(
+                {
+                    "instantiation_id": instantiation_id,
+                    "regeneration_index": regeneration_index,
+                    "taxonomy_node_id": str(sample.get("taxonomy_node_id", "")),
+                    "source_intent": str(sample.get("source_intent", "")),
+                    "current_text": str(sample.get("text", "")),
+                },
+                sort_keys=True,
+            ),
+            operation="nvidia_regeneration",
+            event_log=event_log,
+            request_state=request_state,
+            **completion_options,
+        )
+        if (
+            not isinstance(response, dict)
+            or set(response) != {"instantiation_id", "text"}
+            or str(response.get("instantiation_id", "")).strip() != instantiation_id
+            or not isinstance(response.get("text"), str)
+            or not response["text"].strip()
+        ):
+            raise ValueError("nvidia_regeneration_invalid_response")
+        return response["text"].strip()
+
+    return _generate
+
+
 def _taxonomy_proposal_count_from_env() -> int:
     raw = (os.environ.get("SIMULA_TAXONOMY_PROPOSAL_COUNT") or "").strip()
     if not raw:
@@ -774,4 +824,5 @@ def generation_providers_from_env(
             node_mix_size=_local_node_mix_size_from_env(),
         ),
         "complexification": nvidia_complexification_provider(event_log=event_log),
+        "regeneration": nvidia_regeneration_provider(event_log=event_log),
     }

@@ -43,6 +43,7 @@ from simula_research.generation_provider_adapter import (
     generation_providers_from_env,
     nvidia_complexification_provider,
     nvidia_local_diversification_provider,
+    nvidia_regeneration_provider,
     nvidia_taxonomy_provider,
 )
 from simula_research.dataset_verification import (
@@ -85,6 +86,7 @@ __all__ = [
     "nvidia_taxonomy_provider",
     "nvidia_local_diversification_provider",
     "nvidia_complexification_provider",
+    "nvidia_regeneration_provider",
     "generation_providers_from_env",
     "verify_local_split",
     "build_local_dataset_manifest",

@@ -6,6 +6,7 @@ from simula_research.provider_protocols import (
     CriticSampleEvaluatorFn,
     CriticVerdict,
     CriticVerdictFn,
+    RegenerationProviderFn,
     hash_based_critic_sample_evaluator,
     hash_based_critic_verdict,
 )
@@ -34,6 +35,7 @@ def adjudicate_samples(
     policy: dict[str, Any] | None = None,
     critic_verdict: CriticVerdictFn | None = None,
     critic_sample_evaluator: CriticSampleEvaluatorFn | None = None,
+    regeneration_provider: RegenerationProviderFn | None = None,
 ) -> dict[str, Any]:
     if critic_verdict is not None and critic_sample_evaluator is not None:
         raise ValueError("critic_verdict and critic_sample_evaluator are mutually exclusive")
@@ -106,7 +108,13 @@ def adjudicate_samples(
             regen_text = source_text
             for regeneration_index in range(max_regenerations):
                 regen_count += 1
-                regen_text = f"{regen_text} [regen-{regeneration_index + 1}]"
+                if regeneration_provider is None:
+                    regen_text = f"{regen_text} [regen-{regeneration_index + 1}]"
+                else:
+                    regen_text = regeneration_provider(sample, regeneration_index + 1)
+                    if not isinstance(regen_text, str) or not regen_text.strip():
+                        raise ValueError("regeneration provider must return non-empty text")
+                    regen_text = regen_text.strip()
                 regen_row = {**sample, "text": regen_text}
                 regen_a_decision, regen_b_decision, regen_agreement_evaluable = _dual_verdicts(regen_row)
                 regenerations.append(

@@ -372,6 +372,11 @@ def execute_issue7_matrix(
             "provider_runtime": provider_runtime,
             "provider_event_log": provider_event_log,
             "critic_sample_evaluator": critic_sample_evaluator,
+            "regeneration_provider": (
+                generation_providers.get("regeneration")
+                if generation_providers is not None
+                else None
+            ),
             "taxonomy_provider": (
                 generation_providers.get("taxonomy")
                 if generation_providers is not None

@@ -106,6 +106,35 @@ class Issue22DualCriticEvaluatorsTests(unittest.TestCase):
         self.assertEqual(accepted["critic_a_decision"], "accept")
         self.assertEqual(accepted["critic_b_decision"], "accept")
 
+    def test_regeneration_provider_supplies_text_for_retry(self) -> None:
+        seen_attempts: list[tuple[str, int]] = []
+
+        def regenerate(sample: dict[str, Any], attempt: int) -> str:
+            seen_attempts.append((str(sample["instantiation_id"]), attempt))
+            return "provider regenerated"
+
+        def evaluator(sample: dict[str, Any], critic_id: str) -> str:
+            if sample.get("text") == "provider regenerated":
+                return "accept"
+            return "accept" if critic_id == "critic_a" else "reject"
+
+        adjudication = adjudicate_samples(
+            samples=[
+                {
+                    "instantiation_id": "r3",
+                    "taxonomy_node_id": "t1",
+                    "meta_prompt_id": "m1",
+                    "text": "base",
+                }
+            ],
+            policy={"disagreement_policy": "regenerate", "max_regenerations_per_sample": 1},
+            critic_sample_evaluator=evaluator,
+            regeneration_provider=regenerate,
+        )
+
+        self.assertEqual(seen_attempts, [("r3", 1)])
+        self.assertEqual(adjudication["accepted_samples"][0]["text"], "provider regenerated")
+
     def test_both_evaluator_hooks_rejected(self) -> None:
         with self.assertRaises(ValueError):
 

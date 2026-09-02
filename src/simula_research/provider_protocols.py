@@ -48,6 +48,12 @@ class ComplexificationProviderFn(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class RegenerationProviderFn(Protocol):
+    """Provider hook for regenerating a sample after critic disagreement."""
+
+    def __call__(self, sample: dict[str, Any], regeneration_index: int) -> str: ...
+
+
 class ComplexityJudgmentProviderFn(Protocol):
     """Injectable pairwise complexity judge for a complexified/source sample pair."""
 

@@ -8,6 +8,7 @@ from simula_research.generation_provider_adapter import (
     nvidia_complexification_provider,
     nvidia_json_completion,
     nvidia_local_diversification_provider,
+    nvidia_regeneration_provider,
     nvidia_taxonomy_provider,
 )
 from simula_research.provider_protocols import default_taxonomy_provider
@@ -187,6 +188,26 @@ class GenerationProviderAdapterTests(unittest.TestCase):
         self.assertTrue(output["samples"][0]["is_complexified"])
         self.assertEqual(output["samples"][0]["complexity_source"], "nvidia_nim")
 
+    def test_regeneration_provider_returns_lineage_matched_text(self) -> None:
+        provider = nvidia_regeneration_provider(
+            http_post_json=self._fake_transport(
+                ['{"instantiation_id":"i1","text":"regenerated scenario"}']
+            ),
+            max_retries=0,
+        )
+
+        regenerated = provider(
+            {
+                "instantiation_id": "i1",
+                "taxonomy_node_id": "t1",
+                "text": "original scenario",
+                "source_intent": "original intent",
+            },
+            1,
+        )
+
+        self.assertEqual(regenerated, "regenerated scenario")
+
     def test_generation_backend_selection_is_explicit(self) -> None:
         old = os.environ.get("SIMULA_GENERATION_BACKEND")
         try:
@@ -195,7 +216,7 @@ class GenerationProviderAdapterTests(unittest.TestCase):
             self.assertIsNotNone(providers)
             self.assertEqual(
                 set(providers or {}),
-                {"taxonomy", "local_diversification", "complexification"},
+                {"taxonomy", "local_diversification", "complexification", "regeneration"},
             )
         finally:
             if old is None:
