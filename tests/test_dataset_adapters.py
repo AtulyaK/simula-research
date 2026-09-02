@@ -132,6 +132,24 @@ class DatasetAdapterTests(unittest.TestCase):
             },
         )
 
+    def test_paper_global_mmlu_selection_is_pinned(self) -> None:
+        path = Path(__file__).parents[1] / "configs" / "paper_global_mmlu_selection.json"
+        selection = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(selection["revision"], "0e619dbeb34206cd48705a1a0ea7fb21cae09993")
+        self.assertEqual(
+            [language["config"] for language in selection["languages"]],
+            ["en", "ko", "ne"],
+        )
+        self.assertEqual(
+            {language["config"]: language["expected_records"] for language in selection["languages"]},
+            {"en": 1436, "ko": 1436, "ne": 1436},
+        )
+        self.assertEqual(
+            set(selection["subjects"]),
+            {"mathematics", "computer_science", "physics"},
+        )
+
     def test_adapt_gsm8k_record_preserves_rationale_and_extracts_final_answer(self) -> None:
         task = adapt_gsm8k_record(
             {

@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "selection_id": "simula-paper-global-mmlu-selection",
+  "dataset_id": "Global-MMLU",
+  "source": "https://huggingface.co/datasets/CohereLabs/Global-MMLU",
+  "revision": "0e619dbeb34206cd48705a1a0ea7fb21cae09993",
+  "split": "test",
+  "languages": [
+    {
+      "config": "en",
+      "resource_tier": "high",
+      "expected_records": 1436
+    },
+    {
+      "config": "ko",
+      "resource_tier": "mid",
+      "expected_records": 1436
+    },
+    {
+      "config": "ne",
+      "resource_tier": "low",
+      "expected_records": 1436
+    }
+  ],
+  "subjects": {
+    "mathematics": [
+      "elementary_mathematics",
+      "high_school_mathematics",
+      "college_mathematics"
+    ],
+    "computer_science": [
+      "high_school_computer_science",
+      "college_computer_science"
+    ],
+    "physics": [
+      "conceptual_physics",
+      "high_school_physics",
+      "college_physics"
+    ]
+  },
+  "selection_basis": "Paper Section 3.2 and Appendices D.1 and E.2 identify Mathematics, Computer Science, and Physics across English, Korean, and Nepali. The pinned Global-MMLU subject counts sum to 1436 rows per language, rounded to 1.44k in the paper.",
+  "source_split_note": "configs/paper_dataset_splits.json retains the complete English source config count of 14042. This file defines the paper-selected subject-language subset and must be applied before benchmark scoring."
+}

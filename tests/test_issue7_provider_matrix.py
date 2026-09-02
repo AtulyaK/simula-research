@@ -87,6 +87,17 @@ class Issue7ProviderMatrixTests(unittest.TestCase):
                 return {"choices": [{"message": {"content": "accept"}}]}
 
             mocked_evaluator = nvidia_critic_sample_evaluator(http_post_json=fake_post_json)
+            def fake_batch_complexity_provider(
+                samples: list[dict[str, object]],
+            ) -> list[dict[str, object]]:
+                return [
+                    {
+                        "item_id": str(sample["instantiation_id"]),
+                        "score": float(index),
+                    }
+                    for index, sample in enumerate(samples)
+                ]
+
             with mock.patch(
                 "simula_research.issue7_execution_reporting.critic_sample_evaluator_from_env",
                 return_value=mocked_evaluator,
@@ -97,6 +108,7 @@ class Issue7ProviderMatrixTests(unittest.TestCase):
                         report_root=tmp_dir,
                         branch_name="provider-matrix-nim-mock",
                         commit_hash="deadbeef",
+                        batch_complexity_judgment_provider=fake_batch_complexity_provider,
                     )
                     protocol = output["run_reports"]["A4"]["protocol"]
                     self.assertEqual(protocol["provider_runtime"]["critic_backend"], "nim")

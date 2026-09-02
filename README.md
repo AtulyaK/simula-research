@@ -83,6 +83,9 @@ py -3 -m simula_research.cli verify-datasets `
 The command uses `configs/paper_dataset_splits.json` by default, records each
 file's SHA-256 and observed count, and exits with status `2` when any count
 does not match the pinned manifest.
+For the paper's Global MMLU benchmark, apply the subject/language selection in
+`configs/paper_global_mmlu_selection.json` before scoring; the split manifest
+intentionally verifies the complete 14,042-row source config.
 
 For supported TSV/JSONL benchmarks, score a model's task-id prediction
 artifact without installing a model runtime:
